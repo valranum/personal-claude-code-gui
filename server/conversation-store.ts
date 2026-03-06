@@ -38,11 +38,12 @@ export function createConversation(
   id: string,
   title: string,
   cwd: string,
+  model: string,
 ): ConversationFile {
   ensureDataDir();
   const now = new Date().toISOString();
   const file: ConversationFile = {
-    conversation: { id, title, cwd, createdAt: now, updatedAt: now },
+    conversation: { id, title, cwd, model, createdAt: now, updatedAt: now },
     messages: [],
   };
   fs.writeFileSync(filePath(id), JSON.stringify(file, null, 2));

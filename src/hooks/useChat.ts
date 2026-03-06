@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ChatMessage, ToolCallInfo, StreamingState } from "../types";
+import { ChatMessage, ImageAttachment, ToolCallInfo, StreamingState } from "../types";
 import { connectSSE, SSEEvent } from "../utils/sse";
 
 const EMPTY_STREAMING: StreamingState = {
@@ -151,13 +151,14 @@ export function useChat(
   }, [conversationId]);
 
   const sendMessage = useCallback(
-    async (content: string) => {
+    async (content: string, images?: ImageAttachment[]) => {
       if (!conversationId || streaming.isStreaming) return;
 
       const userMsg: ChatMessage = {
         id: crypto.randomUUID(),
         role: "user",
         content,
+        images: images && images.length > 0 ? images : undefined,
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, userMsg]);
@@ -166,7 +167,7 @@ export function useChat(
       await fetch(`/api/conversations/${conversationId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, images }),
       });
     },
     [conversationId, streaming.isStreaming],

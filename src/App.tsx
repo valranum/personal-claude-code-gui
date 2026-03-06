@@ -13,6 +13,7 @@ export function App() {
     deleteConversation,
     renameConversation,
     updateConversationCwd,
+    updateConversationModel,
     updateLocalTitle,
   } = useConversations();
 
@@ -116,6 +117,7 @@ export function App() {
           onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
           sidebarCollapsed={sidebarCollapsed}
           onChangeCwd={updateConversationCwd}
+          onChangeModel={updateConversationModel}
           onTitleUpdate={updateLocalTitle}
         />
       ) : (

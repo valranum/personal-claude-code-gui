@@ -86,6 +86,21 @@ export function useConversations() {
     [],
   );
 
+  const updateConversationModel = useCallback(
+    async (id: string, model: string) => {
+      const res = await fetch(`/api/conversations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model }),
+      });
+      const updated: Conversation = await res.json();
+      setConversations((prev) =>
+        prev.map((c) => (c.id === id ? updated : c)),
+      );
+    },
+    [],
+  );
+
   return {
     conversations,
     activeId,
@@ -94,6 +109,7 @@ export function useConversations() {
     deleteConversation,
     renameConversation,
     updateConversationCwd,
+    updateConversationModel,
     updateLocalTitle,
     refresh,
   };

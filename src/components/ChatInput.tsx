@@ -1,11 +1,31 @@
-import { useState, useRef, useEffect, KeyboardEvent } from "react";
+import { useState, useRef, useEffect, useCallback, KeyboardEvent, DragEvent } from "react";
+import { ImageAttachment } from "../types";
 
 interface ChatInputProps {
-  onSend: (content: string) => void;
+  onSend: (content: string, images?: ImageAttachment[]) => void;
   onAbort: () => void;
   isStreaming: boolean;
   disabled: boolean;
 }
+
+function readFileAsBase64(file: File): Promise<ImageAttachment> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(",")[1];
+      resolve({
+        data: base64,
+        mediaType: file.type || "image/png",
+        name: file.name,
+      });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
 export function ChatInput({
   onSend,
@@ -14,7 +34,10 @@ export function ChatInput({
   disabled,
 }: ChatInputProps) {
   const [value, setValue] = useState("");
+  const [images, setImages] = useState<ImageAttachment[]>([]);
+  const [dragOver, setDragOver] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -24,14 +47,12 @@ export function ChatInput({
     }
   }, [value]);
 
-  // Re-focus input after streaming completes
   useEffect(() => {
     if (!isStreaming && !disabled && textareaRef.current) {
       textareaRef.current.focus();
     }
   }, [isStreaming, disabled]);
 
-  // Global Escape to stop streaming
   useEffect(() => {
     const handler = (e: globalThis.KeyboardEvent) => {
       if (e.key === "Escape" && isStreaming) {
@@ -42,6 +63,15 @@ export function ChatInput({
     return () => window.removeEventListener("keydown", handler);
   }, [isStreaming, onAbort]);
 
+  const addFiles = useCallback(async (files: FileList | File[]) => {
+    const validFiles = Array.from(files).filter((f) =>
+      ACCEPTED_TYPES.includes(f.type),
+    );
+    if (validFiles.length === 0) return;
+    const attachments = await Promise.all(validFiles.map(readFileAsBase64));
+    setImages((prev) => [...prev, ...attachments]);
+  }, []);
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -51,14 +81,89 @@ export function ChatInput({
 
   const handleSend = () => {
     const trimmed = value.trim();
-    if (!trimmed || disabled) return;
-    onSend(trimmed);
+    if ((!trimmed && images.length === 0) || disabled) return;
+    onSend(trimmed || "(image)", images.length > 0 ? images : undefined);
     setValue("");
+    setImages([]);
   };
+
+  const handleDragOver = (e: DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e: DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+  };
+
+  const handleDrop = async (e: DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files.length > 0) {
+      await addFiles(e.dataTransfer.files);
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      await addFiles(e.target.files);
+      e.target.value = "";
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handlePaste = useCallback(
+    async (e: React.ClipboardEvent) => {
+      const items = e.clipboardData.items;
+      const imageFiles: File[] = [];
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith("image/")) {
+          const file = items[i].getAsFile();
+          if (file) imageFiles.push(file);
+        }
+      }
+      if (imageFiles.length > 0) {
+        e.preventDefault();
+        await addFiles(imageFiles);
+      }
+    },
+    [addFiles],
+  );
 
   return (
     <div className="chat-input-container">
-      <div className="chat-input-wrapper">
+      <div
+        className={`chat-input-wrapper ${dragOver ? "drag-over" : ""}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {images.length > 0 && (
+          <div className="image-preview-row">
+            {images.map((img, i) => (
+              <div key={i} className="image-preview-item">
+                <img
+                  src={`data:${img.mediaType};base64,${img.data}`}
+                  alt={img.name}
+                  className="image-preview-thumb"
+                />
+                <button
+                  className="image-preview-remove"
+                  onClick={() => removeImage(i)}
+                  title="Remove image"
+                >
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                    <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         <textarea
           ref={textareaRef}
           className="chat-input"
@@ -70,10 +175,31 @@ export function ChatInput({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           disabled={disabled || isStreaming}
           rows={1}
         />
         <div className="chat-input-actions">
+          <button
+            className="chat-btn attach-btn"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled || isStreaming}
+            title="Attach image"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3"/>
+              <circle cx="5.5" cy="5.5" r="1.25" fill="currentColor"/>
+              <path d="M2 11L5.5 7.5L8 10L10.5 7L14 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            multiple
+            onChange={handleFileSelect}
+            style={{ display: "none" }}
+          />
           {isStreaming ? (
             <button
               className="chat-btn stop-btn"
@@ -88,7 +214,7 @@ export function ChatInput({
             <button
               className="chat-btn send-btn"
               onClick={handleSend}
-              disabled={!value.trim() || disabled}
+              disabled={(!value.trim() && images.length === 0) || disabled}
               title="Send message (Enter)"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -99,7 +225,7 @@ export function ChatInput({
         </div>
       </div>
       <div className="chat-input-hint">
-        Enter to send · Shift+Enter for newline · Esc to stop
+        Enter to send · Shift+Enter for newline · Esc to stop · Drop or paste images
       </div>
     </div>
   );

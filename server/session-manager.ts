@@ -5,11 +5,12 @@ const sessions = new Map<string, AgentSession>();
 export function getOrCreateSession(
   conversationId: string,
   cwd: string,
+  model: string,
   sessionId?: string,
 ): AgentSession {
   let session = sessions.get(conversationId);
   if (!session) {
-    session = new AgentSession(conversationId, cwd, sessionId);
+    session = new AgentSession(conversationId, cwd, model, sessionId);
     sessions.set(conversationId, session);
   }
   return session;

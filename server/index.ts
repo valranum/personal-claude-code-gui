@@ -5,44 +5,49 @@ import path from "path";
 import os from "os";
 import { execFile } from "child_process";
 import { randomUUID } from "crypto";
+import { query } from "@anthropic-ai/claude-agent-sdk";
 import * as store from "./conversation-store.js";
 import * as sessionManager from "./session-manager.js";
-import { ChatMessage } from "./types.js";
+import { ChatMessage, ImageAttachment } from "./types.js";
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+
+const DEFAULT_MODEL = "claude-opus-4-6";
+
+const AVAILABLE_MODELS = [
+  { id: "claude-opus-4-6", name: "Claude Opus 4.6" },
+  { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6" },
+  { id: "claude-sonnet-4-20250514", name: "Claude Sonnet 4" },
+  { id: "claude-haiku-4-5-20251001", name: "Claude Haiku 4.5" },
+];
 
 async function generateTitle(
   userMessage: string,
   assistantMessage: string,
 ): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return userMessage.slice(0, 50);
-
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+    const prompt = `Generate a very short title (3-6 words, no quotes) summarizing this conversation:\n\nUser: ${userMessage.slice(0, 300)}\nAssistant: ${assistantMessage.slice(0, 300)}`;
+    let resultText = "";
+    for await (const msg of query({
+      prompt,
+      options: {
+        model: "claude-haiku-4-5-20251001",
+        allowedTools: [],
+        maxTurns: 1,
       },
-      body: JSON.stringify({
-        model: "claude-haiku-4-20250414",
-        max_tokens: 30,
-        messages: [
-          {
-            role: "user",
-            content: `Generate a very short title (3-6 words, no quotes) summarizing this conversation:\n\nUser: ${userMessage.slice(0, 300)}\nAssistant: ${assistantMessage.slice(0, 300)}`,
-          },
-        ],
-      }),
-    });
-    const data = await res.json();
-    const title = data?.content?.[0]?.text?.trim();
+    })) {
+      const m = msg as Record<string, unknown>;
+      if ("result" in m && typeof m.result === "string") {
+        resultText = m.result;
+        break;
+      }
+    }
+    const title = resultText.trim().replace(/^["']|["']$/g, "");
     return title || userMessage.slice(0, 50);
-  } catch {
+  } catch (err) {
+    console.error("Title generation failed:", err);
     return userMessage.slice(0, 50);
   }
 }
@@ -101,6 +106,11 @@ app.post("/api/pick-folder", (_req, res) => {
   });
 });
 
+// Available models
+app.get("/api/models", (_req, res) => {
+  res.json({ models: AVAILABLE_MODELS, default: DEFAULT_MODEL });
+});
+
 // List conversations
 app.get("/api/conversations", (_req, res) => {
   res.json(store.listConversations());
@@ -108,19 +118,20 @@ app.get("/api/conversations", (_req, res) => {
 
 // Create conversation
 app.post("/api/conversations", (req, res) => {
-  const { title, cwd } = req.body;
+  const { title, cwd, model } = req.body;
   const id = randomUUID();
   const file = store.createConversation(
     id,
     title || "New Chat",
     cwd || process.cwd(),
+    model || DEFAULT_MODEL,
   );
   res.json(file.conversation);
 });
 
-// Update conversation (rename, change cwd, etc.)
+// Update conversation (rename, change cwd, change model, etc.)
 app.patch("/api/conversations/:id", (req, res) => {
-  const { title, cwd } = req.body;
+  const { title, cwd, model } = req.body;
   const conv = store.getConversation(req.params.id);
   if (!conv) {
     res.status(404).json({ error: "Not found" });
@@ -128,9 +139,10 @@ app.patch("/api/conversations/:id", (req, res) => {
   }
   const updates: Record<string, string> = {};
   if (title !== undefined) updates.title = title;
-  if (cwd !== undefined) {
-    updates.cwd = cwd;
-    // Reset the agent session so it picks up the new cwd
+  if (cwd !== undefined) updates.cwd = cwd;
+  if (model !== undefined) updates.model = model;
+  // Reset session if cwd or model changed so it picks up new settings
+  if (cwd !== undefined || model !== undefined) {
     sessionManager.removeSession(req.params.id);
   }
   if (Object.keys(updates).length > 0) {
@@ -177,6 +189,7 @@ app.get("/api/conversations/:id/stream", (req, res) => {
   const session = sessionManager.getOrCreateSession(
     req.params.id,
     convFile.conversation.cwd,
+    convFile.conversation.model || DEFAULT_MODEL,
     convFile.conversation.sdkSessionId,
   );
 
@@ -214,7 +227,10 @@ app.get("/api/conversations/:id/stream", (req, res) => {
 
 // Send message
 app.post("/api/conversations/:id/messages", (req, res) => {
-  const { content } = req.body;
+  const { content, images } = req.body as {
+    content: string;
+    images?: ImageAttachment[];
+  };
   const convFile = store.getConversation(req.params.id);
   if (!convFile) {
     res.status(404).json({ error: "Not found" });
@@ -225,6 +241,7 @@ app.post("/api/conversations/:id/messages", (req, res) => {
     id: randomUUID(),
     role: "user",
     content,
+    images: images && images.length > 0 ? images : undefined,
     timestamp: new Date().toISOString(),
   };
   store.addMessage(req.params.id, userMsg);
@@ -232,6 +249,7 @@ app.post("/api/conversations/:id/messages", (req, res) => {
   const session = sessionManager.getOrCreateSession(
     req.params.id,
     convFile.conversation.cwd,
+    convFile.conversation.model || DEFAULT_MODEL,
     convFile.conversation.sdkSessionId,
   );
 
@@ -239,7 +257,7 @@ app.post("/api/conversations/:id/messages", (req, res) => {
     convFile.messages.filter((m) => m.role === "user").length === 0;
 
   // Run agent in background — events stream via SSE
-  session.sendMessage(content).then(async ({ text, toolCalls }) => {
+  session.sendMessage(content, images).then(async ({ text, toolCalls }) => {
     if (text) {
       const assistantMsg: ChatMessage = {
         id: randomUUID(),

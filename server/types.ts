@@ -2,15 +2,23 @@ export interface Conversation {
   id: string;
   title: string;
   cwd: string;
+  model: string;
   sdkSessionId?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ImageAttachment {
+  data: string;
+  mediaType: string;
+  name: string;
 }
 
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  images?: ImageAttachment[];
   toolCalls?: ToolCallInfo[];
   timestamp: string;
 }

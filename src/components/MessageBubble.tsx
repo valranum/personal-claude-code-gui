@@ -66,6 +66,18 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           </div>
         )}
         <div className="message-content">
+          {message.role === "user" && message.images && message.images.length > 0 && (
+            <div className="message-images">
+              {message.images.map((img, i) => (
+                <img
+                  key={i}
+                  src={`data:${img.mediaType};base64,${img.data}`}
+                  alt={img.name}
+                  className="message-image"
+                />
+              ))}
+            </div>
+          )}
           {message.role === "assistant" ? (
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}

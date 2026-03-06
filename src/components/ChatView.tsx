@@ -10,6 +10,7 @@ interface ChatViewProps {
   onToggleSidebar: () => void;
   sidebarCollapsed: boolean;
   onChangeCwd: (id: string, cwd: string) => void;
+  onChangeModel: (id: string, model: string) => void;
   onTitleUpdate: (conversationId: string, title: string) => void;
 }
 
@@ -19,6 +20,7 @@ export function ChatView({
   onToggleSidebar,
   sidebarCollapsed,
   onChangeCwd,
+  onChangeModel,
   onTitleUpdate,
 }: ChatViewProps) {
   const { messages, streaming, sendMessage, abort, retry } = useChat(
@@ -33,6 +35,7 @@ export function ChatView({
       <WorkspaceBar
         conversation={conversation}
         onChangeCwd={onChangeCwd}
+        onChangeModel={onChangeModel}
         sidebarCollapsed={sidebarCollapsed}
         onToggleSidebar={onToggleSidebar}
       />
