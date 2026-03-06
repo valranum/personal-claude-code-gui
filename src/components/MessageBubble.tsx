@@ -18,18 +18,28 @@ function CodeCard({
   code: string;
   onClick: () => void;
 }) {
-  const lines = code.split("\n");
-  const lineCount = lines.length;
-  const preview = lines[0]?.slice(0, 80) || "";
+  const lineCount = code.split("\n").length;
 
   return (
     <button className="code-card" onClick={onClick} type="button">
-      <div className="code-card-header">
-        <span className="code-card-lang">{language}</span>
+      <div className="code-card-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+          <path d="M14 2V8H20" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+          <path d="M9 15L12 18L15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M9 11L7 13L9 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M15 11L17 13L15 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+      <div className="code-card-info">
+        <span className="code-card-title">{language} code</span>
         <span className="code-card-meta">{lineCount} line{lineCount !== 1 ? "s" : ""}</span>
       </div>
-      <div className="code-card-preview">
-        <code>{preview}{preview.length < (lines[0]?.length ?? 0) ? "..." : ""}</code>
+      <div className="code-card-open">
+        <span>Open</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
       </div>
     </button>
   );
@@ -50,20 +60,14 @@ export function MessageBubble({ message, onOpenArtifact }: MessageBubbleProps) {
 
   return (
     <div className={`message-bubble ${message.role} msg-enter`}>
-      <div className={`message-avatar ${message.role}-avatar`}>
-        {message.role === "user" ? (
+      {message.role === "user" && (
+        <div className="message-avatar user-avatar">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <circle cx="8" cy="6" r="3" stroke="currentColor" strokeWidth="1.5"/>
             <path d="M2.5 14C2.5 11.24 4.96 9 8 9C11.04 9 13.5 11.24 13.5 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
-        ) : (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="1" y="1" width="14" height="14" rx="4" stroke="currentColor" strokeWidth="1.5"/>
-            <circle cx="6" cy="8" r="1.25" fill="currentColor"/>
-            <circle cx="10" cy="8" r="1.25" fill="currentColor"/>
-          </svg>
-        )}
-      </div>
+        </div>
+      )}
       <div className="message-body">
         <div className="message-header">
           <span className="message-role">
