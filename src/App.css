@@ -234,6 +234,7 @@ body,
   gap: 8px;
   border-radius: var(--radius-sm);
   transition: background 0.12s;
+  position: relative;
 }
 
 .conversation-item:hover {
@@ -293,6 +294,63 @@ body,
 .conversation-action-btn:hover {
   background: var(--bg-tertiary);
   color: var(--text-secondary);
+}
+
+.export-dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 4px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 100px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.export-dropdown button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.export-dropdown button:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.conversation-match-context {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  font-style: italic;
+}
+
+.search-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .conversation-action-btn.delete-btn:hover {
@@ -789,6 +847,59 @@ body,
   overflow-y: auto;
   border: 1px solid var(--border);
   line-height: 1.5;
+}
+
+/* ── Compact Suggestion Banner ── */
+.compact-suggestion-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  max-width: 800px;
+  margin: 0 auto;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.compact-suggestion-text {
+  flex: 1;
+}
+
+.compact-suggestion-btn {
+  background: var(--accent-color);
+  color: #fff;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: opacity 0.12s;
+}
+
+.compact-suggestion-btn:hover {
+  opacity: 0.85;
+}
+
+.compact-suggestion-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: color 0.12s;
+}
+
+.compact-suggestion-dismiss:hover {
+  color: var(--text-primary);
 }
 
 /* ── Chat Input ── */

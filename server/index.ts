@@ -143,6 +143,68 @@ app.post("/api/conversations", (req, res) => {
   res.json(file.conversation);
 });
 
+// Search conversations (title + message content)
+app.get("/api/conversations/search", (req, res) => {
+  const q = ((req.query.q as string) || "").toLowerCase().trim();
+  if (!q) {
+    res.json([]);
+    return;
+  }
+
+  const DATA_DIR = path.join(process.cwd(), "data", "conversations");
+  if (!fs.existsSync(DATA_DIR)) {
+    res.json([]);
+    return;
+  }
+
+  const files = fs.readdirSync(DATA_DIR).filter((f) => f.endsWith(".json"));
+  const results: {
+    conversation: { id: string; title: string; cwd: string; model: string; updatedAt: string; [key: string]: unknown };
+    matchType: "title" | "message";
+    matchContext?: string;
+  }[] = [];
+
+  for (const f of files) {
+    try {
+      const data = JSON.parse(fs.readFileSync(path.join(DATA_DIR, f), "utf-8"));
+      const conv = data.conversation;
+      const messages = data.messages || [];
+
+      const titleMatch = conv.title?.toLowerCase().includes(q);
+      let messageMatch = false;
+      let matchContext = "";
+
+      if (!titleMatch) {
+        for (const msg of messages) {
+          const idx = (msg.content || "").toLowerCase().indexOf(q);
+          if (idx !== -1) {
+            messageMatch = true;
+            const start = Math.max(0, idx - 30);
+            const end = Math.min(msg.content.length, idx + q.length + 30);
+            matchContext = (start > 0 ? "…" : "") + msg.content.slice(start, end) + (end < msg.content.length ? "…" : "");
+            break;
+          }
+        }
+      }
+
+      if (titleMatch || messageMatch) {
+        results.push({
+          conversation: conv,
+          matchType: titleMatch ? "title" : "message",
+          matchContext: messageMatch ? matchContext : undefined,
+        });
+      }
+    } catch { /* skip corrupt files */ }
+
+    if (results.length >= 20) break;
+  }
+
+  results.sort((a, b) =>
+    new Date(b.conversation.updatedAt).getTime() - new Date(a.conversation.updatedAt).getTime()
+  );
+  res.json(results);
+});
+
 // Update conversation (rename, change cwd, change model, etc.)
 app.patch("/api/conversations/:id", (req, res) => {
   const { title, cwd, model } = req.body;
@@ -180,7 +242,10 @@ app.get("/api/conversations/:id/messages", (req, res) => {
     res.status(404).json({ error: "Not found" });
     return;
   }
-  res.json(file.messages);
+  res.json({
+    messages: file.messages,
+    lastTurnInputTokens: file.conversation.lastTurnInputTokens ?? 0,
+  });
 });
 
 // SSE stream
@@ -293,7 +358,7 @@ app.post("/api/conversations/:id/messages", (req, res) => {
       }
     }
 
-    // Accumulate token usage
+    // Accumulate token usage and emit context window utilization
     if (tokenUsage && (tokenUsage.inputTokens > 0 || tokenUsage.outputTokens > 0)) {
       const current = store.getConversation(req.params.id);
       const prev = current?.conversation.tokenUsage;
@@ -303,6 +368,13 @@ app.post("/api/conversations/:id/messages", (req, res) => {
           outputTokens: (prev?.outputTokens || 0) + tokenUsage.outputTokens,
           estimatedCost: (prev?.estimatedCost || 0) + tokenUsage.estimatedCost,
         },
+        lastTurnInputTokens: tokenUsage.inputTokens,
+      });
+
+      // Emit per-turn input tokens so frontend can detect context window pressure
+      session.events.emit("event", {
+        type: "context_usage",
+        data: { inputTokens: tokenUsage.inputTokens },
       });
     }
   });
@@ -380,6 +452,62 @@ app.post("/api/conversations/:id/compact", async (req, res) => {
   } catch (err) {
     console.error("Compact failed:", err);
     res.status(500).json({ error: "Failed to compact conversation" });
+  }
+});
+
+// Export conversation
+app.get("/api/conversations/:id/export", (req, res) => {
+  const file = store.getConversation(req.params.id);
+  if (!file) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  const format = (req.query.format as string) || "json";
+  const safeTitle = file.conversation.title.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 40);
+
+  if (format === "md") {
+    const lines: string[] = [];
+    lines.push(`# ${file.conversation.title}\n`);
+    lines.push(`**Model:** ${file.conversation.model}`);
+    lines.push(`**Workspace:** ${file.conversation.cwd}`);
+    lines.push(`**Created:** ${new Date(file.conversation.createdAt).toLocaleString()}`);
+    lines.push(`**Updated:** ${new Date(file.conversation.updatedAt).toLocaleString()}`);
+    if (file.conversation.tokenUsage) {
+      const u = file.conversation.tokenUsage;
+      lines.push(`**Tokens:** ${u.inputTokens.toLocaleString()} in / ${u.outputTokens.toLocaleString()} out (~$${u.estimatedCost.toFixed(2)})`);
+    }
+    lines.push("\n---\n");
+
+    for (const msg of file.messages) {
+      const role = msg.role === "user" ? "You" : "Claude";
+      lines.push(`## ${role}\n`);
+      lines.push(msg.content);
+      if (msg.toolCalls && msg.toolCalls.length > 0) {
+        lines.push("");
+        for (const tc of msg.toolCalls) {
+          lines.push(`<details><summary>Tool: ${tc.name}</summary>\n`);
+          lines.push("```json");
+          lines.push(JSON.stringify(tc.input, null, 2));
+          lines.push("```");
+          if (tc.output) {
+            lines.push("\n**Output:**\n");
+            lines.push("```");
+            lines.push(tc.output.slice(0, 2000));
+            lines.push("```");
+          }
+          lines.push("</details>");
+        }
+      }
+      lines.push("");
+    }
+
+    res.setHeader("Content-Type", "text/markdown; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${safeTitle}.md"`);
+    res.send(lines.join("\n"));
+  } else {
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${safeTitle}.json"`);
+    res.send(JSON.stringify(file, null, 2));
   }
 });
 

@@ -3,6 +3,7 @@ import { useToast } from "../hooks/useToast";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
 import { WorkspaceBar } from "./WorkspaceBar";
+import { CompactSuggestionBanner } from "./CompactSuggestionBanner";
 import { Conversation } from "../types";
 
 interface ChatViewProps {
@@ -25,7 +26,7 @@ export function ChatView({
   onTitleUpdate,
 }: ChatViewProps) {
   const { addToast } = useToast();
-  const { messages, streaming, sendMessage, abort, retry } = useChat(
+  const { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion } = useChat(
     conversationId,
     (title) => {
       if (conversationId) onTitleUpdate(conversationId, title);
@@ -48,6 +49,15 @@ export function ChatView({
         onRetry={retry}
         onSendPrompt={sendMessage}
       />
+      {showCompactSuggestion && (
+        <CompactSuggestionBanner
+          onCompact={() => {
+            dismissCompactSuggestion();
+            sendMessage("/compact");
+          }}
+          onDismiss={dismissCompactSuggestion}
+        />
+      )}
       <ChatInput
         onSend={sendMessage}
         onAbort={abort}

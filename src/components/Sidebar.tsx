@@ -1,6 +1,12 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Conversation } from "../types";
 import { formatRelativeTime } from "../utils/time";
+
+interface SearchResult {
+  conversation: Conversation;
+  matchType: "title" | "message";
+  matchContext?: string;
+}
 
 interface SidebarProps {
   conversations: Conversation[];
@@ -32,7 +38,11 @@ export function Sidebar({
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [exportMenuId, setExportMenuId] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
+  const [searching, setSearching] = useState(false);
   const editRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     if (editingId && editRef.current) {
@@ -41,9 +51,45 @@ export function Sidebar({
     }
   }, [editingId]);
 
-  const filtered = conversations.filter((c) =>
-    c.title.toLowerCase().includes(search.toLowerCase()),
-  );
+  // Debounced server search
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (!search.trim()) {
+      setSearchResults(null);
+      setSearching(false);
+      return;
+    }
+
+    setSearching(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/conversations/search?q=${encodeURIComponent(search.trim())}`);
+        const data: SearchResult[] = await res.json();
+        setSearchResults(data);
+      } catch {
+        setSearchResults(null);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [search]);
+
+  // Close export menu on outside click
+  useEffect(() => {
+    if (!exportMenuId) return;
+    const handler = () => setExportMenuId(null);
+    window.addEventListener("click", handler);
+    return () => window.removeEventListener("click", handler);
+  }, [exportMenuId]);
+
+  const displayList = searchResults
+    ? searchResults.map((r) => ({ conv: r.conversation, matchType: r.matchType, matchContext: r.matchContext }))
+    : conversations.map((c) => ({ conv: c, matchType: "title" as const, matchContext: undefined }));
 
   const handleRenameStart = (conv: Conversation) => {
     setEditingId(conv.id);
@@ -56,6 +102,11 @@ export function Sidebar({
     }
     setEditingId(null);
   };
+
+  const handleExport = useCallback((convId: string, format: "md" | "json") => {
+    window.open(`/api/conversations/${convId}/export?format=${format}`, "_blank");
+    setExportMenuId(null);
+  }, []);
 
   if (collapsed) {
     return (
@@ -134,9 +185,10 @@ export function Sidebar({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        {searching && <span className="search-spinner" />}
       </div>
       <div className="conversation-list">
-        {filtered.map((conv) => (
+        {displayList.map(({ conv, matchType, matchContext }) => (
           <div
             key={conv.id}
             className={`conversation-item ${activeId === conv.id ? "active" : ""}`}
@@ -158,12 +210,35 @@ export function Sidebar({
             ) : (
               <div className="conversation-info">
                 <span className="conversation-title">{conv.title}</span>
-                <span className="conversation-time">
-                  {formatRelativeTime(conv.updatedAt)}
-                </span>
+                {matchType === "message" && matchContext ? (
+                  <span className="conversation-match-context">{matchContext}</span>
+                ) : (
+                  <span className="conversation-time">
+                    {formatRelativeTime(conv.updatedAt)}
+                  </span>
+                )}
               </div>
             )}
             <div className="conversation-actions">
+              <button
+                className="conversation-action-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExportMenuId(exportMenuId === conv.id ? null : conv.id);
+                }}
+                title="Export"
+              >
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 2V10M5 7L8 10L11 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M3 13H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </button>
+              {exportMenuId === conv.id && (
+                <div className="export-dropdown" onClick={(e) => e.stopPropagation()}>
+                  <button onClick={() => handleExport(conv.id, "md")}>Markdown</button>
+                  <button onClick={() => handleExport(conv.id, "json")}>JSON</button>
+                </div>
+              )}
               <button
                 className="conversation-action-btn"
                 onClick={(e) => {
@@ -191,10 +266,10 @@ export function Sidebar({
             </div>
           </div>
         ))}
-        {filtered.length === 0 && conversations.length > 0 && (
+        {displayList.length === 0 && search.trim() && (
           <div className="sidebar-empty">No matches found.</div>
         )}
-        {conversations.length === 0 && (
+        {displayList.length === 0 && !search.trim() && conversations.length === 0 && (
           <div className="sidebar-empty">
             No conversations yet. Click + to start.
           </div>

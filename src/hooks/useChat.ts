@@ -19,6 +19,9 @@ function formatCost(cost: number): string {
   return `$${cost.toFixed(2)}`;
 }
 
+// ~75% of 200k context window — trigger compact suggestion
+const CONTEXT_TOKEN_THRESHOLD = 150_000;
+
 export function useChat(
   conversationId: string | null,
   onTitleUpdate?: (title: string) => void,
@@ -26,6 +29,8 @@ export function useChat(
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, setStreaming] = useState<StreamingState>(EMPTY_STREAMING);
+  const [showCompactSuggestion, setShowCompactSuggestion] = useState(false);
+  const dismissedRef = useRef<Set<string>>(new Set());
   const esRef = useRef<EventSource | null>(null);
   const toolCallsRef = useRef<ToolCallInfo[]>([]);
   const onErrorRef = useRef(onError);
@@ -35,11 +40,22 @@ export function useChat(
     if (!conversationId) {
       setMessages([]);
       setStreaming(EMPTY_STREAMING);
+      setShowCompactSuggestion(false);
       return;
     }
     fetch(`/api/conversations/${conversationId}/messages`)
       .then((r) => r.json())
-      .then(setMessages)
+      .then((data: { messages: ChatMessage[]; lastTurnInputTokens: number }) => {
+        setMessages(data.messages);
+        if (
+          data.lastTurnInputTokens >= CONTEXT_TOKEN_THRESHOLD &&
+          !dismissedRef.current.has(conversationId)
+        ) {
+          setShowCompactSuggestion(true);
+        } else {
+          setShowCompactSuggestion(false);
+        }
+      })
       .catch(() => {
         setMessages([]);
         onErrorRef.current?.("Failed to load messages");
@@ -65,7 +81,7 @@ export function useChat(
             ...prev,
             {
               id: crypto.randomUUID(),
-              role: "assistant",
+              role: "assistant" as const,
               content: text,
               toolCalls:
                 finalToolCalls.length > 0 ? finalToolCalls : undefined,
@@ -148,6 +164,18 @@ export function useChat(
           break;
         }
 
+        case "context_usage": {
+          const { inputTokens } = event.data as { inputTokens: number };
+          if (
+            inputTokens >= CONTEXT_TOKEN_THRESHOLD &&
+            conversationId &&
+            !dismissedRef.current.has(conversationId)
+          ) {
+            setShowCompactSuggestion(true);
+          }
+          break;
+        }
+
         case "title_updated": {
           const { title } = event.data as { title: string };
           onTitleUpdate?.(title);
@@ -188,8 +216,8 @@ export function useChat(
           const data = await res.json();
           if (!res.ok) throw new Error(data.error);
           const reloaded = await fetch(`/api/conversations/${conversationId}/messages`);
-          const msgs = await reloaded.json();
-          setMessages(msgs);
+          const reloadedData = await reloaded.json();
+          setMessages(reloadedData.messages);
         } catch {
           onErrorRef.current?.("Failed to compact conversation");
         } finally {
@@ -291,5 +319,10 @@ export function useChat(
     }
   }, [conversationId]);
 
-  return { messages, streaming, sendMessage, abort, retry };
+  const dismissCompactSuggestion = useCallback(() => {
+    setShowCompactSuggestion(false);
+    if (conversationId) dismissedRef.current.add(conversationId);
+  }, [conversationId]);
+
+  return { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion };
 }

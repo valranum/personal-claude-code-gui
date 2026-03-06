@@ -112,6 +112,22 @@ export function CommandPalette({
             },
           ]
         : []),
+      ...(activeId
+        ? [
+            {
+              id: "export-md",
+              label: "Export as Markdown",
+              section: "actions" as const,
+              action: () => window.open(`/api/conversations/${activeId}/export?format=md`, "_blank"),
+            },
+            {
+              id: "export-json",
+              label: "Export as JSON",
+              section: "actions" as const,
+              action: () => window.open(`/api/conversations/${activeId}/export?format=json`, "_blank"),
+            },
+          ]
+        : []),
     ];
 
     const modelItems: CommandItem[] = models.map((m) => ({

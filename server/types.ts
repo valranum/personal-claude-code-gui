@@ -5,6 +5,7 @@ export interface Conversation {
   model: string;
   sdkSessionId?: string;
   tokenUsage?: TokenUsage;
+  lastTurnInputTokens?: number;
   createdAt: string;
   updatedAt: string;
 }
