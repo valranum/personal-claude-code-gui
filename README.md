@@ -1,91 +1,69 @@
 # Claude Code GUI
 
-A web-based chat interface for Claude Code. Provides a modern UI with markdown rendering, syntax-highlighted code blocks, and tool call visibility — backed by the Claude Agent SDK.
+A browser-based coding assistant powered by Claude. Point it at any project folder and chat with Claude to read files, write code, run commands, search the web, and more — all through a clean UI instead of a terminal.
 
-## Prerequisites
+## Get Started
 
-- **Node.js 18+** — Check with `node --version`. Download from https://nodejs.org if needed.
-- **Anthropic API key** — Get one at https://console.anthropic.com. You need this for Claude to work.
+You need **Node.js 18+** and an **Anthropic API key**. If you don't have Node.js, download it from [nodejs.org](https://nodejs.org). Get an API key at [console.anthropic.com](https://console.anthropic.com).
 
-## Setup
+### Quick Setup
 
-1. **Clone or navigate to the project:**
+```bash
+git clone https://github.com/valranum/personal-claude-code-gui.git
+cd personal-claude-code-gui
+./setup.sh
+```
 
-   ```bash
-   cd claude-code-gui
-   ```
+The setup script installs dependencies and walks you through setting your API key. Once it's done, run:
 
-2. **Install dependencies:**
+```bash
+npm run dev
+```
 
-   ```bash
-   npm install
-   ```
+Then open **http://localhost:5173** in your browser.
 
-3. **Set your API key:**
+### Manual Setup
 
-   ```bash
-   export ANTHROPIC_API_KEY=sk-ant-...
-   ```
+If you prefer to do it step by step:
 
-   To make this permanent, add the line above to your `~/.zshrc` or `~/.bashrc` file.
+```bash
+git clone https://github.com/valranum/personal-claude-code-gui.git
+cd personal-claude-code-gui
+npm install
+export ANTHROPIC_API_KEY=sk-ant-...    # your key here
+npm run dev
+```
 
-4. **Start the app:**
+To make the API key permanent so you don't have to set it every time, add `export ANTHROPIC_API_KEY=sk-ant-...` to your `~/.zshrc` (Mac) or `~/.bashrc` (Linux) file.
 
-   ```bash
-   npm run dev
-   ```
+## How It Works
 
-5. **Open your browser to** http://localhost:5173
+When you open the app, you'll see a welcome screen asking you to pick a project folder. This tells Claude where to work — it can read and edit files, run commands, and navigate within that folder.
 
-That's it. You should see the Claude Code GUI.
+Once a folder is selected, you're in a chat. Type a message, press Enter, and Claude will respond. It can:
 
-## How to Use
+- **Read and edit your code** — Claude sees your files and can make changes directly.
+- **Run shell commands** — things like `npm install`, `git status`, tests, etc.
+- **Search your codebase** — find files by name or search contents by keyword.
+- **Search the web** — look things up when it needs current information.
 
-### Starting a Conversation
+### Tips
 
-1. Click the **+** button in the top-left sidebar.
-2. A new conversation appears in the sidebar. It's automatically selected.
-3. Type a message in the text box at the bottom and press **Enter**.
+- **Enter** sends a message. **Shift+Enter** adds a new line.
+- **Esc** stops Claude mid-response.
+- **⌘N** (or Ctrl+N) starts a new conversation.
+- **⌘B** (or Ctrl+B) toggles the sidebar.
+- Click the folder path at the top of the chat to change which folder Claude is working in.
+- Claude's responses include **syntax-highlighted code blocks** with a copy button.
+- **Tool calls** (file reads, shell commands, etc.) appear as collapsible blocks — click to see details.
+- Conversations auto-save and persist across restarts.
+- Use the **light/dark mode toggle** in the sidebar.
 
-### Setting a Working Directory
+## Important to Know
 
-By default, Claude works in the directory where the server was started. To change this:
+Claude runs with full permissions in whatever folder you point it at. It can read, create, edit, and delete files, and run any shell command. This is by design — it makes for a smooth coding experience — but be aware of it.
 
-1. Click the **...** button next to the **+** button in the sidebar.
-2. A text field appears — type the full path to the directory you want Claude to work in (e.g., `/Users/you/projects/my-app`).
-3. Click **+** to create the conversation with that working directory.
-
-This is important because Claude's file tools (Read, Edit, Bash, etc.) operate relative to this directory.
-
-### Sending Messages
-
-- **Enter** sends your message.
-- **Shift+Enter** inserts a newline (for multi-line messages).
-- While Claude is responding, a **Stop** button appears to cancel the current request.
-
-### Reading Responses
-
-- Claude's responses render as **Markdown** — headings, lists, bold, links, tables all display properly.
-- **Code blocks** have syntax highlighting and a **Copy** button in the top-right corner.
-- **Tool calls** (when Claude reads files, runs commands, etc.) appear as collapsible blocks. Click them to see the input and output.
-
-### Managing Conversations
-
-- Click any conversation in the sidebar to switch to it.
-- Hover over a conversation and click **×** to delete it.
-- Conversation history is saved automatically and persists across browser refreshes and server restarts.
-
-## FAQ
-
-### Where is my data stored?
-
-Conversations are saved as JSON files in the `data/conversations/` folder inside the project directory. Each conversation is one file. You can back them up, delete them manually, or move them.
-
-### Can Claude edit files on my computer?
-
-Yes. The app runs with `permissionMode: "acceptEdits"`, which means Claude can read, write, and edit files in the working directory without asking for confirmation. It can also run shell commands. This is by design for a smooth coding experience, but be aware of it.
-
-### What tools does Claude have access to?
+## Available Tools
 
 | Tool | What it does |
 |------|-------------|
@@ -93,57 +71,40 @@ Yes. The app runs with `permissionMode: "acceptEdits"`, which means Claude can r
 | Write | Create new files |
 | Edit | Make precise edits to existing files |
 | Bash | Run shell commands |
-| Glob | Find files by pattern |
+| Glob | Find files by name pattern |
 | Grep | Search file contents |
 | WebSearch | Search the web |
 | WebFetch | Fetch and read web pages |
 
-### What model does it use?
+## Troubleshooting
 
-It uses whatever model the Claude Agent SDK defaults to (currently Claude's most capable model). You can change this by modifying `server/agent-session.ts` and adding `model: "claude-sonnet-4-6"` (or another model ID) to the options.
+**The server won't start** — Make sure port 3001 isn't in use (`lsof -i :3001`) and your API key is set (`echo $ANTHROPIC_API_KEY`).
 
-### The server won't start / I see connection errors
+**Messages aren't sending** — Check the terminal for errors. Verify your API key is valid and has credits.
 
-- Make sure port 3001 is not already in use: `lsof -i :3001`
-- Make sure your `ANTHROPIC_API_KEY` is set: `echo $ANTHROPIC_API_KEY`
-- Check the terminal where `npm run dev` is running for error messages.
+**How do I stop it?** — Press Ctrl+C in the terminal.
 
-### The page loads but nothing happens when I send a message
+## Where Is My Data?
 
-- Open browser DevTools (F12) → Console tab. Look for errors.
-- Check the terminal running the server for errors.
-- Verify your API key is valid and has available credits.
-
-### Can I use this with a proxy or VPN?
-
-If you need to route API calls through a proxy, set the standard environment variables before starting:
-
-```bash
-export HTTPS_PROXY=http://your-proxy:port
-npm run dev
-```
-
-### How do I stop the app?
-
-Press **Ctrl+C** in the terminal where `npm run dev` is running. This stops both the frontend and backend.
+Conversations are saved as JSON files in `data/conversations/`. You can back them up or delete them. They're gitignored so they won't be committed.
 
 ## Project Structure
 
 ```
 claude-code-gui/
-├── server/                  # Backend (Express + Agent SDK)
-│   ├── index.ts             # HTTP routes and SSE streaming
-│   ├── agent-session.ts     # Wraps the Claude Agent SDK
-│   ├── conversation-store.ts# JSON file persistence
-│   ├── session-manager.ts   # Tracks active sessions
+├── server/                  # Backend (Express + Claude Agent SDK)
+│   ├── index.ts             # API routes and SSE streaming
+│   ├── agent-session.ts     # Claude Agent SDK wrapper
+│   ├── conversation-store.ts# Conversation persistence
+│   ├── session-manager.ts   # Active session tracking
 │   └── types.ts
-├── src/                     # Frontend (React + Vite)
-│   ├── App.tsx              # Main layout
-│   ├── App.css              # Dark theme styles
+├── src/                     # Frontend (React + Vite + TypeScript)
+│   ├── App.tsx
+│   ├── App.css
 │   ├── components/          # UI components
 │   ├── hooks/               # React hooks
 │   ├── types/               # TypeScript types
-│   └── utils/               # SSE helper
+│   └── utils/               # Helpers
 ├── data/conversations/      # Saved conversations (gitignored)
 ├── package.json
 ├── vite.config.ts
