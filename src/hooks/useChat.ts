@@ -8,7 +8,10 @@ const EMPTY_STREAMING: StreamingState = {
   toolCalls: [],
 };
 
-export function useChat(conversationId: string | null) {
+export function useChat(
+  conversationId: string | null,
+  onTitleUpdate?: (title: string) => void,
+) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, setStreaming] = useState<StreamingState>(EMPTY_STREAMING);
   const esRef = useRef<EventSource | null>(null);
@@ -124,6 +127,12 @@ export function useChat(conversationId: string | null) {
               text: prev.text + data.content,
             }));
           }
+          break;
+        }
+
+        case "title_updated": {
+          const { title } = event.data as { title: string };
+          onTitleUpdate?.(title);
           break;
         }
       }

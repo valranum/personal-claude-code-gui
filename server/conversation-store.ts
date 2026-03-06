@@ -66,15 +66,6 @@ export function addMessage(id: string, message: ChatMessage): void {
   if (!file) return;
   file.messages.push(message);
   file.conversation.updatedAt = new Date().toISOString();
-  if (
-    file.messages.filter((m) => m.role === "user").length === 1 &&
-    message.role === "user" &&
-    file.conversation.title === "New Chat"
-  ) {
-    file.conversation.title =
-      message.content.slice(0, 60) +
-      (message.content.length > 60 ? "..." : "");
-  }
   fs.writeFileSync(filePath(id), JSON.stringify(file, null, 2));
 }
 

@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Sidebar } from "./components/Sidebar";
 import { ChatView } from "./components/ChatView";
+import { WelcomeScreen } from "./components/WelcomeScreen";
 import { useConversations } from "./hooks/useConversations";
 
 export function App() {
@@ -11,6 +12,8 @@ export function App() {
     createConversation,
     deleteConversation,
     renameConversation,
+    updateConversationCwd,
+    updateLocalTitle,
   } = useConversations();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -19,6 +22,11 @@ export function App() {
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     return (localStorage.getItem("theme") as "dark" | "light") || "dark";
   });
+
+  const activeConversation = useMemo(
+    () => conversations.find((c) => c.id === activeId) ?? null,
+    [conversations, activeId],
+  );
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -57,7 +65,6 @@ export function App() {
     };
   }, [isResizing, handleMouseMove, handleMouseUp]);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMod = e.metaKey || e.ctrlKey;
@@ -73,6 +80,13 @@ export function App() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [createConversation]);
+
+  const handleOpenFolder = useCallback(
+    (cwd: string) => {
+      createConversation(cwd);
+    },
+    [createConversation],
+  );
 
   return (
     <div className="app">
@@ -95,11 +109,22 @@ export function App() {
           onMouseDown={() => setIsResizing(true)}
         />
       )}
-      <ChatView
-        conversationId={activeId}
-        onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
-        sidebarCollapsed={sidebarCollapsed}
-      />
+      {activeConversation ? (
+        <ChatView
+          conversationId={activeId}
+          conversation={activeConversation}
+          onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
+          sidebarCollapsed={sidebarCollapsed}
+          onChangeCwd={updateConversationCwd}
+          onTitleUpdate={updateLocalTitle}
+        />
+      ) : (
+        <WelcomeScreen
+          onOpenFolder={handleOpenFolder}
+          sidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
+        />
+      )}
     </div>
   );
 }

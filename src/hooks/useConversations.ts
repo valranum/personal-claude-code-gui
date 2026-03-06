@@ -19,17 +19,6 @@ export function useConversations() {
         setConversations(convs);
         if (convs.length > 0) {
           setActiveId(convs[0].id);
-        } else {
-          fetch("/api/conversations", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({}),
-          })
-            .then((r) => r.json())
-            .then((conv: Conversation) => {
-              setConversations([conv]);
-              setActiveId(conv.id);
-            });
         }
       })
       .catch(() => setConversations([]));
@@ -73,6 +62,30 @@ export function useConversations() {
     [],
   );
 
+  const updateConversationCwd = useCallback(
+    async (id: string, cwd: string) => {
+      const res = await fetch(`/api/conversations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cwd }),
+      });
+      const updated: Conversation = await res.json();
+      setConversations((prev) =>
+        prev.map((c) => (c.id === id ? updated : c)),
+      );
+    },
+    [],
+  );
+
+  const updateLocalTitle = useCallback(
+    (id: string, title: string) => {
+      setConversations((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, title } : c)),
+      );
+    },
+    [],
+  );
+
   return {
     conversations,
     activeId,
@@ -80,6 +93,8 @@ export function useConversations() {
     createConversation,
     deleteConversation,
     renameConversation,
+    updateConversationCwd,
+    updateLocalTitle,
     refresh,
   };
 }

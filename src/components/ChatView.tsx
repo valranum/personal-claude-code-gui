@@ -1,34 +1,41 @@
 import { useChat } from "../hooks/useChat";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
+import { WorkspaceBar } from "./WorkspaceBar";
+import { Conversation } from "../types";
 
 interface ChatViewProps {
   conversationId: string | null;
+  conversation: Conversation | null;
   onToggleSidebar: () => void;
   sidebarCollapsed: boolean;
+  onChangeCwd: (id: string, cwd: string) => void;
+  onTitleUpdate: (conversationId: string, title: string) => void;
 }
 
 export function ChatView({
   conversationId,
+  conversation,
   onToggleSidebar,
   sidebarCollapsed,
+  onChangeCwd,
+  onTitleUpdate,
 }: ChatViewProps) {
-  const { messages, streaming, sendMessage, abort, retry } =
-    useChat(conversationId);
+  const { messages, streaming, sendMessage, abort, retry } = useChat(
+    conversationId,
+    (title) => {
+      if (conversationId) onTitleUpdate(conversationId, title);
+    },
+  );
 
   return (
     <div className="chat-view">
-      {sidebarCollapsed && (
-        <button
-          className="mobile-menu-btn"
-          onClick={onToggleSidebar}
-          title="Show sidebar (⌘B)"
-        >
-          <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-            <path d="M2 4H14M2 8H14M2 12H14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-        </button>
-      )}
+      <WorkspaceBar
+        conversation={conversation}
+        onChangeCwd={onChangeCwd}
+        sidebarCollapsed={sidebarCollapsed}
+        onToggleSidebar={onToggleSidebar}
+      />
       <MessageList
         messages={messages}
         streaming={streaming}
