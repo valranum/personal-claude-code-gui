@@ -15,8 +15,8 @@ interface MessageListProps {
 const SUGGESTED_PROMPTS = [
   { label: "Summarize this project", prompt: "Read the project structure and give me a concise summary of what this codebase does." },
   { label: "Find TODOs", prompt: "Search the codebase for all TODO and FIXME comments and list them." },
-  { label: "Explain the architecture", prompt: "Read the main source files and explain the architecture of this project." },
-  { label: "Run the tests", prompt: "Find and run the test suite, then report the results." },
+  { label: "Check my code for bugs", prompt: "Review the codebase for potential bugs, edge cases, or issues and report what you find." },
+  { label: "Suggest a new feature", prompt: "Analyze this project and suggest useful features or improvements that could be added." },
 ];
 
 export function MessageList({ messages, streaming, onRetry, onSendPrompt }: MessageListProps) {

@@ -3,6 +3,7 @@ import cors from "cors";
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { execFile } from "child_process";
 import { randomUUID } from "crypto";
 import * as store from "./conversation-store.js";
 import * as sessionManager from "./session-manager.js";
@@ -84,6 +85,20 @@ app.get("/api/browse", (req, res) => {
   } catch {
     res.json({ parent: resolved, dirs: [] });
   }
+});
+
+// Native OS folder picker dialog
+app.post("/api/pick-folder", (_req, res) => {
+  const script =
+    'set f to POSIX path of (choose folder with prompt "Choose a project folder")\nreturn f';
+  execFile("osascript", ["-e", script], (err, stdout) => {
+    if (err) {
+      res.json({ cancelled: true, path: null });
+      return;
+    }
+    const picked = stdout.trim().replace(/\/$/, "");
+    res.json({ cancelled: false, path: picked });
+  });
 });
 
 // List conversations
