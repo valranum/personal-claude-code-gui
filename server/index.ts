@@ -26,6 +26,21 @@ app.post("/api/conversations", (req, res) => {
   res.json(file.conversation);
 });
 
+// Update conversation (rename, etc.)
+app.patch("/api/conversations/:id", (req, res) => {
+  const { title } = req.body;
+  const conv = store.getConversation(req.params.id);
+  if (!conv) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  if (title !== undefined) {
+    store.updateConversation(req.params.id, { title });
+  }
+  const updated = store.getConversation(req.params.id);
+  res.json(updated!.conversation);
+});
+
 // Delete conversation
 app.delete("/api/conversations/:id", (req, res) => {
   sessionManager.removeSession(req.params.id);

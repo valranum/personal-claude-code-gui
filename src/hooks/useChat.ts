@@ -14,7 +14,6 @@ export function useChat(conversationId: string | null) {
   const esRef = useRef<EventSource | null>(null);
   const toolCallsRef = useRef<ToolCallInfo[]>([]);
 
-  // Load messages when conversation changes
   useEffect(() => {
     if (!conversationId) {
       setMessages([]);
@@ -27,11 +26,9 @@ export function useChat(conversationId: string | null) {
       .catch(() => setMessages([]));
   }, [conversationId]);
 
-  // Connect SSE
   useEffect(() => {
     if (!conversationId) return;
 
-    // Close existing connection
     esRef.current?.close();
 
     const handleEvent = (event: SSEEvent) => {
@@ -89,7 +86,6 @@ export function useChat(conversationId: string | null) {
         case "done":
           setStreaming((prev) => {
             if (prev.isStreaming && prev.text) {
-              // If we accumulated text but never got a result event
               setMessages((msgs) => [
                 ...msgs,
                 {
@@ -121,7 +117,6 @@ export function useChat(conversationId: string | null) {
         }
 
         case "message": {
-          // Try to extract useful content from generic SDK messages
           const data = event.data as Record<string, unknown>;
           if (typeof data.content === "string") {
             setStreaming((prev) => ({
@@ -168,6 +163,30 @@ export function useChat(conversationId: string | null) {
     [conversationId, streaming.isStreaming],
   );
 
+  const retry = useCallback(async () => {
+    if (!conversationId || streaming.isStreaming) return;
+
+    setMessages((prev) => {
+      const lastUserIdx = prev.findLastIndex((m) => m.role === "user");
+      if (lastUserIdx === -1) return prev;
+
+      const lastUserMsg = prev[lastUserIdx];
+      const withoutLast = prev.slice(0, lastUserIdx);
+
+      setStreaming({ isStreaming: true, text: "", toolCalls: [] });
+      fetch(`/api/conversations/${conversationId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: lastUserMsg.content }),
+      });
+
+      return [
+        ...withoutLast,
+        { ...lastUserMsg, id: crypto.randomUUID(), timestamp: new Date().toISOString() },
+      ];
+    });
+  }, [conversationId, streaming.isStreaming]);
+
   const abort = useCallback(async () => {
     if (!conversationId) return;
     await fetch(`/api/conversations/${conversationId}/abort`, {
@@ -175,5 +194,5 @@ export function useChat(conversationId: string | null) {
     });
   }, [conversationId]);
 
-  return { messages, streaming, sendMessage, abort };
+  return { messages, streaming, sendMessage, abort, retry };
 }
