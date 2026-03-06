@@ -1,15 +1,20 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Conversation } from "../types";
 
-export function useConversations() {
+export function useConversations(onError?: (message: string) => void) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
 
   const refresh = useCallback(() => {
     fetch("/api/conversations")
       .then((r) => r.json())
       .then(setConversations)
-      .catch(() => setConversations([]));
+      .catch(() => {
+        setConversations([]);
+        onErrorRef.current?.("Failed to load conversations");
+      });
   }, []);
 
   useEffect(() => {
@@ -21,27 +26,38 @@ export function useConversations() {
           setActiveId(convs[0].id);
         }
       })
-      .catch(() => setConversations([]));
+      .catch(() => {
+        setConversations([]);
+        onErrorRef.current?.("Failed to load conversations");
+      });
   }, []);
 
   const createConversation = useCallback(async (cwd?: string) => {
-    const res = await fetch("/api/conversations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cwd }),
-    });
-    const conv: Conversation = await res.json();
-    setConversations((prev) => [conv, ...prev]);
-    setActiveId(conv.id);
-    return conv;
+    try {
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cwd }),
+      });
+      const conv: Conversation = await res.json();
+      setConversations((prev) => [conv, ...prev]);
+      setActiveId(conv.id);
+      return conv;
+    } catch {
+      onErrorRef.current?.("Failed to create conversation");
+    }
   }, []);
 
   const deleteConversation = useCallback(
     async (id: string) => {
-      await fetch(`/api/conversations/${id}`, { method: "DELETE" });
-      setConversations((prev) => prev.filter((c) => c.id !== id));
-      if (activeId === id) {
-        setActiveId(null);
+      try {
+        await fetch(`/api/conversations/${id}`, { method: "DELETE" });
+        setConversations((prev) => prev.filter((c) => c.id !== id));
+        if (activeId === id) {
+          setActiveId(null);
+        }
+      } catch {
+        onErrorRef.current?.("Failed to delete conversation");
       }
     },
     [activeId],
@@ -49,30 +65,38 @@ export function useConversations() {
 
   const renameConversation = useCallback(
     async (id: string, title: string) => {
-      const res = await fetch(`/api/conversations/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title }),
-      });
-      const updated: Conversation = await res.json();
-      setConversations((prev) =>
-        prev.map((c) => (c.id === id ? updated : c)),
-      );
+      try {
+        const res = await fetch(`/api/conversations/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title }),
+        });
+        const updated: Conversation = await res.json();
+        setConversations((prev) =>
+          prev.map((c) => (c.id === id ? updated : c)),
+        );
+      } catch {
+        onErrorRef.current?.("Failed to rename conversation");
+      }
     },
     [],
   );
 
   const updateConversationCwd = useCallback(
     async (id: string, cwd: string) => {
-      const res = await fetch(`/api/conversations/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cwd }),
-      });
-      const updated: Conversation = await res.json();
-      setConversations((prev) =>
-        prev.map((c) => (c.id === id ? updated : c)),
-      );
+      try {
+        const res = await fetch(`/api/conversations/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cwd }),
+        });
+        const updated: Conversation = await res.json();
+        setConversations((prev) =>
+          prev.map((c) => (c.id === id ? updated : c)),
+        );
+      } catch {
+        onErrorRef.current?.("Failed to update workspace");
+      }
     },
     [],
   );
@@ -88,15 +112,19 @@ export function useConversations() {
 
   const updateConversationModel = useCallback(
     async (id: string, model: string) => {
-      const res = await fetch(`/api/conversations/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model }),
-      });
-      const updated: Conversation = await res.json();
-      setConversations((prev) =>
-        prev.map((c) => (c.id === id ? updated : c)),
-      );
+      try {
+        const res = await fetch(`/api/conversations/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model }),
+        });
+        const updated: Conversation = await res.json();
+        setConversations((prev) =>
+          prev.map((c) => (c.id === id ? updated : c)),
+        );
+      } catch {
+        onErrorRef.current?.("Failed to update model");
+      }
     },
     [],
   );

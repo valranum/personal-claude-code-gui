@@ -8,14 +8,28 @@ const EMPTY_STREAMING: StreamingState = {
   toolCalls: [],
 };
 
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return n.toString();
+}
+
+function formatCost(cost: number): string {
+  if (cost < 0.005) return "<$0.01";
+  return `$${cost.toFixed(2)}`;
+}
+
 export function useChat(
   conversationId: string | null,
   onTitleUpdate?: (title: string) => void,
+  onError?: (message: string) => void,
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, setStreaming] = useState<StreamingState>(EMPTY_STREAMING);
   const esRef = useRef<EventSource | null>(null);
   const toolCallsRef = useRef<ToolCallInfo[]>([]);
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
 
   useEffect(() => {
     if (!conversationId) {
@@ -26,7 +40,10 @@ export function useChat(
     fetch(`/api/conversations/${conversationId}/messages`)
       .then((r) => r.json())
       .then(setMessages)
-      .catch(() => setMessages([]));
+      .catch(() => {
+        setMessages([]);
+        onErrorRef.current?.("Failed to load messages");
+      });
   }, [conversationId]);
 
   useEffect(() => {
@@ -111,6 +128,7 @@ export function useChat(
         case "error": {
           const errMsg =
             (event.data as { message?: string }).message || "An error occurred";
+          onErrorRef.current?.(errMsg);
           setStreaming((prev) => ({
             ...prev,
             isStreaming: false,
@@ -154,6 +172,65 @@ export function useChat(
     async (content: string, images?: ImageAttachment[]) => {
       if (!conversationId || streaming.isStreaming) return;
 
+      if (content.trim() === "/clear") {
+        try {
+          await fetch(`/api/conversations/${conversationId}/clear`, { method: "POST" });
+          setMessages([]);
+        } catch {
+          onErrorRef.current?.("Failed to clear conversation");
+        }
+        return;
+      }
+      if (content.trim() === "/compact") {
+        setStreaming({ isStreaming: true, text: "", toolCalls: [] });
+        try {
+          const res = await fetch(`/api/conversations/${conversationId}/compact`, { method: "POST" });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+          const reloaded = await fetch(`/api/conversations/${conversationId}/messages`);
+          const msgs = await reloaded.json();
+          setMessages(msgs);
+        } catch {
+          onErrorRef.current?.("Failed to compact conversation");
+        } finally {
+          setStreaming(EMPTY_STREAMING);
+        }
+        return;
+      }
+      if (content.trim().startsWith("/usage")) {
+        const arg = content.trim().split(/\s+/)[1] || "";
+        const customDays = parseInt(arg, 10);
+        const isCustom = !isNaN(customDays) && customDays > 0;
+        const scope = arg === "week" || arg === "month" || isCustom ? "range" : "conversation";
+        try {
+          const params = new URLSearchParams();
+          if (scope === "conversation") {
+            params.set("scope", "conversation");
+            params.set("id", conversationId);
+          } else {
+            params.set("scope", arg === "week" ? "week" : arg === "month" ? "month" : "week");
+            if (isCustom) params.set("days", String(customDays));
+          }
+          const res = await fetch(`/api/usage?${params}`);
+          const data = await res.json();
+          const label = isCustom
+            ? `Past ${customDays} day${customDays === 1 ? "" : "s"}`
+            : arg === "week" ? "Past 7 days"
+            : arg === "month" ? "Past 30 days"
+            : "This conversation";
+          const systemMsg: ChatMessage = {
+            id: crypto.randomUUID(),
+            role: "system",
+            content: `**${label}** — ${formatTokens(data.inputTokens)} input tokens · ${formatTokens(data.outputTokens)} output tokens · ${formatCost(data.estimatedCost)}`,
+            timestamp: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, systemMsg]);
+        } catch {
+          onErrorRef.current?.("Failed to fetch usage data");
+        }
+        return;
+      }
+
       const userMsg: ChatMessage = {
         id: crypto.randomUUID(),
         role: "user",
@@ -164,11 +241,15 @@ export function useChat(
       setMessages((prev) => [...prev, userMsg]);
       setStreaming({ isStreaming: true, text: "", toolCalls: [] });
 
-      await fetch(`/api/conversations/${conversationId}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, images }),
-      });
+      try {
+        await fetch(`/api/conversations/${conversationId}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content, images }),
+        });
+      } catch {
+        onErrorRef.current?.("Failed to send message");
+      }
     },
     [conversationId, streaming.isStreaming],
   );
@@ -188,6 +269,8 @@ export function useChat(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: lastUserMsg.content }),
+      }).catch(() => {
+        onErrorRef.current?.("Failed to retry message");
       });
 
       return [
@@ -199,9 +282,13 @@ export function useChat(
 
   const abort = useCallback(async () => {
     if (!conversationId) return;
-    await fetch(`/api/conversations/${conversationId}/abort`, {
-      method: "POST",
-    });
+    try {
+      await fetch(`/api/conversations/${conversationId}/abort`, {
+        method: "POST",
+      });
+    } catch {
+      onErrorRef.current?.("Failed to abort");
+    }
   }, [conversationId]);
 
   return { messages, streaming, sendMessage, abort, retry };

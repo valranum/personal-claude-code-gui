@@ -19,6 +19,18 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  if (message.role === "system") {
+    return (
+      <div className="message-bubble system msg-enter">
+        <div className="system-message-content">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {message.content}
+          </ReactMarkdown>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`message-bubble ${message.role} msg-enter`}>
       <div className={`message-avatar ${message.role}-avatar`}>

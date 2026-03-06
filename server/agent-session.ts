@@ -1,6 +1,13 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { EventEmitter } from "events";
-import { ImageAttachment, ToolCallInfo } from "./types.js";
+import { ImageAttachment, ToolCallInfo, TokenUsage } from "./types.js";
+
+const COST_PER_MILLION: Record<string, { input: number; output: number }> = {
+  "claude-opus-4-6": { input: 15, output: 75 },
+  "claude-sonnet-4-6": { input: 3, output: 15 },
+  "claude-sonnet-4-20250514": { input: 3, output: 15 },
+  "claude-haiku-4-5-20251001": { input: 1, output: 5 },
+};
 
 export class AgentSession {
   conversationId: string;
@@ -20,10 +27,11 @@ export class AgentSession {
     this.events.setMaxListeners(20);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private buildPrompt(
     content: string,
     images?: ImageAttachment[],
-  ): string | AsyncIterable<unknown> {
+  ): any {
     if (!images || images.length === 0) {
       return content;
     }
@@ -60,7 +68,7 @@ export class AgentSession {
   async sendMessage(
     content: string,
     images?: ImageAttachment[],
-  ): Promise<{ text: string; toolCalls: ToolCallInfo[] }> {
+  ): Promise<{ text: string; toolCalls: ToolCallInfo[]; tokenUsage: TokenUsage }> {
     if (this.isRunning) {
       throw new Error("Agent is already processing a message");
     }
@@ -68,6 +76,8 @@ export class AgentSession {
 
     let resultText = "";
     const toolCalls: ToolCallInfo[] = [];
+    let totalInput = 0;
+    let totalOutput = 0;
 
     this.abortController = new AbortController();
 
@@ -100,21 +110,32 @@ export class AgentSession {
       for await (const message of query({ prompt, options })) {
         const msg = message as Record<string, unknown>;
 
-        // Capture session ID from init message
+        // Accumulate token usage from any message that carries it
+        const usage = msg.usage as Record<string, number> | undefined;
+        if (usage) {
+          totalInput += usage.input_tokens || 0;
+          totalOutput += usage.output_tokens || 0;
+        }
+        // Some SDK versions nest usage in message.message.usage
+        const innerMsg = msg.message as Record<string, unknown> | undefined;
+        const innerUsage = innerMsg?.usage as Record<string, number> | undefined;
+        if (innerUsage) {
+          totalInput += innerUsage.input_tokens || 0;
+          totalOutput += innerUsage.output_tokens || 0;
+        }
+
         if (msg.type === "system" && msg.subtype === "init") {
           this.sessionId = msg.session_id as string;
           this.emit("init", { sessionId: this.sessionId });
           continue;
         }
 
-        // Final result
         if ("result" in msg && typeof msg.result === "string") {
           resultText = msg.result;
           this.emit("result", { text: resultText });
           continue;
         }
 
-        // Try to detect tool use messages
         if (msg.type === "tool_use" || msg.tool_name) {
           const tc: ToolCallInfo = {
             id: (msg.id as string) || crypto.randomUUID(),
@@ -127,7 +148,6 @@ export class AgentSession {
           continue;
         }
 
-        // Try to detect tool results
         if (msg.type === "tool_result") {
           const toolId = msg.tool_use_id as string;
           const tc = toolCalls.find((t) => t.id === toolId);
@@ -145,7 +165,6 @@ export class AgentSession {
           continue;
         }
 
-        // Forward any other message types
         this.emit("message", msg);
       }
     } catch (error: unknown) {
@@ -155,10 +174,20 @@ export class AgentSession {
     } finally {
       this.abortController = null;
       this.isRunning = false;
-      this.emit("done", {});
     }
 
-    return { text: resultText, toolCalls };
+    const rates = COST_PER_MILLION[this.model] || { input: 3, output: 15 };
+    const tokenUsage: TokenUsage = {
+      inputTokens: totalInput,
+      outputTokens: totalOutput,
+      estimatedCost:
+        (totalInput * rates.input + totalOutput * rates.output) / 1_000_000,
+    };
+
+    this.emit("usage", tokenUsage);
+    this.emit("done", {});
+
+    return { text: resultText, toolCalls, tokenUsage };
   }
 
   abort(): void {

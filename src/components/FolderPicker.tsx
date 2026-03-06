@@ -35,7 +35,7 @@ export function FolderPicker({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const fetchTimer = useRef<ReturnType<typeof setTimeout>>();
+  const fetchTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     if (autoFocus && inputRef.current) {

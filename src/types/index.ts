@@ -16,7 +16,7 @@ export interface ImageAttachment {
 
 export interface ChatMessage {
   id: string;
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "system";
   content: string;
   images?: ImageAttachment[];
   toolCalls?: ToolCallInfo[];
@@ -29,6 +29,12 @@ export interface ToolCallInfo {
   input: Record<string, unknown>;
   output?: string;
   status: "running" | "done" | "error";
+}
+
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCost: number;
 }
 
 export interface StreamingState {

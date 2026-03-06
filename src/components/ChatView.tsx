@@ -1,4 +1,5 @@
 import { useChat } from "../hooks/useChat";
+import { useToast } from "../hooks/useToast";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
 import { WorkspaceBar } from "./WorkspaceBar";
@@ -23,11 +24,13 @@ export function ChatView({
   onChangeModel,
   onTitleUpdate,
 }: ChatViewProps) {
+  const { addToast } = useToast();
   const { messages, streaming, sendMessage, abort, retry } = useChat(
     conversationId,
     (title) => {
       if (conversationId) onTitleUpdate(conversationId, title);
     },
+    (msg) => addToast(msg, "error"),
   );
 
   return (

@@ -28,7 +28,15 @@ async function generateTitle(
   assistantMessage: string,
 ): Promise<string> {
   try {
-    const prompt = `Generate a very short title (3-6 words, no quotes) summarizing this conversation:\n\nUser: ${userMessage.slice(0, 300)}\nAssistant: ${assistantMessage.slice(0, 300)}`;
+    const prompt = [
+      "INSTRUCTION: Output ONLY a 3-6 word title. No explanation, no quotes, no preamble. Just the title itself.",
+      "",
+      `User message: ${userMessage.slice(0, 200)}`,
+      `Assistant response: ${assistantMessage.slice(0, 200)}`,
+      "",
+      "Title:",
+    ].join("\n");
+
     let resultText = "";
     for await (const msg of query({
       prompt,
@@ -44,7 +52,13 @@ async function generateTitle(
         break;
       }
     }
-    const title = resultText.trim().replace(/^["']|["']$/g, "");
+
+    let title = resultText.trim();
+    title = title.replace(/^["']|["']$/g, "");
+    title = title.replace(/^(here'?s?\s*(a\s*)?|title:\s*|sure[,!]?\s*)/i, "");
+    title = title.split("\n")[0].trim();
+    if (title.length > 60) title = title.slice(0, 57) + "...";
+
     return title || userMessage.slice(0, 50);
   } catch (err) {
     console.error("Title generation failed:", err);
@@ -257,7 +271,7 @@ app.post("/api/conversations/:id/messages", (req, res) => {
     convFile.messages.filter((m) => m.role === "user").length === 0;
 
   // Run agent in background — events stream via SSE
-  session.sendMessage(content, images).then(async ({ text, toolCalls }) => {
+  session.sendMessage(content, images).then(async ({ text, toolCalls, tokenUsage }) => {
     if (text) {
       const assistantMsg: ChatMessage = {
         id: randomUUID(),
@@ -278,6 +292,19 @@ app.post("/api/conversations/:id/messages", (req, res) => {
         });
       }
     }
+
+    // Accumulate token usage
+    if (tokenUsage && (tokenUsage.inputTokens > 0 || tokenUsage.outputTokens > 0)) {
+      const current = store.getConversation(req.params.id);
+      const prev = current?.conversation.tokenUsage;
+      store.updateConversation(req.params.id, {
+        tokenUsage: {
+          inputTokens: (prev?.inputTokens || 0) + tokenUsage.inputTokens,
+          outputTokens: (prev?.outputTokens || 0) + tokenUsage.outputTokens,
+          estimatedCost: (prev?.estimatedCost || 0) + tokenUsage.estimatedCost,
+        },
+      });
+    }
   });
 
   res.json({ ok: true, message: userMsg });
@@ -288,6 +315,108 @@ app.post("/api/conversations/:id/abort", (req, res) => {
   const session = sessionManager.getSession(req.params.id);
   if (session) session.abort();
   res.json({ ok: true });
+});
+
+// Clear conversation context
+app.post("/api/conversations/:id/clear", (req, res) => {
+  const convFile = store.getConversation(req.params.id);
+  if (!convFile) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  sessionManager.removeSession(req.params.id);
+  store.updateConversation(req.params.id, { sdkSessionId: undefined });
+
+  const file = store.getConversation(req.params.id);
+  if (file) {
+    file.messages = [];
+    const fp = path.join(process.cwd(), "data", "conversations", `${req.params.id}.json`);
+    fs.writeFileSync(fp, JSON.stringify(file, null, 2));
+  }
+
+  res.json({ ok: true });
+});
+
+// Compact conversation context
+app.post("/api/conversations/:id/compact", async (req, res) => {
+  const convFile = store.getConversation(req.params.id);
+  if (!convFile) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  const session = sessionManager.getOrCreateSession(
+    req.params.id,
+    convFile.conversation.cwd,
+    convFile.conversation.model || DEFAULT_MODEL,
+    convFile.conversation.sdkSessionId,
+  );
+
+  try {
+    const { text } = await session.sendMessage(
+      "Please provide a concise summary of our entire conversation so far. Include all key decisions, file changes, and current state. This summary will be used to compact the conversation context.",
+    );
+
+    sessionManager.removeSession(req.params.id);
+    store.updateConversation(req.params.id, { sdkSessionId: undefined });
+
+    const file = store.getConversation(req.params.id);
+    if (file) {
+      const now = new Date().toISOString();
+      file.messages = [
+        {
+          id: randomUUID(),
+          role: "assistant",
+          content: `**Context Summary (compacted):**\n\n${text}`,
+          timestamp: now,
+        },
+      ];
+      const fp = path.join(process.cwd(), "data", "conversations", `${req.params.id}.json`);
+      fs.writeFileSync(fp, JSON.stringify(file, null, 2));
+    }
+
+    res.json({ ok: true, summary: text });
+  } catch (err) {
+    console.error("Compact failed:", err);
+    res.status(500).json({ error: "Failed to compact conversation" });
+  }
+});
+
+// Usage endpoint
+app.get("/api/usage", (req, res) => {
+  const scope = (req.query.scope as string) || "conversation";
+  const convId = req.query.id as string | undefined;
+
+  if (scope === "conversation") {
+    if (!convId) {
+      res.status(400).json({ error: "Missing conversation id" });
+      return;
+    }
+    const file = store.getConversation(convId);
+    if (!file) {
+      res.status(404).json({ error: "Conversation not found" });
+      return;
+    }
+    const usage = file.conversation.tokenUsage || { inputTokens: 0, outputTokens: 0, estimatedCost: 0 };
+    res.json(usage);
+    return;
+  }
+
+  const daysParam = req.query.days as string | undefined;
+  const days = daysParam ? parseInt(daysParam, 10) : (scope === "week" ? 7 : 30);
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+  const all = store.listConversations();
+
+  const totals = { inputTokens: 0, outputTokens: 0, estimatedCost: 0 };
+  for (const conv of all) {
+    if (new Date(conv.updatedAt).getTime() >= cutoff && conv.tokenUsage) {
+      totals.inputTokens += conv.tokenUsage.inputTokens;
+      totals.outputTokens += conv.tokenUsage.outputTokens;
+      totals.estimatedCost += conv.tokenUsage.estimatedCost;
+    }
+  }
+  res.json(totals);
 });
 
 const PORT = 3001;

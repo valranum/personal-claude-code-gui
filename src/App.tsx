@@ -2,9 +2,25 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { Sidebar } from "./components/Sidebar";
 import { ChatView } from "./components/ChatView";
 import { WelcomeScreen } from "./components/WelcomeScreen";
+import { CommandPalette } from "./components/CommandPalette";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ToastContainer } from "./components/ToastContainer";
+import { ToastProvider, useToast } from "./hooks/useToast";
 import { useConversations } from "./hooks/useConversations";
 
 export function App() {
+  return (
+    <ToastProvider>
+      <ErrorBoundary>
+        <AppContent />
+      </ErrorBoundary>
+      <ToastContainer />
+    </ToastProvider>
+  );
+}
+
+function AppContent() {
+  const { addToast } = useToast();
   const {
     conversations,
     activeId,
@@ -15,7 +31,7 @@ export function App() {
     updateConversationCwd,
     updateConversationModel,
     updateLocalTitle,
-  } = useConversations();
+  } = useConversations((msg) => addToast(msg, "error"));
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(280);
@@ -77,56 +93,105 @@ export function App() {
         e.preventDefault();
         setSidebarCollapsed((c) => !c);
       }
+      if (isMod && e.key === "k") {
+        e.preventDefault();
+        setCommandPaletteOpen((o) => !o);
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [createConversation]);
 
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
   const handleOpenFolder = useCallback(
-    (cwd: string) => {
+    (cwd?: string) => {
       createConversation(cwd);
     },
     [createConversation],
   );
 
+  const handlePaletteChangeModel = useCallback(
+    (model: string) => {
+      if (activeId) updateConversationModel(activeId, model);
+    },
+    [activeId, updateConversationModel],
+  );
+
+  const handleClear = useCallback(async () => {
+    if (!activeId) return;
+    try {
+      await fetch(`/api/conversations/${activeId}/clear`, { method: "POST" });
+      window.location.reload();
+    } catch {
+      addToast("Failed to clear conversation", "error");
+    }
+  }, [activeId, addToast]);
+
+  const handleCompact = useCallback(async () => {
+    if (!activeId) return;
+    try {
+      const res = await fetch(`/api/conversations/${activeId}/compact`, { method: "POST" });
+      if (!res.ok) throw new Error();
+      window.location.reload();
+    } catch {
+      addToast("Failed to compact conversation", "error");
+    }
+  }, [activeId, addToast]);
+
   return (
-    <div className="app">
-      <Sidebar
+    <>
+      <div className="app">
+        <Sidebar
+          conversations={conversations}
+          activeId={activeId}
+          onSelect={setActiveId}
+          onCreate={createConversation}
+          onDelete={deleteConversation}
+          onRename={renameConversation}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
+          width={sidebarWidth}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+        />
+        {!sidebarCollapsed && (
+          <div
+            className="sidebar-resize-handle"
+            onMouseDown={() => setIsResizing(true)}
+          />
+        )}
+        {activeConversation ? (
+          <ChatView
+            conversationId={activeId}
+            conversation={activeConversation}
+            onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
+            sidebarCollapsed={sidebarCollapsed}
+            onChangeCwd={updateConversationCwd}
+            onChangeModel={updateConversationModel}
+            onTitleUpdate={updateLocalTitle}
+          />
+        ) : (
+          <WelcomeScreen
+            onOpenFolder={handleOpenFolder}
+            sidebarCollapsed={sidebarCollapsed}
+            onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
+          />
+        )}
+      </div>
+      <CommandPalette
+        open={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
         conversations={conversations}
         activeId={activeId}
-        onSelect={setActiveId}
-        onCreate={createConversation}
-        onDelete={deleteConversation}
-        onRename={renameConversation}
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
-        width={sidebarWidth}
-        theme={theme}
+        onNewConversation={createConversation}
+        onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
         onToggleTheme={toggleTheme}
+        onSelectConversation={setActiveId}
+        onChangeModel={handlePaletteChangeModel}
+        onClear={activeId ? handleClear : undefined}
+        onCompact={activeId ? handleCompact : undefined}
       />
-      {!sidebarCollapsed && (
-        <div
-          className="sidebar-resize-handle"
-          onMouseDown={() => setIsResizing(true)}
-        />
-      )}
-      {activeConversation ? (
-        <ChatView
-          conversationId={activeId}
-          conversation={activeConversation}
-          onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
-          sidebarCollapsed={sidebarCollapsed}
-          onChangeCwd={updateConversationCwd}
-          onChangeModel={updateConversationModel}
-          onTitleUpdate={updateLocalTitle}
-        />
-      ) : (
-        <WelcomeScreen
-          onOpenFolder={handleOpenFolder}
-          sidebarCollapsed={sidebarCollapsed}
-          onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
-        />
-      )}
-    </div>
+    </>
   );
 }

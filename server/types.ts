@@ -4,6 +4,7 @@ export interface Conversation {
   cwd: string;
   model: string;
   sdkSessionId?: string;
+  tokenUsage?: TokenUsage;
   createdAt: string;
   updatedAt: string;
 }
@@ -34,6 +35,12 @@ export interface ToolCallInfo {
 export interface ConversationFile {
   conversation: Conversation;
   messages: ChatMessage[];
+}
+
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCost: number;
 }
 
 export interface SSEEvent {

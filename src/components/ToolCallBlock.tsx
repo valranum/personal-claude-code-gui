@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { createPatch } from "diff";
 import { ToolCallInfo } from "../types";
+import { DiffViewer } from "./DiffViewer";
 
 interface ToolCallBlockProps {
   toolCall: ToolCallInfo;
@@ -70,11 +72,36 @@ function getToolSummary(toolCall: ToolCallInfo): string | null {
   return null;
 }
 
+function getDiffData(toolCall: ToolCallInfo): { patch: string; filePath: string } | null {
+  const n = toolCall.name.toLowerCase();
+  const input = toolCall.input;
+
+  if ((n === "edit" || n === "strreplace") && input.old_string && input.new_string && input.path) {
+    const oldStr = String(input.old_string);
+    const newStr = String(input.new_string);
+    const filePath = String(input.path);
+    const patch = createPatch(filePath, oldStr, newStr, "", "", { context: 3 });
+    const patchBody = patch.split("\n").slice(4).join("\n");
+    return { patch: patchBody, filePath };
+  }
+
+  if (n === "write" && input.contents && input.path) {
+    const content = String(input.contents);
+    const filePath = String(input.path);
+    const patch = createPatch(filePath, "", content, "", "", { context: 0 });
+    const patchBody = patch.split("\n").slice(4).join("\n");
+    return { patch: patchBody, filePath };
+  }
+
+  return null;
+}
+
 export function ToolCallBlock({ toolCall }: ToolCallBlockProps) {
   const [expanded, setExpanded] = useState(false);
 
   const statusClass = `tool-status-${toolCall.status}`;
   const summary = getToolSummary(toolCall);
+  const diffData = useMemo(() => getDiffData(toolCall), [toolCall]);
 
   return (
     <div className={`tool-call-block ${statusClass}`}>
@@ -104,17 +131,23 @@ export function ToolCallBlock({ toolCall }: ToolCallBlockProps) {
       </div>
       {expanded && (
         <div className="tool-call-body">
-          <div className="tool-section">
-            <div className="tool-section-label">Input</div>
-            <pre className="tool-json">
-              {JSON.stringify(toolCall.input, null, 2)}
-            </pre>
-          </div>
-          {toolCall.output && (
-            <div className="tool-section">
-              <div className="tool-section-label">Output</div>
-              <pre className="tool-json">{toolCall.output}</pre>
-            </div>
+          {diffData ? (
+            <DiffViewer patch={diffData.patch} filePath={diffData.filePath} />
+          ) : (
+            <>
+              <div className="tool-section">
+                <div className="tool-section-label">Input</div>
+                <pre className="tool-json">
+                  {JSON.stringify(toolCall.input, null, 2)}
+                </pre>
+              </div>
+              {toolCall.output && (
+                <div className="tool-section">
+                  <div className="tool-section-label">Output</div>
+                  <pre className="tool-json">{toolCall.output}</pre>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

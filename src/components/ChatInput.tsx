@@ -27,6 +27,12 @@ function readFileAsBase64(file: File): Promise<ImageAttachment> {
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
+const SLASH_COMMANDS = [
+  { command: "/clear", description: "Clear conversation history and reset context" },
+  { command: "/compact", description: "Summarize and compact the conversation" },
+  { command: "/usage", description: "Usage for this chat, or /usage week · month · 14" },
+];
+
 export function ChatInput({
   onSend,
   onAbort,
@@ -36,8 +42,11 @@ export function ChatInput({
   const [value, setValue] = useState("");
   const [images, setImages] = useState<ImageAttachment[]>([]);
   const [dragOver, setDragOver] = useState(false);
+  const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [slashActiveIdx, setSlashActiveIdx] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const slashMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -63,6 +72,27 @@ export function ChatInput({
     return () => window.removeEventListener("keydown", handler);
   }, [isStreaming, onAbort]);
 
+  const filteredCommands = value.startsWith("/")
+    ? SLASH_COMMANDS.filter((c) =>
+        c.command.toLowerCase().startsWith(value.toLowerCase()),
+      )
+    : [];
+
+  useEffect(() => {
+    const shouldShow = value.startsWith("/") && filteredCommands.length > 0 && !value.includes(" ");
+    setShowSlashMenu(shouldShow);
+    if (shouldShow) setSlashActiveIdx(0);
+  }, [value, filteredCommands.length]);
+
+  const selectSlashCommand = useCallback(
+    (cmd: string) => {
+      onSend(cmd);
+      setValue("");
+      setShowSlashMenu(false);
+    },
+    [onSend],
+  );
+
   const addFiles = useCallback(async (files: FileList | File[]) => {
     const validFiles = Array.from(files).filter((f) =>
       ACCEPTED_TYPES.includes(f.type),
@@ -73,6 +103,33 @@ export function ChatInput({
   }, []);
 
   const handleKeyDown = (e: KeyboardEvent) => {
+    if (showSlashMenu) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSlashActiveIdx((i) => (i + 1) % filteredCommands.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSlashActiveIdx(
+          (i) => (i - 1 + filteredCommands.length) % filteredCommands.length,
+        );
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        if (filteredCommands[slashActiveIdx]) {
+          selectSlashCommand(filteredCommands[slashActiveIdx].command);
+        }
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setShowSlashMenu(false);
+        return;
+      }
+    }
+
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -85,6 +142,7 @@ export function ChatInput({
     onSend(trimmed || "(image)", images.length > 0 ? images : undefined);
     setValue("");
     setImages([]);
+    setShowSlashMenu(false);
   };
 
   const handleDragOver = (e: DragEvent) => {
@@ -142,6 +200,24 @@ export function ChatInput({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
+        {showSlashMenu && (
+          <div className="slash-menu" ref={slashMenuRef}>
+            {filteredCommands.map((cmd, i) => (
+              <div
+                key={cmd.command}
+                className={`slash-menu-item ${i === slashActiveIdx ? "active" : ""}`}
+                onMouseEnter={() => setSlashActiveIdx(i)}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  selectSlashCommand(cmd.command);
+                }}
+              >
+                <span className="slash-menu-command">{cmd.command}</span>
+                <span className="slash-menu-desc">{cmd.description}</span>
+              </div>
+            ))}
+          </div>
+        )}
         {images.length > 0 && (
           <div className="image-preview-row">
             {images.map((img, i) => (
@@ -170,7 +246,7 @@ export function ChatInput({
           placeholder={
             disabled
               ? "Select or create a conversation..."
-              : "Message Claude... (Enter to send, Shift+Enter for newline)"
+              : "Message Claude..."
           }
           value={value}
           onChange={(e) => setValue(e.target.value)}
@@ -223,9 +299,6 @@ export function ChatInput({
             </button>
           )}
         </div>
-      </div>
-      <div className="chat-input-hint">
-        Enter to send · Shift+Enter for newline · Esc to stop · Drop or paste images
       </div>
     </div>
   );
