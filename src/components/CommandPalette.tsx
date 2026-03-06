@@ -21,6 +21,7 @@ interface CommandPaletteProps {
   onChangeModel: (model: string) => void;
   onClear?: () => void;
   onCompact?: () => void;
+  onShare?: () => void;
 }
 
 export function CommandPalette({
@@ -35,6 +36,7 @@ export function CommandPalette({
   onChangeModel,
   onClear,
   onCompact,
+  onShare,
 }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -126,6 +128,14 @@ export function CommandPalette({
               section: "actions" as const,
               action: () => window.open(`/api/conversations/${activeId}/export?format=json`, "_blank"),
             },
+            ...(onShare
+              ? [{
+                  id: "share",
+                  label: "Share Conversation",
+                  section: "actions" as const,
+                  action: onShare,
+                }]
+              : []),
           ]
         : []),
     ];

@@ -511,6 +511,135 @@ app.get("/api/conversations/:id/export", (req, res) => {
   }
 });
 
+// Share conversation (create a read-only snapshot)
+const SHARED_DIR = path.join(process.cwd(), "data", "shared");
+function ensureSharedDir() {
+  fs.mkdirSync(SHARED_DIR, { recursive: true });
+}
+
+app.post("/api/conversations/:id/share", (req, res) => {
+  const file = store.getConversation(req.params.id);
+  if (!file) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  ensureSharedDir();
+  const token = randomUUID().replace(/-/g, "").slice(0, 12);
+  const snapshot = {
+    token,
+    title: file.conversation.title,
+    model: file.conversation.model,
+    cwd: file.conversation.cwd,
+    createdAt: file.conversation.createdAt,
+    sharedAt: new Date().toISOString(),
+    messages: file.messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+      toolCalls: m.toolCalls,
+      timestamp: m.timestamp,
+    })),
+  };
+  fs.writeFileSync(
+    path.join(SHARED_DIR, `${token}.json`),
+    JSON.stringify(snapshot, null, 2),
+  );
+
+  const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+  const host = req.headers["x-forwarded-host"] || req.get("host");
+  const shareUrl = `${protocol}://${host}/shared/${token}`;
+
+  res.json({ token, url: shareUrl });
+});
+
+app.get("/shared/:token", (req, res) => {
+  ensureSharedDir();
+  const fp = path.join(SHARED_DIR, `${req.params.token}.json`);
+  if (!fs.existsSync(fp)) {
+    res.status(404).send("Shared conversation not found.");
+    return;
+  }
+
+  const snapshot = JSON.parse(fs.readFileSync(fp, "utf-8"));
+
+  const messagesHtml = snapshot.messages
+    .filter((m: { role: string }) => m.role === "user" || m.role === "assistant")
+    .map((m: { role: string; content: string; toolCalls?: { name: string; input: Record<string, unknown>; output?: string }[]; timestamp: string }) => {
+      const isUser = m.role === "user";
+      const avatar = isUser
+        ? `<div class="avatar user-av">You</div>`
+        : `<div class="avatar claude-av">C</div>`;
+      const escapedContent = escapeHtml(m.content);
+      const time = new Date(m.timestamp).toLocaleString();
+
+      let toolsHtml = "";
+      if (m.toolCalls && m.toolCalls.length > 0) {
+        toolsHtml = m.toolCalls.map((tc) => {
+          const inputStr = escapeHtml(JSON.stringify(tc.input, null, 2));
+          const outputStr = tc.output ? escapeHtml(tc.output.slice(0, 2000)) : "";
+          return `<details class="tool-detail"><summary>Tool: ${escapeHtml(tc.name)}</summary><pre>${inputStr}</pre>${outputStr ? `<p class="tool-out-label">Output:</p><pre>${outputStr}</pre>` : ""}</details>`;
+        }).join("");
+      }
+
+      return `<div class="msg ${isUser ? "msg-user" : "msg-assistant"}">${avatar}<div class="msg-body"><div class="msg-content">${escapedContent}</div>${toolsHtml}<div class="msg-time">${time}</div></div></div>`;
+    })
+    .join("\n");
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>${escapeHtml(snapshot.title)} — Shared</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0d1117;color:#e6edf3;line-height:1.6}
+.container{max-width:780px;margin:0 auto;padding:24px 20px 60px}
+header{border-bottom:1px solid #30363d;padding-bottom:16px;margin-bottom:24px}
+h1{font-size:1.4rem;font-weight:600;color:#f0f6fc}
+.meta{font-size:0.82rem;color:#8b949e;margin-top:6px;display:flex;gap:16px;flex-wrap:wrap}
+.msg{display:flex;gap:12px;margin-bottom:20px}
+.avatar{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
+.user-av{background:#1f6feb;color:#fff}
+.claude-av{background:#da7756;color:#fff}
+.msg-body{flex:1;min-width:0}
+.msg-content{white-space:pre-wrap;word-break:break-word;font-size:0.92rem}
+.msg-user .msg-content{color:#e6edf3}
+.msg-assistant .msg-content{color:#c9d1d9}
+.msg-time{font-size:0.72rem;color:#484f58;margin-top:4px}
+.tool-detail{margin:8px 0;border:1px solid #30363d;border-radius:6px;font-size:0.82rem}
+.tool-detail summary{padding:6px 10px;cursor:pointer;color:#8b949e;font-weight:500}
+.tool-detail pre{padding:10px;background:#161b22;border-radius:0 0 6px 6px;overflow-x:auto;font-size:0.78rem;color:#8b949e;max-height:200px;overflow-y:auto}
+.tool-out-label{padding:6px 10px 0;font-size:0.78rem;color:#8b949e;font-weight:600}
+.badge{display:inline-block;background:#30363d;padding:2px 8px;border-radius:10px;font-size:0.75rem;color:#8b949e}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+  <h1>${escapeHtml(snapshot.title)}</h1>
+  <div class="meta">
+    <span class="badge">${escapeHtml(snapshot.model)}</span>
+    <span>Shared ${new Date(snapshot.sharedAt).toLocaleDateString()}</span>
+  </div>
+</header>
+${messagesHtml}
+</div>
+</body>
+</html>`;
+
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.send(html);
+});
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 // Usage endpoint
 app.get("/api/usage", (req, res) => {
   const scope = (req.query.scope as string) || "conversation";

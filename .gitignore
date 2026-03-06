@@ -2,6 +2,7 @@ node_modules
 dist
 data/conversations/*
 !data/conversations/.gitkeep
+data/shared/
 .env*
 *.pem
 *.key

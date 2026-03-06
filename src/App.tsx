@@ -139,6 +139,19 @@ function AppContent() {
     }
   }, [activeId, addToast]);
 
+  const handleShare = useCallback(async () => {
+    if (!activeId) return;
+    try {
+      const res = await fetch(`/api/conversations/${activeId}/share`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      await navigator.clipboard.writeText(data.url);
+      addToast("Share link copied to clipboard!", "info");
+    } catch {
+      addToast("Failed to create share link", "error");
+    }
+  }, [activeId, addToast]);
+
   return (
     <>
       <div className="app">
@@ -191,6 +204,7 @@ function AppContent() {
         onChangeModel={handlePaletteChangeModel}
         onClear={activeId ? handleClear : undefined}
         onCompact={activeId ? handleCompact : undefined}
+        onShare={activeId ? handleShare : undefined}
       />
     </>
   );

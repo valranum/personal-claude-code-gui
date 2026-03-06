@@ -1,24 +1,41 @@
-import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChatMessage } from "../types";
-import { CodeBlock } from "./CodeBlock";
 import { ToolCallBlock } from "./ToolCallBlock";
 import { formatTimestamp } from "../utils/time";
 
 interface MessageBubbleProps {
   message: ChatMessage;
+  onOpenArtifact?: (language: string, code: string) => void;
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
-  const [copied, setCopied] = useState(false);
+function CodeCard({
+  language,
+  code,
+  onClick,
+}: {
+  language: string;
+  code: string;
+  onClick: () => void;
+}) {
+  const lines = code.split("\n");
+  const lineCount = lines.length;
+  const preview = lines[0]?.slice(0, 80) || "";
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(message.content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  return (
+    <button className="code-card" onClick={onClick} type="button">
+      <div className="code-card-header">
+        <span className="code-card-lang">{language}</span>
+        <span className="code-card-meta">{lineCount} line{lineCount !== 1 ? "s" : ""}</span>
+      </div>
+      <div className="code-card-preview">
+        <code>{preview}{preview.length < (lines[0]?.length ?? 0) ? "..." : ""}</code>
+      </div>
+    </button>
+  );
+}
 
+export function MessageBubble({ message, onOpenArtifact }: MessageBubbleProps) {
   if (message.role === "system") {
     return (
       <div className="message-bubble system msg-enter">
@@ -53,22 +70,6 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             {message.role === "user" ? "You" : "Claude"}
           </span>
           <span className="message-time">{formatTimestamp(message.timestamp)}</span>
-          <button
-            className={`message-copy-btn ${copied ? "copied" : ""}`}
-            onClick={handleCopy}
-            title="Copy message"
-          >
-            {copied ? (
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <path d="M3 8.5L6.5 12L13 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            ) : (
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M11 5V3.5C11 2.67 10.33 2 9.5 2H3.5C2.67 2 2 2.67 2 3.5V9.5C2 10.33 2.67 11 3.5 11H5" stroke="currentColor" strokeWidth="1.5"/>
-              </svg>
-            )}
-          </button>
         </div>
         {message.toolCalls && message.toolCalls.length > 0 && (
           <div className="message-tools">
@@ -104,11 +105,18 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                       </code>
                     );
                   }
-                  return (
-                    <CodeBlock language={match[1]}>
-                      {String(children).replace(/\n$/, "")}
-                    </CodeBlock>
-                  );
+                  const codeStr = String(children).replace(/\n$/, "");
+                  const lang = match[1];
+                  if (onOpenArtifact) {
+                    return (
+                      <CodeCard
+                        language={lang}
+                        code={codeStr}
+                        onClick={() => onOpenArtifact(lang, codeStr)}
+                      />
+                    );
+                  }
+                  return <pre><code className={className} {...props}>{children}</code></pre>;
                 },
               }}
             >
