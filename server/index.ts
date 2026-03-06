@@ -301,6 +301,7 @@ app.get("/api/conversations/:id/stream", (req, res) => {
   req.on("close", () => {
     session.events.off("event", onEvent);
     clearInterval(heartbeat);
+    session.abort();
   });
 });
 

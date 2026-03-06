@@ -33,6 +33,7 @@ export function useChat(
   const dismissedRef = useRef<Set<string>>(new Set());
   const esRef = useRef<EventSource | null>(null);
   const toolCallsRef = useRef<ToolCallInfo[]>([]);
+  const effectIdRef = useRef(0);
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
 
@@ -43,6 +44,8 @@ export function useChat(
       setShowCompactSuggestion(false);
       return;
     }
+    setMessages([]);
+    setStreaming(EMPTY_STREAMING);
     fetch(`/api/conversations/${conversationId}/messages`)
       .then((r) => r.json())
       .then((data: { messages: ChatMessage[]; lastTurnInputTokens: number }) => {
@@ -66,8 +69,11 @@ export function useChat(
     if (!conversationId) return;
 
     esRef.current?.close();
+    toolCallsRef.current = [];
+    const currentEffectId = ++effectIdRef.current;
 
     const handleEvent = (event: SSEEvent) => {
+      if (currentEffectId !== effectIdRef.current) return;
       switch (event.type) {
         case "processing":
           setStreaming({ isStreaming: true, text: "", toolCalls: [] });
