@@ -31,6 +31,7 @@ function AppContent() {
     updateConversationCwd,
     updateConversationModel,
     updateLocalTitle,
+    pinConversation,
   } = useConversations((msg) => addToast(msg, "error"));
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -139,6 +140,14 @@ function AppContent() {
     }
   }, [activeId, addToast]);
 
+  const updateSystemPrompt = useCallback((id: string, systemPrompt: string) => {
+    fetch(`/api/conversations/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ systemPrompt }),
+    }).catch(() => addToast("Failed to update system prompt", "error"));
+  }, [addToast]);
+
   const handleShare = useCallback(async () => {
     if (!activeId) return;
     try {
@@ -162,6 +171,7 @@ function AppContent() {
           onCreate={createConversation}
           onDelete={deleteConversation}
           onRename={renameConversation}
+          onPin={pinConversation}
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
           width={sidebarWidth}
@@ -182,6 +192,7 @@ function AppContent() {
             sidebarCollapsed={sidebarCollapsed}
             onChangeCwd={updateConversationCwd}
             onChangeModel={updateConversationModel}
+            onChangeSystemPrompt={updateSystemPrompt}
             onTitleUpdate={updateLocalTitle}
           />
         ) : (

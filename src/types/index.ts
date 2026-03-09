@@ -3,7 +3,9 @@ export interface Conversation {
   title: string;
   cwd: string;
   model: string;
+  systemPrompt?: string;
   sdkSessionId?: string;
+  pinned?: boolean;
   createdAt: string;
   updatedAt: string;
 }

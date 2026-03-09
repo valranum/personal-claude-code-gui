@@ -106,6 +106,40 @@ app.get("/api/browse", (req, res) => {
   }
 });
 
+// File tree listing for workspace explorer
+app.get("/api/filetree", (req, res) => {
+  const dirPath = req.query.path as string | undefined;
+  if (!dirPath) {
+    res.json([]);
+    return;
+  }
+
+  try {
+    const resolved = path.resolve(dirPath);
+    const entries = fs.readdirSync(resolved, { withFileTypes: true });
+    const results: { name: string; path: string; type: "file" | "directory" }[] = [];
+
+    for (const entry of entries) {
+      if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
+      results.push({
+        name: entry.name,
+        path: path.join(resolved, entry.name),
+        type: entry.isDirectory() ? "directory" : "file",
+      });
+      if (results.length >= 100) break;
+    }
+
+    results.sort((a, b) => {
+      if (a.type !== b.type) return a.type === "directory" ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    res.json(results);
+  } catch {
+    res.json([]);
+  }
+});
+
 // Native OS folder picker dialog
 app.post("/api/pick-folder", (_req, res) => {
   const script =
@@ -207,18 +241,19 @@ app.get("/api/conversations/search", (req, res) => {
 
 // Update conversation (rename, change cwd, change model, etc.)
 app.patch("/api/conversations/:id", (req, res) => {
-  const { title, cwd, model } = req.body;
+  const { title, cwd, model, pinned, systemPrompt } = req.body;
   const conv = store.getConversation(req.params.id);
   if (!conv) {
     res.status(404).json({ error: "Not found" });
     return;
   }
-  const updates: Record<string, string> = {};
+  const updates: Record<string, unknown> = {};
   if (title !== undefined) updates.title = title;
   if (cwd !== undefined) updates.cwd = cwd;
   if (model !== undefined) updates.model = model;
-  // Reset session if cwd or model changed so it picks up new settings
-  if (cwd !== undefined || model !== undefined) {
+  if (pinned !== undefined) updates.pinned = pinned;
+  if (systemPrompt !== undefined) updates.systemPrompt = systemPrompt;
+  if (cwd !== undefined || model !== undefined || systemPrompt !== undefined) {
     sessionManager.removeSession(req.params.id);
   }
   if (Object.keys(updates).length > 0) {
@@ -270,6 +305,7 @@ app.get("/api/conversations/:id/stream", (req, res) => {
     convFile.conversation.cwd,
     convFile.conversation.model || DEFAULT_MODEL,
     convFile.conversation.sdkSessionId,
+    convFile.conversation.systemPrompt,
   );
 
   const onEvent = (event: { type: string; data: unknown }) => {
@@ -331,6 +367,7 @@ app.post("/api/conversations/:id/messages", (req, res) => {
     convFile.conversation.cwd,
     convFile.conversation.model || DEFAULT_MODEL,
     convFile.conversation.sdkSessionId,
+    convFile.conversation.systemPrompt,
   );
 
   const isFirstMessage =

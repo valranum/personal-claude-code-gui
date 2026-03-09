@@ -110,6 +110,25 @@ export function useConversations(onError?: (message: string) => void) {
     [],
   );
 
+  const pinConversation = useCallback(
+    async (id: string, pinned: boolean) => {
+      try {
+        const res = await fetch(`/api/conversations/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pinned }),
+        });
+        const updated: Conversation = await res.json();
+        setConversations((prev) =>
+          prev.map((c) => (c.id === id ? updated : c)),
+        );
+      } catch {
+        onErrorRef.current?.("Failed to pin conversation");
+      }
+    },
+    [],
+  );
+
   const updateConversationModel = useCallback(
     async (id: string, model: string) => {
       try {
@@ -139,6 +158,7 @@ export function useConversations(onError?: (message: string) => void) {
     updateConversationCwd,
     updateConversationModel,
     updateLocalTitle,
+    pinConversation,
     refresh,
   };
 }

@@ -7,10 +7,11 @@ export function getOrCreateSession(
   cwd: string,
   model: string,
   sessionId?: string,
+  systemPrompt?: string,
 ): AgentSession {
   let session = sessions.get(conversationId);
   if (!session) {
-    session = new AgentSession(conversationId, cwd, model, sessionId);
+    session = new AgentSession(conversationId, cwd, model, sessionId, systemPrompt);
     sessions.set(conversationId, session);
   }
   return session;

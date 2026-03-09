@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Conversation } from "../types";
 import { formatRelativeTime } from "../utils/time";
 
@@ -15,6 +15,7 @@ interface SidebarProps {
   onCreate: (cwd?: string) => void;
   onDelete: (id: string) => void;
   onRename: (id: string, title: string) => void;
+  onPin: (id: string, pinned: boolean) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
   width: number;
@@ -29,6 +30,7 @@ export function Sidebar({
   onCreate,
   onDelete,
   onRename,
+  onPin,
   collapsed,
   onToggleCollapse,
   width,
@@ -89,7 +91,11 @@ export function Sidebar({
 
   const displayList = searchResults
     ? searchResults.map((r) => ({ conv: r.conversation, matchType: r.matchType, matchContext: r.matchContext }))
-    : conversations.map((c) => ({ conv: c, matchType: "title" as const, matchContext: undefined }));
+    : [...conversations]
+        .sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1))
+        .map((c) => ({ conv: c, matchType: "title" as const, matchContext: undefined }));
+
+  const pinnedCount = searchResults ? 0 : displayList.filter((d) => d.conv.pinned).length;
 
   const handleRenameStart = (conv: Conversation) => {
     setEditingId(conv.id);
@@ -136,7 +142,10 @@ export function Sidebar({
   return (
     <div className="sidebar" style={{ width }}>
       <div className="sidebar-header">
-        <h1 className="sidebar-title">Claude Code</h1>
+        <div className="sidebar-title-group">
+          <h1 className="sidebar-title">Claude Code</h1>
+          <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 12 }}>(for designers)</span>
+        </div>
         <div className="sidebar-actions">
           <button
             className="sidebar-btn"
@@ -188,83 +197,114 @@ export function Sidebar({
         {searching && <span className="search-spinner" />}
       </div>
       <div className="conversation-list">
-        {displayList.map(({ conv, matchType, matchContext }) => (
-          <div
-            key={conv.id}
-            className={`conversation-item ${activeId === conv.id ? "active" : ""}`}
-            onClick={() => onSelect(conv.id)}
-          >
-            {editingId === conv.id ? (
-              <input
-                ref={editRef}
-                className="rename-input"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onBlur={handleRenameCommit}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleRenameCommit();
-                  if (e.key === "Escape") setEditingId(null);
-                }}
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : (
-              <div className="conversation-info">
-                <span className="conversation-title">{conv.title}</span>
-                {matchType === "message" && matchContext ? (
-                  <span className="conversation-match-context">{matchContext}</span>
-                ) : (
-                  <span className="conversation-time">
-                    {formatRelativeTime(conv.updatedAt)}
-                  </span>
-                )}
-              </div>
+        {pinnedCount > 0 && (
+          <div className="pinned-divider">
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
+              <path d="M8 1.5L9.8 5.6L14.2 6.1L11 9.1L11.8 13.5L8 11.4L4.2 13.5L5 9.1L1.8 6.1L6.2 5.6Z" stroke="currentColor" strokeWidth="1.3" fill="currentColor" strokeLinejoin="round"/>
+            </svg>
+            Starred
+          </div>
+        )}
+        {displayList.map(({ conv, matchType, matchContext }, idx) => (
+          <React.Fragment key={conv.id}>
+            {pinnedCount > 0 && idx === pinnedCount && (
+              <div className="pinned-divider pinned-divider-end" />
             )}
-            <div className="conversation-actions">
-              <button
-                className="conversation-action-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setExportMenuId(exportMenuId === conv.id ? null : conv.id);
-                }}
-                title="Export"
-              >
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                  <path d="M8 2V10M5 7L8 10L11 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M3 13H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-              </button>
-              {exportMenuId === conv.id && (
-                <div className="export-dropdown" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => handleExport(conv.id, "md")}>Markdown</button>
-                  <button onClick={() => handleExport(conv.id, "json")}>JSON</button>
+            <div
+              className={`conversation-item ${activeId === conv.id ? "active" : ""}`}
+              onClick={() => onSelect(conv.id)}
+            >
+              {editingId === conv.id ? (
+                <input
+                  ref={editRef}
+                  className="rename-input"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={handleRenameCommit}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleRenameCommit();
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <div className="conversation-info">
+                  <span className="conversation-title">
+                    {conv.pinned && (
+                      <svg className="conversation-pin-icon" width="10" height="10" viewBox="0 0 16 16" fill="none">
+                        <path d="M8 1.5L9.8 5.6L14.2 6.1L11 9.1L11.8 13.5L8 11.4L4.2 13.5L5 9.1L1.8 6.1L6.2 5.6Z" stroke="currentColor" strokeWidth="1.3" fill="currentColor" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                    {conv.title}
+                  </span>
+                  {matchType === "message" && matchContext ? (
+                    <span className="conversation-match-context">{matchContext}</span>
+                  ) : (
+                    <span className="conversation-time">
+                      {formatRelativeTime(conv.updatedAt)}
+                    </span>
+                  )}
                 </div>
               )}
-              <button
-                className="conversation-action-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRenameStart(conv);
-                }}
-                title="Rename"
-              >
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                  <path d="M11.5 1.5L14.5 4.5L5 14H2V11L11.5 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-                </svg>
-              </button>
-              <button
-                className="conversation-action-btn delete-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(conv.id);
-                }}
-                title="Delete"
-              >
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                  <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-              </button>
+              <div className="conversation-actions">
+                <button
+                  className={`pin-btn ${conv.pinned ? "pinned" : ""}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPin(conv.id, !conv.pinned);
+                  }}
+                  title={conv.pinned ? "Unstar" : "Star"}
+                >
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                    <path d="M8 1.5L9.8 5.6L14.2 6.1L11 9.1L11.8 13.5L8 11.4L4.2 13.5L5 9.1L1.8 6.1L6.2 5.6Z" stroke="currentColor" strokeWidth="1.3" fill={conv.pinned ? "currentColor" : "none"} strokeLinejoin="round"/>
+                  </svg>
+                </button>
+                <button
+                  className="conversation-action-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setExportMenuId(exportMenuId === conv.id ? null : conv.id);
+                  }}
+                  title="Export"
+                >
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                    <path d="M8 2V10M5 7L8 10L11 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M3 13H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </button>
+                {exportMenuId === conv.id && (
+                  <div className="export-dropdown" onClick={(e) => e.stopPropagation()}>
+                    <button onClick={() => handleExport(conv.id, "md")}>Markdown</button>
+                    <button onClick={() => handleExport(conv.id, "json")}>JSON</button>
+                  </div>
+                )}
+                <button
+                  className="conversation-action-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRenameStart(conv);
+                  }}
+                  title="Rename"
+                >
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                    <path d="M11.5 1.5L14.5 4.5L5 14H2V11L11.5 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+                <button
+                  className="conversation-action-btn delete-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(conv.id);
+                  }}
+                  title="Delete"
+                >
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                    <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
             </div>
-          </div>
+          </React.Fragment>
         ))}
         {displayList.length === 0 && search.trim() && (
           <div className="sidebar-empty">No matches found.</div>

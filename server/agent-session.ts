@@ -13,15 +13,17 @@ export class AgentSession {
   conversationId: string;
   cwd: string;
   model: string;
+  systemPrompt?: string;
   sessionId?: string;
   events: EventEmitter;
   private isRunning = false;
   private abortController: AbortController | null = null;
 
-  constructor(conversationId: string, cwd: string, model: string, sessionId?: string) {
+  constructor(conversationId: string, cwd: string, model: string, sessionId?: string, systemPrompt?: string) {
     this.conversationId = conversationId;
     this.cwd = cwd;
     this.model = model;
+    this.systemPrompt = systemPrompt;
     this.sessionId = sessionId;
     this.events = new EventEmitter();
     this.events.setMaxListeners(20);
@@ -98,6 +100,10 @@ export class AgentSession {
       abortController: this.abortController,
     };
 
+    if (this.systemPrompt) {
+      options.systemPrompt = this.systemPrompt;
+    }
+
     if (this.sessionId) {
       options.resume = this.sessionId;
     }
@@ -165,12 +171,44 @@ export class AgentSession {
           continue;
         }
 
+        if (msg.type === "assistant") {
+          const innerMessage = msg.message as Record<string, unknown> | undefined;
+          const content = innerMessage?.content ?? msg.content;
+          if (typeof content === "string" && content) {
+            this.emit("message", { content });
+          } else if (Array.isArray(content)) {
+            const text = (content as Array<Record<string, unknown>>)
+              .filter((b) => b.type === "text" && typeof b.text === "string")
+              .map((b) => b.text as string)
+              .join("");
+            if (text) {
+              this.emit("message", { content: text });
+            }
+          }
+          continue;
+        }
+
+        if (msg.type === "content_block_delta") {
+          const delta = msg.delta as Record<string, unknown> | undefined;
+          if (delta?.type === "text_delta" && typeof delta.text === "string") {
+            this.emit("message", { content: delta.text });
+            continue;
+          }
+        }
+
         this.emit("message", msg);
       }
     } catch (error: unknown) {
       const errMsg =
         error instanceof Error ? error.message : "Unknown error occurred";
-      this.emit("error", { message: errMsg });
+      const isAbort =
+        error instanceof Error &&
+        (error.name === "AbortError" ||
+          /abort/i.test(error.message) ||
+          /cancel/i.test(error.message));
+      if (!isAbort) {
+        this.emit("error", { message: errMsg });
+      }
     } finally {
       this.abortController = null;
       this.isRunning = false;

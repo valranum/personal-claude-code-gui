@@ -1,4 +1,6 @@
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { ChatMessage, StreamingState } from "../types";
 import { MessageBubble } from "./MessageBubble";
 import { ToolCallBlock } from "./ToolCallBlock";
@@ -54,6 +56,7 @@ export function MessageList({ messages, streaming, conversationId, onRetry, onSe
         <div className="empty-state">
           <img src={littleDude} alt="Claude" className="empty-logo-img" />
           <h2>Claude Code</h2>
+          <p style={{ color: 'var(--text-muted)', marginTop: -4, fontSize: 14 }}>(for designers)</p>
           <p>What would you like to work on?</p>
           <div className="suggested-prompts">
             {SUGGESTED_PROMPTS.map((sp) => (
@@ -90,7 +93,9 @@ export function MessageList({ messages, streaming, conversationId, onRetry, onSe
             )}
             {streaming.text ? (
               <div className="message-content">
-                <p>{streaming.text}</p>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {streaming.text}
+                </ReactMarkdown>
               </div>
             ) : streaming.toolCalls.length === 0 ? (
               <StreamingIndicator />

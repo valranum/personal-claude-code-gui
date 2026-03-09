@@ -61,6 +61,22 @@ Attach images to your messages by clicking the image icon next to the send butto
 
 When Claude includes code blocks in a response, they appear as clickable cards. Click a card to open the code in a side panel with full syntax highlighting, line numbers, and a copy button — similar to artifacts on Claude's web interface.
 
+### System Prompts & Persona Presets
+
+Click the gear icon next to the model selector to set a custom system prompt for each conversation. Choose from built-in presets — **Code Reviewer**, **Senior Dev**, **Explain Simply** — or write your own. The system prompt persists with the conversation and a dot indicator shows when one is active.
+
+### File Tree
+
+Click the file tree icon in the workspace bar to open a side panel showing the project's file and folder structure. Directories are expandable and lazy-loaded. The tree skips hidden files and `node_modules`.
+
+### Conversation Pinning
+
+Pin important conversations to the top of the sidebar. Hover over a conversation and click the pin icon. Pinned conversations appear in a separate group above the rest.
+
+### Streaming Markdown
+
+Claude's responses stream in as formatted Markdown with a blinking cursor, so you see headings, bold text, lists, and code blocks forming in real time rather than raw text.
+
 ### Slash Commands
 
 Type `/` in the chat input to see available commands:
@@ -156,15 +172,16 @@ claude-code-gui/
 │   ├── components/          # UI components
 │   │   ├── ArtifactPanel    # Side panel for viewing code artifacts
 │   │   ├── ChatInput        # Message input with slash commands and image upload
-│   │   ├── ChatView         # Main chat area with artifact split layout
+│   │   ├── ChatView         # Main chat area with artifact/filetree split layout
 │   │   ├── CommandPalette   # ⌘K command palette
 │   │   ├── CompactSuggestionBanner
 │   │   ├── DiffViewer       # Syntax-highlighted diff display
+│   │   ├── FileTree         # Workspace file/folder tree viewer
 │   │   ├── MessageBubble    # Message rendering with code cards
 │   │   ├── MessageList      # Message list with retry/share actions
-│   │   ├── Sidebar          # Conversation list, search, export
+│   │   ├── Sidebar          # Conversation list, search, export, pinning
 │   │   ├── ToolCallBlock    # Collapsible tool call display
-│   │   └── WorkspaceBar     # Folder path and model selector
+│   │   └── WorkspaceBar     # Folder/model selector, system prompt, file tree toggle
 │   ├── hooks/               # React hooks (useChat, useConversations, useToast)
 │   ├── types/               # TypeScript types
 │   └── utils/               # Helpers (SSE, time formatting)

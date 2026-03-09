@@ -3,9 +3,11 @@ export interface Conversation {
   title: string;
   cwd: string;
   model: string;
+  systemPrompt?: string;
   sdkSessionId?: string;
   tokenUsage?: TokenUsage;
   lastTurnInputTokens?: number;
+  pinned?: boolean;
   createdAt: string;
   updatedAt: string;
 }
