@@ -297,27 +297,36 @@ export function useChat(
   const retry = useCallback(async () => {
     if (!conversationId || streaming.isStreaming) return;
 
+    let lastContent: string | undefined;
+
     setMessages((prev) => {
       const lastUserIdx = prev.findLastIndex((m) => m.role === "user");
       if (lastUserIdx === -1) return prev;
 
       const lastUserMsg = prev[lastUserIdx];
+      lastContent = lastUserMsg.content;
       const withoutLast = prev.slice(0, lastUserIdx);
-
-      setStreaming({ isStreaming: true, text: "", toolCalls: [] });
-      apiFetch(`/api/conversations/${conversationId}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: lastUserMsg.content }),
-      }).catch(() => {
-        onErrorRef.current?.("Failed to retry message");
-      });
 
       return [
         ...withoutLast,
         { ...lastUserMsg, id: crypto.randomUUID(), timestamp: new Date().toISOString() },
       ];
     });
+
+    if (!lastContent) return;
+
+    setStreaming({ isStreaming: true, text: "", toolCalls: [] });
+    toolCallsRef.current = [];
+
+    try {
+      await apiFetch(`/api/conversations/${conversationId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: lastContent }),
+      });
+    } catch {
+      onErrorRef.current?.("Failed to retry message");
+    }
   }, [conversationId, streaming.isStreaming]);
 
   const abort = useCallback(async () => {

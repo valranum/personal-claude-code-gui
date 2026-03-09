@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Conversation } from "../types";
 import { formatRelativeTime } from "../utils/time";
 import { FileTree } from "./FileTree";
+import { Tooltip } from "./Tooltip";
 import { apiFetch } from "../utils/api";
 
 interface SearchResult {
@@ -120,24 +121,26 @@ export function Sidebar({
   if (collapsed) {
     return (
       <div className="sidebar sidebar-collapsed">
-        <button
-          className="sidebar-btn collapse-btn"
-          onClick={onToggleCollapse}
-          title="Expand sidebar (⌘B)"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M6 3L11 8L6 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-        <button
-          className="sidebar-btn"
-          onClick={() => onCreate()}
-          title="New Chat"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-        </button>
+        <Tooltip text="Expand sidebar (⌘B)">
+          <button
+            className="sidebar-btn collapse-btn"
+            onClick={onToggleCollapse}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M6 3L11 8L6 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </Tooltip>
+        <Tooltip text="New Chat (⌘N)">
+          <button
+            className="sidebar-btn"
+            onClick={() => onCreate()}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </Tooltip>
       </div>
     );
   }
@@ -150,24 +153,26 @@ export function Sidebar({
           <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 12 }}>(for designers)</span>
         </div>
         <div className="sidebar-actions">
-          <button
-            className="sidebar-btn"
-            onClick={() => onCreate()}
-            title="New Chat"
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-          </button>
-          <button
-            className="sidebar-btn collapse-btn"
-            onClick={onToggleCollapse}
-            title="Collapse sidebar (⌘B)"
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <path d="M11 3L6 8L11 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
+          <Tooltip text="New Chat (⌘N)">
+            <button
+              className="sidebar-btn"
+              onClick={() => onCreate()}
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </Tooltip>
+          <Tooltip text="Collapse sidebar (⌘B)">
+            <button
+              className="sidebar-btn collapse-btn"
+              onClick={onToggleCollapse}
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M11 3L6 8L11 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </Tooltip>
         </div>
       </div>
       <div className="sidebar-tabs">

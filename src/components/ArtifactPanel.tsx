@@ -23,8 +23,8 @@ export function ArtifactPanel({ language, code, onClose }: ArtifactPanelProps) {
     <div className="artifact-panel">
       <div className="artifact-header">
         <div className="artifact-title">
-          <span className="artifact-lang">{language}</span>
-          <span className="artifact-lines">{lineCount} line{lineCount !== 1 ? "s" : ""}</span>
+          <span className="artifact-lang">{language.charAt(0).toUpperCase() + language.slice(1)} Code</span>
+          <span className="artifact-lines">{language.toUpperCase()}</span>
         </div>
         <div className="artifact-actions">
           <button

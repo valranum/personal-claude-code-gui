@@ -186,6 +186,25 @@ body,
   color: var(--text-primary);
 }
 
+.custom-tooltip {
+  position: fixed;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  border: 1px solid var(--border);
+  z-index: 9999;
+  animation: tooltipFadeIn 0.1s ease forwards;
+}
+
+@keyframes tooltipFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* Sidebar tabs */
 .sidebar-tabs {
   display: flex;
@@ -689,8 +708,8 @@ body,
 }
 
 .message-role {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
@@ -834,16 +853,16 @@ body,
   align-items: center;
   gap: 12px;
   width: 100%;
-  max-width: 320px;
+  max-width: 400px;
   margin: 10px 0;
-  padding: 12px 14px;
+  padding: 14px 16px;
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
   text-align: left;
-  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
-  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   color: inherit;
 }
 
@@ -852,14 +871,10 @@ body,
   background: var(--bg-hover);
 }
 
-.code-card:hover .code-card-open {
-  color: var(--accent-color);
-}
-
 .code-card-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   background: rgba(99, 102, 241, 0.1);
   color: var(--accent-color);
   display: flex;
@@ -873,29 +888,40 @@ body,
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
 .code-card-title {
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary);
-  text-transform: capitalize;
 }
 
 .code-card-meta {
   font-size: 11px;
   color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
 }
 
-.code-card-open {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 12px;
-  color: var(--text-muted);
+.code-card-download {
   flex-shrink: 0;
-  transition: color 0.15s;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+
+.code-card-download:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-muted);
 }
 
 /* ── Artifact Panel ── */
@@ -938,11 +964,8 @@ body,
 }
 
 .artifact-lang {
-  font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   color: var(--accent-color);
   background: rgba(99, 102, 241, 0.1);
   padding: 2px 8px;
