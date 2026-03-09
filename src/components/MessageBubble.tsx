@@ -1,8 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChatMessage } from "../types";
-import { ToolCallBlock } from "./ToolCallBlock";
 import { formatTimestamp } from "../utils/time";
 
 interface MessageBubbleProps {
@@ -34,26 +33,37 @@ function langTitle(lang: string): string {
   return titles[lang.toLowerCase()] || lang.charAt(0).toUpperCase() + lang.slice(1);
 }
 
+function fileNameFromPath(p: string): string {
+  return p.split("/").pop() || p;
+}
+
 function CodeCard({
   language,
   code,
+  title,
+  fileName,
   onOpen,
 }: {
   language: string;
   code: string;
+  title?: string;
+  fileName?: string;
   onOpen: () => void;
 }) {
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const ext = language.toLowerCase() === "javascript" || language.toLowerCase() === "js" ? "js"
-      : language.toLowerCase() === "typescript" || language.toLowerCase() === "ts" ? "ts"
-      : language.toLowerCase() === "python" || language.toLowerCase() === "py" ? "py"
-      : language.toLowerCase();
+    const downloadName = fileName || (() => {
+      const ext = language.toLowerCase() === "javascript" || language.toLowerCase() === "js" ? "js"
+        : language.toLowerCase() === "typescript" || language.toLowerCase() === "ts" ? "ts"
+        : language.toLowerCase() === "python" || language.toLowerCase() === "py" ? "py"
+        : language.toLowerCase();
+      return `code.${ext}`;
+    })();
     const blob = new Blob([code], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `code.${ext}`;
+    a.download = downloadName;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -67,7 +77,7 @@ function CodeCard({
         </svg>
       </div>
       <div className="code-card-info">
-        <span className="code-card-title">{langTitle(language)} Code</span>
+        <span className="code-card-title">{title || `${langTitle(language)} Code`}</span>
         <span className="code-card-meta">{langLabel(language)}</span>
       </div>
       <button className="code-card-download" onClick={handleDownload} type="button">
@@ -96,18 +106,43 @@ function detectLangFromPath(filePath: string): string {
 export function MessageBubble({ message, onOpenArtifact }: MessageBubbleProps) {
   const autoOpened = useRef(false);
 
+  const writtenFiles = useMemo(() => {
+    if (message.role !== "assistant" || !message.toolCalls) return [];
+    const byPath = new Map<string, { lang: string; code: string; path: string; name: string }>();
+    for (const tc of message.toolCalls) {
+      const tcName = tc.name.toLowerCase();
+      if (tcName !== "write" && tcName !== "filewrite") continue;
+      const inp = tc.input || {};
+      if (!(inp.content || inp.contents) || !(inp.file_path || inp.path)) continue;
+      const filePath = String(inp.file_path || inp.path);
+      const code = String(inp.content || inp.contents);
+      byPath.set(filePath, {
+        lang: detectLangFromPath(filePath),
+        code,
+        path: filePath,
+        name: fileNameFromPath(filePath),
+      });
+    }
+    return Array.from(byPath.values());
+  }, [message.role, message.toolCalls]);
+
   useEffect(() => {
     if (message.role !== "assistant" || !onOpenArtifact || autoOpened.current) return;
 
-    // Check for file writes in tool calls first (highest priority)
     if (message.toolCalls && message.toolCalls.length > 0) {
       const writes = message.toolCalls
-        .filter((tc) => tc.name.toLowerCase() === "write" && tc.input?.contents && tc.input?.path)
-        .map((tc) => ({
-          lang: detectLangFromPath(String(tc.input.path)),
-          code: String(tc.input.contents),
-          path: String(tc.input.path),
-        }));
+        .filter((tc) => {
+          const name = tc.name.toLowerCase();
+          if (name !== "write" && name !== "filewrite") return false;
+          const inp = tc.input || {};
+          return (inp.content || inp.contents) && (inp.file_path || inp.path);
+        })
+        .map((tc) => {
+          const inp = tc.input;
+          const filePath = String(inp.file_path || inp.path);
+          const code = String(inp.content || inp.contents);
+          return { lang: detectLangFromPath(filePath), code, path: filePath };
+        });
 
       if (writes.length > 0) {
         const largest = writes.reduce((a, b) => (b.code.length > a.code.length ? b : a));
@@ -161,13 +196,6 @@ export function MessageBubble({ message, onOpenArtifact }: MessageBubbleProps) {
           </span>
           <span className="message-time">{formatTimestamp(message.timestamp)}</span>
         </div>
-        {message.toolCalls && message.toolCalls.length > 0 && (
-          <div className="message-tools">
-            {message.toolCalls.map((tc) => (
-              <ToolCallBlock key={tc.id} toolCall={tc} />
-            ))}
-          </div>
-        )}
         <div className="message-content">
           {message.role === "user" && message.images && message.images.length > 0 && (
             <div className="message-images">
@@ -182,36 +210,52 @@ export function MessageBubble({ message, onOpenArtifact }: MessageBubbleProps) {
             </div>
           )}
           {message.role === "assistant" ? (
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                code({ className, children, ...props }) {
-                  const match = /language-(\w+)/.exec(className || "");
-                  const isInline = !match;
-                  if (isInline) {
-                    return (
-                      <code className="inline-code" {...props}>
-                        {children}
-                      </code>
-                    );
-                  }
-                  const codeStr = String(children).replace(/\n$/, "");
-                  const lang = match[1];
-                  if (onOpenArtifact) {
-                    return (
-                      <CodeCard
-                        language={lang}
-                        code={codeStr}
-                        onOpen={() => onOpenArtifact(lang, codeStr)}
-                      />
-                    );
-                  }
-                  return <pre><code className={className} {...props}>{children}</code></pre>;
-                },
-              }}
-            >
-              {message.content}
-            </ReactMarkdown>
+            <>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  code({ className, children, ...props }) {
+                    const match = /language-(\w+)/.exec(className || "");
+                    const isInline = !match;
+                    if (isInline) {
+                      return (
+                        <code className="inline-code" {...props}>
+                          {children}
+                        </code>
+                      );
+                    }
+                    const codeStr = String(children).replace(/\n$/, "");
+                    const lang = match[1];
+                    if (onOpenArtifact) {
+                      return (
+                        <CodeCard
+                          language={lang}
+                          code={codeStr}
+                          onOpen={() => onOpenArtifact(lang, codeStr)}
+                        />
+                      );
+                    }
+                    return <pre><code className={className} {...props}>{children}</code></pre>;
+                  },
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
+              {writtenFiles.length > 0 && onOpenArtifact && (
+                <div className="written-files-cards">
+                  {writtenFiles.map((f) => (
+                    <CodeCard
+                      key={f.path}
+                      language={f.lang}
+                      code={f.code}
+                      title={f.name}
+                      fileName={f.name}
+                      onOpen={() => onOpenArtifact!(f.lang, f.code)}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           ) : (
             <p>{message.content}</p>
           )}

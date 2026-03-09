@@ -3,7 +3,6 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChatMessage, StreamingState } from "../types";
 import { MessageBubble } from "./MessageBubble";
-import { ToolCallBlock } from "./ToolCallBlock";
 import { StreamingIndicator } from "./StreamingIndicator";
 import { useAutoScroll } from "../hooks/useAutoScroll";
 import { apiFetch } from "../utils/api";
@@ -79,22 +78,15 @@ export function MessageList({ messages, streaming, conversationId, onRetry, onSe
       {streaming.isStreaming && (
         <div className="message-bubble assistant streaming msg-enter">
           <div className="message-body">
-            {streaming.toolCalls.length > 0 && (
-              <div className="message-tools">
-                {streaming.toolCalls.map((tc) => (
-                  <ToolCallBlock key={tc.id} toolCall={tc} />
-                ))}
-              </div>
-            )}
             {streaming.text ? (
               <div className="message-content">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {streaming.text}
                 </ReactMarkdown>
               </div>
-            ) : streaming.toolCalls.length === 0 ? (
+            ) : (
               <StreamingIndicator />
-            ) : null}
+            )}
           </div>
         </div>
       )}

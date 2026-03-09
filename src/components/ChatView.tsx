@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useChat } from "../hooks/useChat";
 import { useToast } from "../hooks/useToast";
 import { MessageList } from "./MessageList";
@@ -49,6 +49,12 @@ export function ChatView({
   const isEmpty = messages.length === 0 && !streaming.isStreaming;
   const [artifact, setArtifact] = useState<ArtifactState | null>(null);
   const [models, setModels] = useState<{ id: string; name: string }[]>([]);
+  const [artifactWidth, setArtifactWidth] = useState(45);
+  const isResizingArtifact = useRef(false);
+
+  useEffect(() => {
+    setArtifact(null);
+  }, [conversationId]);
 
   useEffect(() => {
     apiFetch("/api/models")
@@ -63,6 +69,30 @@ export function ChatView({
 
   const handleCloseArtifact = useCallback(() => {
     setArtifact(null);
+  }, []);
+
+  const handleArtifactResizeStart = useCallback(() => {
+    isResizingArtifact.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isResizingArtifact.current) return;
+      const containerWidth = document.querySelector(".chat-view")?.clientWidth || window.innerWidth;
+      const pct = ((containerWidth - e.clientX + (document.querySelector(".chat-view")?.getBoundingClientRect().left || 0)) / containerWidth) * 100;
+      setArtifactWidth(Math.min(Math.max(pct, 20), 70));
+    };
+
+    const onMouseUp = () => {
+      isResizingArtifact.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
   }, []);
 
   const chatViewClass = [
@@ -121,11 +151,18 @@ export function ChatView({
         )}
       </div>
       {artifact && (
-        <ArtifactPanel
-          language={artifact.language}
-          code={artifact.code}
-          onClose={handleCloseArtifact}
-        />
+        <>
+          <div
+            className="artifact-resize-handle"
+            onMouseDown={handleArtifactResizeStart}
+          />
+          <ArtifactPanel
+            language={artifact.language}
+            code={artifact.code}
+            onClose={handleCloseArtifact}
+            widthPercent={artifactWidth}
+          />
+        </>
       )}
     </div>
   );

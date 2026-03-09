@@ -179,12 +179,19 @@ export class AgentSession {
           if (typeof content === "string" && content) {
             this.emit("message", { content });
           } else if (Array.isArray(content)) {
-            const text = (content as Array<Record<string, unknown>>)
-              .filter((b) => b.type === "text" && typeof b.text === "string")
-              .map((b) => b.text as string)
-              .join("");
-            if (text) {
-              this.emit("message", { content: text });
+            for (const block of content as Array<Record<string, unknown>>) {
+              if (block.type === "text" && typeof block.text === "string") {
+                this.emit("message", { content: block.text });
+              } else if (block.type === "tool_use") {
+                const tc: ToolCallInfo = {
+                  id: (block.id as string) || crypto.randomUUID(),
+                  name: (block.name as string) || "unknown",
+                  input: (block.input as Record<string, unknown>) || {},
+                  status: "running",
+                };
+                toolCalls.push(tc);
+                this.emit("tool_use", tc);
+              }
             }
           }
           continue;

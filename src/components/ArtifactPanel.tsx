@@ -6,9 +6,10 @@ interface ArtifactPanelProps {
   language: string;
   code: string;
   onClose: () => void;
+  widthPercent?: number;
 }
 
-export function ArtifactPanel({ language, code, onClose }: ArtifactPanelProps) {
+export function ArtifactPanel({ language, code, onClose, widthPercent = 45 }: ArtifactPanelProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -17,10 +18,8 @@ export function ArtifactPanel({ language, code, onClose }: ArtifactPanelProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const lineCount = code.split("\n").length;
-
   return (
-    <div className="artifact-panel">
+    <div className="artifact-panel" style={{ flex: `0 0 ${widthPercent}%`, maxWidth: `${widthPercent}%` }}>
       <div className="artifact-header">
         <div className="artifact-title">
           <span className="artifact-lang">{language.charAt(0).toUpperCase() + language.slice(1)} Code</span>
@@ -61,6 +60,7 @@ export function ArtifactPanel({ language, code, onClose }: ArtifactPanelProps) {
           language={language || "text"}
           style={oneDark}
           showLineNumbers
+          wrapLongLines
           customStyle={{
             margin: 0,
             borderRadius: 0,

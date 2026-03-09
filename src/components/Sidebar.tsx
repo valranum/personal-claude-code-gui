@@ -150,19 +150,9 @@ export function Sidebar({
       <div className="sidebar-header">
         <div className="sidebar-title-group">
           <h1 className="sidebar-title">Claude Code</h1>
-          <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 12 }}>(for designers)</span>
+          <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 11 }}>(for designers)</span>
         </div>
         <div className="sidebar-actions">
-          <Tooltip text="New Chat (⌘N)">
-            <button
-              className="sidebar-btn"
-              onClick={() => onCreate()}
-            >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-            </button>
-          </Tooltip>
           <Tooltip text="Collapse sidebar (⌘B)">
             <button
               className="sidebar-btn collapse-btn"
@@ -211,6 +201,14 @@ export function Sidebar({
         />
         {searching && <span className="search-spinner" />}
       </div>
+      <button className="new-chat-list-btn" onClick={() => onCreate()}>
+        <span className="new-chat-icon">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        </span>
+        New chat
+      </button>
       <div className="conversation-list">
         {pinnedCount > 0 && (
           <div className="pinned-divider">
