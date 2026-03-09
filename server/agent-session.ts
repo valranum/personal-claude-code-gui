@@ -38,8 +38,10 @@ export class AgentSession {
       return content;
     }
 
+    const ALLOWED_MEDIA = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
     const contentBlocks: unknown[] = [];
     for (const img of images) {
+      if (!ALLOWED_MEDIA.has(img.mediaType)) continue;
       contentBlocks.push({
         type: "image",
         source: {

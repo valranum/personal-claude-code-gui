@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { apiFetch } from "../utils/api";
 
 interface FileEntry {
   name: string;
@@ -72,7 +73,7 @@ function TreeNode({ entry }: { entry: FileEntry }) {
     if (children === null) {
       setLoading(true);
       try {
-        const res = await fetch(`/api/filetree?path=${encodeURIComponent(entry.path)}`);
+        const res = await apiFetch(`/api/filetree?path=${encodeURIComponent(entry.path)}`);
         const data: FileEntry[] = await res.json();
         setChildren(data);
       } catch {
@@ -126,7 +127,7 @@ export function FileTree({ cwd, onClose }: FileTreeProps) {
   const fetchRoot = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/filetree?path=${encodeURIComponent(cwd)}`);
+      const res = await apiFetch(`/api/filetree?path=${encodeURIComponent(cwd)}`);
       const data: FileEntry[] = await res.json();
       setEntries(data);
     } catch {

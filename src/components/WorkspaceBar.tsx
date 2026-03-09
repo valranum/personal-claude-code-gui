@@ -1,35 +1,14 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Conversation } from "../types";
-
-interface ModelOption {
-  id: string;
-  name: string;
-}
-
-const SYSTEM_PROMPT_PRESETS: { label: string; prompt: string }[] = [
-  {
-    label: "Code Reviewer",
-    prompt: "You are a thorough code reviewer. Focus on bugs, performance issues, security concerns, and code quality. Be specific and provide actionable suggestions.",
-  },
-  {
-    label: "Senior Dev",
-    prompt: "You are a senior software engineer. Write clean, well-structured, production-quality code. Explain your architectural decisions.",
-  },
-  {
-    label: "Explain Simply",
-    prompt: "Explain concepts in simple, easy-to-understand terms. Avoid jargon. Use analogies and examples.",
-  },
-];
+import { apiFetch } from "../utils/api";
 
 interface WorkspaceBarProps {
   conversation: Conversation | null;
   onChangeCwd: (id: string, cwd: string) => void;
-  onChangeModel: (id: string, model: string) => void;
-  onChangeSystemPrompt: (id: string, systemPrompt: string) => void;
   sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
-  showFileTree?: boolean;
-  onToggleFileTree?: () => void;
+  theme: "dark" | "light";
+  onToggleTheme: () => void;
 }
 
 function shortenPath(fullPath: string): { dir: string; name: string } {
@@ -43,69 +22,36 @@ function shortenPath(fullPath: string): { dir: string; name: string } {
 export function WorkspaceBar({
   conversation,
   onChangeCwd,
-  onChangeModel,
-  onChangeSystemPrompt,
   sidebarCollapsed,
   onToggleSidebar,
-  showFileTree,
-  onToggleFileTree,
+  theme,
+  onToggleTheme,
 }: WorkspaceBarProps) {
   const [picking, setPicking] = useState(false);
-  const [models, setModels] = useState<ModelOption[]>([]);
-  const [showModelMenu, setShowModelMenu] = useState(false);
-  const [showSystemPrompt, setShowSystemPrompt] = useState(false);
-  const [systemPromptDraft, setSystemPromptDraft] = useState("");
-  const menuRef = useRef<HTMLDivElement>(null);
-  const spRef = useRef<HTMLDivElement>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/models")
-      .then((r) => r.json())
-      .then((data) => setModels(data.models || []))
-      .catch(() => {});
-  }, []);
-
-  // Close menu on outside click
-  useEffect(() => {
-    if (!showModelMenu) return;
+    if (!showSettings) return;
     const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowModelMenu(false);
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setShowSettings(false);
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [showModelMenu]);
+  }, [showSettings]);
 
-  useEffect(() => {
-    if (!showSystemPrompt) return;
-    const handler = (e: MouseEvent) => {
-      if (spRef.current && !spRef.current.contains(e.target as Node)) {
-        setShowSystemPrompt(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showSystemPrompt]);
-
-  useEffect(() => {
-    if (showSystemPrompt && conversation) {
-      setSystemPromptDraft(conversation.systemPrompt || "");
-    }
-  }, [showSystemPrompt, conversation]);
 
   if (!conversation) return null;
 
   const { dir, name } = shortenPath(conversation.cwd);
-  const currentModelName =
-    models.find((m) => m.id === conversation.model)?.name ||
-    conversation.model;
 
   const handleChangeCwd = async () => {
     if (picking) return;
     setPicking(true);
     try {
-      const res = await fetch("/api/pick-folder", { method: "POST" });
+      const res = await apiFetch("/api/pick-folder", { method: "POST" });
       const data = await res.json();
       if (!data.cancelled && data.path && data.path !== conversation.cwd) {
         onChangeCwd(conversation.id, data.path);
@@ -114,26 +60,6 @@ export function WorkspaceBar({
       setPicking(false);
     }
   };
-
-  const handleSelectModel = (modelId: string) => {
-    if (modelId !== conversation.model) {
-      onChangeModel(conversation.id, modelId);
-    }
-    setShowModelMenu(false);
-  };
-
-  const handleSaveSystemPrompt = () => {
-    onChangeSystemPrompt(conversation.id, systemPromptDraft);
-    setShowSystemPrompt(false);
-  };
-
-  const handleClearSystemPrompt = () => {
-    setSystemPromptDraft("");
-    onChangeSystemPrompt(conversation.id, "");
-    setShowSystemPrompt(false);
-  };
-
-  const hasSystemPrompt = !!(conversation.systemPrompt && conversation.systemPrompt.trim());
 
   return (
     <div className="workspace-bar">
@@ -146,19 +72,6 @@ export function WorkspaceBar({
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M2 4H14M2 8H14M2 12H14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-          </button>
-        )}
-        {onToggleFileTree && (
-          <button
-            className={`workspace-menu-btn filetree-toggle-btn ${showFileTree ? "active" : ""}`}
-            onClick={onToggleFileTree}
-            title="Toggle file tree"
-          >
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-              <path d="M2 3H5.5L7 4.5H14V12.5H2V3Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-              <path d="M5 7.5H11" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
-              <path d="M5 9.5H9" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
             </svg>
           </button>
         )}
@@ -175,82 +88,56 @@ export function WorkspaceBar({
           <span className="workspace-path-name">{picking ? "Opening..." : name}</span>
         </button>
       </div>
-      <div className="workspace-bar-right" ref={menuRef}>
+      <div className="workspace-bar-right" ref={settingsRef}>
         <button
-          className="model-selector-btn"
-          onClick={() => setShowModelMenu((s) => !s)}
-          title="Change model"
+          className="settings-btn"
+          onClick={() => setShowSettings((s) => !s)}
+          title="Settings"
         >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.3"/>
-            <path d="M5.5 7L8 4.5L10.5 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M8 4.5V11.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-          </svg>
-          <span className="model-selector-name">{currentModelName}</span>
-          <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
-            <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M6.86 1.5H9.14L9.6 3.42L11.18 4.15L13.02 3.24L14.76 5.26L13.52 6.92L13.68 8.7L15.36 9.62L14.64 11.86L12.72 11.82L11.58 13.14L11.88 15.08L9.64 15.58L8.6 13.92H7.4L6.36 15.58L4.12 15.08L4.42 13.14L3.28 11.82L1.36 11.86L0.64 9.62L2.32 8.7L2.48 6.92L1.24 5.26L2.98 3.24L4.82 4.15L6.4 3.42L6.86 1.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" transform="scale(0.88) translate(1.1, 0.8)"/>
+            <circle cx="8" cy="8.5" r="2.2" stroke="currentColor" strokeWidth="1.2"/>
           </svg>
         </button>
-        {showModelMenu && (
-          <div className="model-dropdown">
-            {models.map((m) => (
-              <button
-                key={m.id}
-                className={`model-option ${m.id === conversation.model ? "active" : ""}`}
-                onClick={() => handleSelectModel(m.id)}
-              >
-                <span className="model-option-name">{m.name}</span>
-                {m.id === conversation.model && (
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                    <path d="M3 8.5L6.5 12L13 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                )}
-              </button>
-            ))}
+        {showSettings && (
+          <div className="settings-dropdown">
+            <button
+              className="settings-option"
+              onClick={() => {
+                onToggleTheme();
+                setShowSettings(false);
+              }}
+            >
+              {theme === "dark" ? (
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <circle cx="8" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.3"/>
+                  <path d="M8 2V3.5M8 12.5V14M2 8H3.5M12.5 8H14M3.76 3.76L4.82 4.82M11.18 11.18L12.24 12.24M12.24 3.76L11.18 4.82M4.82 11.18L3.76 12.24" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <path d="M13.5 9.5a5.5 5.5 0 1 1-7-7 4.5 4.5 0 0 0 7 7Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+                </svg>
+              )}
+              <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+            </button>
+            <div className="settings-divider" />
+            <a
+              className="settings-option"
+              href="https://github.com/valranum/personal-claude-code-gui"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setShowSettings(false)}
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M8 1C4.13 1 1 4.13 1 8c0 3.1 2 5.7 4.8 6.6.35.07.48-.15.48-.34V13c-1.95.42-2.36-.94-2.36-.94-.32-.81-.78-1.03-.78-1.03-.64-.44.05-.43.05-.43.7.05 1.07.72 1.07.72.63 1.07 1.65.76 2.05.58.06-.45.24-.76.44-.94-1.56-.18-3.2-.78-3.2-3.47 0-.77.28-1.4.72-1.89-.07-.18-.31-.9.07-1.87 0 0 .59-.19 1.93.72a6.7 6.7 0 0 1 3.5 0c1.34-.91 1.93-.72 1.93-.72.38.97.14 1.69.07 1.87.45.49.72 1.12.72 1.89 0 2.7-1.65 3.29-3.22 3.46.25.22.48.65.48 1.31v1.94c0 .19.13.41.48.34C13 13.7 15 11.1 15 8c0-3.87-3.13-7-7-7Z" fill="currentColor"/>
+              </svg>
+              <span>GitHub</span>
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none" style={{ marginLeft: "auto" }}>
+                <path d="M5 3H13V11M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </a>
           </div>
         )}
-        <div className="system-prompt-container" ref={spRef}>
-          <button
-            className={`system-prompt-btn ${hasSystemPrompt ? "active" : ""}`}
-            onClick={() => setShowSystemPrompt((s) => !s)}
-            title={hasSystemPrompt ? "System prompt active" : "Set system prompt"}
-          >
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-              <path d="M6.5 1.5L6 3.5L4.2 4.3L2.3 3.3L1 4.7L2.2 6.5L1.5 8.3L-.2 8.8V10.7L1.8 11L2.6 12.8L1.7 14.7L3.1 16L5 14.8L6.8 15.5L7.3 17.5H9.2L9.5 15.5L11.3 14.7L13.2 15.7L14.5 14.3L13.3 12.5L14 10.7L16 10.2V8.3L14 8L13.2 6.2L14.1 4.3L12.7 3L10.8 4.2L9 3.5L8.5 1.5H6.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" transform="scale(0.85) translate(1.4, 1.2)"/>
-              <circle cx="8" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.2" transform="scale(0.85) translate(1.4, 1.2)"/>
-            </svg>
-          </button>
-          {showSystemPrompt && (
-            <div className="system-prompt-dropdown">
-              <textarea
-                className="system-prompt-textarea"
-                placeholder="Set a system prompt for this conversation..."
-                value={systemPromptDraft}
-                onChange={(e) => setSystemPromptDraft(e.target.value)}
-                rows={4}
-              />
-              <div className="system-prompt-presets">
-                {SYSTEM_PROMPT_PRESETS.map((preset) => (
-                  <button
-                    key={preset.label}
-                    className="system-prompt-preset"
-                    onClick={() => setSystemPromptDraft(preset.prompt)}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
-              <div className="system-prompt-actions">
-                <button className="system-prompt-clear" onClick={handleClearSystemPrompt}>
-                  Clear
-                </button>
-                <button className="system-prompt-save" onClick={handleSaveSystemPrompt}>
-                  Save
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

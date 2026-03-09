@@ -7,6 +7,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ToastContainer } from "./components/ToastContainer";
 import { ToastProvider, useToast } from "./hooks/useToast";
 import { useConversations } from "./hooks/useConversations";
+import { apiFetch } from "./utils/api";
 
 export function App() {
   return (
@@ -122,7 +123,7 @@ function AppContent() {
   const handleClear = useCallback(async () => {
     if (!activeId) return;
     try {
-      await fetch(`/api/conversations/${activeId}/clear`, { method: "POST" });
+      await apiFetch(`/api/conversations/${activeId}/clear`, { method: "POST" });
       window.location.reload();
     } catch {
       addToast("Failed to clear conversation", "error");
@@ -132,7 +133,7 @@ function AppContent() {
   const handleCompact = useCallback(async () => {
     if (!activeId) return;
     try {
-      const res = await fetch(`/api/conversations/${activeId}/compact`, { method: "POST" });
+      const res = await apiFetch(`/api/conversations/${activeId}/compact`, { method: "POST" });
       if (!res.ok) throw new Error();
       window.location.reload();
     } catch {
@@ -140,18 +141,10 @@ function AppContent() {
     }
   }, [activeId, addToast]);
 
-  const updateSystemPrompt = useCallback((id: string, systemPrompt: string) => {
-    fetch(`/api/conversations/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ systemPrompt }),
-    }).catch(() => addToast("Failed to update system prompt", "error"));
-  }, [addToast]);
-
   const handleShare = useCallback(async () => {
     if (!activeId) return;
     try {
-      const res = await fetch(`/api/conversations/${activeId}/share`, { method: "POST" });
+      const res = await apiFetch(`/api/conversations/${activeId}/share`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       await navigator.clipboard.writeText(data.url);
@@ -172,11 +165,10 @@ function AppContent() {
           onDelete={deleteConversation}
           onRename={renameConversation}
           onPin={pinConversation}
+          activeCwd={activeConversation?.cwd}
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
           width={sidebarWidth}
-          theme={theme}
-          onToggleTheme={toggleTheme}
         />
         {!sidebarCollapsed && (
           <div
@@ -192,8 +184,9 @@ function AppContent() {
             sidebarCollapsed={sidebarCollapsed}
             onChangeCwd={updateConversationCwd}
             onChangeModel={updateConversationModel}
-            onChangeSystemPrompt={updateSystemPrompt}
             onTitleUpdate={updateLocalTitle}
+            theme={theme}
+            onToggleTheme={toggleTheme}
           />
         ) : (
           <WelcomeScreen

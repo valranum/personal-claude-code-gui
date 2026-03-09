@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Conversation } from "../types";
+import { apiFetch } from "../utils/api";
 
 export function useConversations(onError?: (message: string) => void) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -8,7 +9,7 @@ export function useConversations(onError?: (message: string) => void) {
   onErrorRef.current = onError;
 
   const refresh = useCallback(() => {
-    fetch("/api/conversations")
+    apiFetch("/api/conversations")
       .then((r) => r.json())
       .then(setConversations)
       .catch(() => {
@@ -18,7 +19,7 @@ export function useConversations(onError?: (message: string) => void) {
   }, []);
 
   useEffect(() => {
-    fetch("/api/conversations")
+    apiFetch("/api/conversations")
       .then((r) => r.json())
       .then((convs: Conversation[]) => {
         setConversations(convs);
@@ -34,7 +35,7 @@ export function useConversations(onError?: (message: string) => void) {
 
   const createConversation = useCallback(async (cwd?: string) => {
     try {
-      const res = await fetch("/api/conversations", {
+      const res = await apiFetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cwd }),
@@ -51,7 +52,7 @@ export function useConversations(onError?: (message: string) => void) {
   const deleteConversation = useCallback(
     async (id: string) => {
       try {
-        await fetch(`/api/conversations/${id}`, { method: "DELETE" });
+        await apiFetch(`/api/conversations/${id}`, { method: "DELETE" });
         setConversations((prev) => prev.filter((c) => c.id !== id));
         if (activeId === id) {
           setActiveId(null);
@@ -66,7 +67,7 @@ export function useConversations(onError?: (message: string) => void) {
   const renameConversation = useCallback(
     async (id: string, title: string) => {
       try {
-        const res = await fetch(`/api/conversations/${id}`, {
+        const res = await apiFetch(`/api/conversations/${id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title }),
@@ -85,7 +86,7 @@ export function useConversations(onError?: (message: string) => void) {
   const updateConversationCwd = useCallback(
     async (id: string, cwd: string) => {
       try {
-        const res = await fetch(`/api/conversations/${id}`, {
+        const res = await apiFetch(`/api/conversations/${id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ cwd }),
@@ -113,7 +114,7 @@ export function useConversations(onError?: (message: string) => void) {
   const pinConversation = useCallback(
     async (id: string, pinned: boolean) => {
       try {
-        const res = await fetch(`/api/conversations/${id}`, {
+        const res = await apiFetch(`/api/conversations/${id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pinned }),
@@ -132,7 +133,7 @@ export function useConversations(onError?: (message: string) => void) {
   const updateConversationModel = useCallback(
     async (id: string, model: string) => {
       try {
-        const res = await fetch(`/api/conversations/${id}`, {
+        const res = await apiFetch(`/api/conversations/${id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ model }),

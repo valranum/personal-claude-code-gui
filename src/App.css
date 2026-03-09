@@ -186,6 +186,65 @@ body,
   color: var(--text-primary);
 }
 
+/* Sidebar tabs */
+.sidebar-tabs {
+  display: flex;
+  padding: 4px 12px;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.sidebar-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.sidebar-tab:hover:not(:disabled) {
+  color: var(--text-secondary);
+  background: var(--bg-hover);
+}
+
+.sidebar-tab.active {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.sidebar-tab:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sidebar-filetree {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-filetree .filetree-panel {
+  width: 100%;
+  border-right: none;
+  animation: none;
+}
+
+.sidebar-filetree .filetree-header {
+  display: none;
+}
+
 /* Sidebar search */
 .sidebar-search {
   padding: 8px 12px;
@@ -1148,6 +1207,103 @@ body,
   flex-shrink: 0;
 }
 
+.empty-state-input {
+  width: 100%;
+  max-width: 680px;
+  margin-top: 20px;
+}
+
+.empty-state-input .chat-input-container {
+  padding: 0;
+}
+
+.empty-state-prompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 16px;
+  max-width: 600px;
+}
+
+/* ── Bottom bar inside chat input (attach + model selector) ── */
+.chat-input-bottom-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 8px 6px;
+}
+
+.chat-input-bottom-left {
+  display: flex;
+  align-items: center;
+}
+
+.chat-input-bottom-right {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.chat-input-model-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s, background 0.15s;
+}
+
+.chat-input-model-btn:hover {
+  color: var(--text-secondary);
+  background: var(--bg-hover);
+}
+
+.chat-input-model-dropdown {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  right: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  min-width: 200px;
+  z-index: 200;
+  padding: 4px;
+}
+
+.chat-input-model-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 7px 10px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background 0.1s, color 0.1s;
+}
+
+.chat-input-model-option:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.chat-input-model-option.active {
+  color: var(--accent);
+}
+
 .chat-input-wrapper {
   max-width: 800px;
   margin: 0 auto;
@@ -1812,81 +1968,8 @@ body,
   flex-shrink: 0;
 }
 
-/* ── Model Selector ── */
-.model-selector-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 12.5px;
-  font-family: var(--font-sans);
-  color: var(--text-secondary);
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-
-.model-selector-btn:hover {
-  background: var(--bg-hover);
-  border-color: var(--border);
-  color: var(--text-primary);
-}
-
-.model-selector-name {
-  font-weight: 500;
-}
-
-.model-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-md);
-  min-width: 200px;
-  z-index: 200;
-  overflow: hidden;
-}
-
-.model-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 9px 12px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 13px;
-  font-family: var(--font-sans);
-  color: var(--text-secondary);
-  transition: background 0.08s;
-  text-align: left;
-}
-
-.model-option:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.model-option.active {
-  color: var(--accent);
-}
-
-.model-option-name {
-  font-weight: 500;
-}
-
-/* ── System Prompt ── */
-.system-prompt-container {
-  position: relative;
-}
-
-.system-prompt-btn {
+/* ── Settings Dropdown ── */
+.settings-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1898,31 +1981,15 @@ body,
   color: var(--text-muted);
   cursor: pointer;
   transition: color 0.15s, background 0.15s, border-color 0.15s;
-  position: relative;
 }
 
-.system-prompt-btn:hover {
-  color: var(--text-secondary);
+.settings-btn:hover {
+  color: var(--text-primary);
   background: var(--bg-hover);
   border-color: var(--border);
 }
 
-.system-prompt-btn.active {
-  color: var(--accent);
-}
-
-.system-prompt-btn.active::after {
-  content: "";
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-}
-
-.system-prompt-dropdown {
+.settings-dropdown {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
@@ -1930,97 +1997,43 @@ body,
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-md);
-  width: 320px;
+  min-width: 180px;
   z-index: 200;
-  padding: 12px;
+  padding: 4px;
+}
+
+.settings-option {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.system-prompt-textarea {
+  align-items: center;
+  gap: 8px;
   width: 100%;
-  min-height: 80px;
   padding: 8px 10px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-size: 12.5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
   font-family: var(--font-sans);
-  line-height: 1.5;
-  resize: vertical;
-  outline: none;
-  transition: border-color 0.15s;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  transition: background 0.1s, color 0.1s;
+  text-decoration: none;
 }
 
-.system-prompt-textarea:focus {
-  border-color: var(--accent);
+.settings-option:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
-.system-prompt-textarea::placeholder {
+.settings-shortcut {
+  margin-left: auto;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
-.system-prompt-presets {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.system-prompt-preset {
-  padding: 4px 10px;
-  background: var(--bg-hover);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--text-secondary);
-  font-size: 11.5px;
-  font-family: var(--font-sans);
-  cursor: pointer;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
-}
-
-.system-prompt-preset:hover {
-  background: var(--accent-subtle);
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
-.system-prompt-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.system-prompt-actions button {
-  padding: 5px 14px;
-  border-radius: var(--radius-sm);
-  font-size: 12.5px;
-  font-family: var(--font-sans);
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.12s, color 0.12s;
-}
-
-.system-prompt-clear {
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-}
-
-.system-prompt-clear:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.system-prompt-save {
-  background: var(--accent);
-  border: 1px solid var(--accent);
-  color: #fff;
-}
-
-.system-prompt-save:hover {
-  opacity: 0.9;
+.settings-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
 }
 
 /* ── Folder Picker ── */

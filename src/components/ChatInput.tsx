@@ -1,11 +1,20 @@
 import { useState, useRef, useEffect, useCallback, KeyboardEvent, DragEvent } from "react";
 import { ImageAttachment } from "../types";
 
+interface ModelOption {
+  id: string;
+  name: string;
+}
+
 interface ChatInputProps {
   onSend: (content: string, images?: ImageAttachment[]) => void;
   onAbort: () => void;
   isStreaming: boolean;
   disabled: boolean;
+  placeholder?: string;
+  models?: ModelOption[];
+  currentModel?: string;
+  onChangeModel?: (modelId: string) => void;
 }
 
 function readFileAsBase64(file: File): Promise<ImageAttachment> {
@@ -38,15 +47,21 @@ export function ChatInput({
   onAbort,
   isStreaming,
   disabled,
+  placeholder,
+  models,
+  currentModel,
+  onChangeModel,
 }: ChatInputProps) {
   const [value, setValue] = useState("");
   const [images, setImages] = useState<ImageAttachment[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [slashActiveIdx, setSlashActiveIdx] = useState(0);
+  const [showModelMenu, setShowModelMenu] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const slashMenuRef = useRef<HTMLDivElement>(null);
+  const modelMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -61,6 +76,17 @@ export function ChatInput({
       textareaRef.current.focus();
     }
   }, [isStreaming, disabled]);
+
+  useEffect(() => {
+    if (!showModelMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (modelMenuRef.current && !modelMenuRef.current.contains(e.target as Node)) {
+        setShowModelMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showModelMenu]);
 
   useEffect(() => {
     const handler = (e: globalThis.KeyboardEvent) => {
@@ -246,7 +272,7 @@ export function ChatInput({
           placeholder={
             disabled
               ? "Select or create a conversation..."
-              : "Message Claude..."
+              : placeholder || "Message Claude..."
           }
           value={value}
           onChange={(e) => setValue(e.target.value)}
@@ -256,18 +282,6 @@ export function ChatInput({
           rows={1}
         />
         <div className="chat-input-actions">
-          <button
-            className="chat-btn attach-btn"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={disabled || isStreaming}
-            title="Attach image"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3"/>
-              <circle cx="5.5" cy="5.5" r="1.25" fill="currentColor"/>
-              <path d="M2 11L5.5 7.5L8 10L10.5 7L14 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
           <input
             ref={fileInputRef}
             type="file"
@@ -297,6 +311,56 @@ export function ChatInput({
                 <path d="M3 8H13M9 4L13 8L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
+          )}
+        </div>
+        <div className="chat-input-bottom-bar">
+          <div className="chat-input-bottom-left">
+            <button
+              className="chat-btn attach-btn"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={disabled || isStreaming}
+              title="Attach image"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3"/>
+                <circle cx="5.5" cy="5.5" r="1.25" fill="currentColor"/>
+                <path d="M2 11L5.5 7.5L8 10L10.5 7L14 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          {models && models.length > 0 && onChangeModel && (
+            <div className="chat-input-bottom-right" ref={modelMenuRef}>
+              <button
+                className="chat-input-model-btn"
+                onClick={() => setShowModelMenu((s) => !s)}
+              >
+                {(models.find((m) => m.id === currentModel)?.name || currentModel || "").replace(/^Claude\s+/i, "")}
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
+                  <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              {showModelMenu && (
+                <div className="chat-input-model-dropdown">
+                  {models.map((m) => (
+                    <button
+                      key={m.id}
+                      className={`chat-input-model-option ${m.id === currentModel ? "active" : ""}`}
+                      onClick={() => {
+                        onChangeModel(m.id);
+                        setShowModelMenu(false);
+                      }}
+                    >
+                      {m.name.replace(/^Claude\s+/i, "")}
+                      {m.id === currentModel && (
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                          <path d="M3 8.5L6.5 12L13 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

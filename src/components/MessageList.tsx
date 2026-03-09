@@ -6,6 +6,7 @@ import { MessageBubble } from "./MessageBubble";
 import { ToolCallBlock } from "./ToolCallBlock";
 import { StreamingIndicator } from "./StreamingIndicator";
 import { useAutoScroll } from "../hooks/useAutoScroll";
+import { apiFetch } from "../utils/api";
 import littleDude from "../assets/little-dude.png";
 
 interface MessageListProps {
@@ -16,6 +17,7 @@ interface MessageListProps {
   onSendPrompt: (content: string) => void;
   onToast?: (message: string, type?: "info" | "error") => void;
   onOpenArtifact?: (language: string, code: string) => void;
+  renderInput?: () => React.ReactNode;
 }
 
 const SUGGESTED_PROMPTS = [
@@ -25,7 +27,7 @@ const SUGGESTED_PROMPTS = [
   { label: "Suggest a new feature", prompt: "Analyze this project and suggest useful features or improvements that could be added." },
 ];
 
-export function MessageList({ messages, streaming, conversationId, onRetry, onSendPrompt, onToast, onOpenArtifact }: MessageListProps) {
+export function MessageList({ messages, streaming, conversationId, onRetry, onSendPrompt, onToast, onOpenArtifact, renderInput }: MessageListProps) {
   const scrollRef = useAutoScroll([messages, streaming]);
   const [sharing, setSharing] = useState(false);
 
@@ -38,7 +40,7 @@ export function MessageList({ messages, streaming, conversationId, onRetry, onSe
     if (!conversationId || sharing) return;
     setSharing(true);
     try {
-      const res = await fetch(`/api/conversations/${conversationId}/share`, { method: "POST" });
+      const res = await apiFetch(`/api/conversations/${conversationId}/share`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       await navigator.clipboard.writeText(data.url);
@@ -56,9 +58,9 @@ export function MessageList({ messages, streaming, conversationId, onRetry, onSe
         <div className="empty-state">
           <img src={littleDude} alt="Claude" className="empty-logo-img" />
           <h2>Claude Code</h2>
-          <p style={{ color: 'var(--text-muted)', marginTop: -4, fontSize: 14 }}>(for designers)</p>
-          <p>What would you like to work on?</p>
-          <div className="suggested-prompts">
+          <p style={{ color: 'var(--text-muted)', marginTop: -10, fontSize: 14 }}>(for designers)</p>
+          {renderInput && <div className="empty-state-input">{renderInput()}</div>}
+          <div className="empty-state-prompts">
             {SUGGESTED_PROMPTS.map((sp) => (
               <button
                 key={sp.label}
@@ -76,13 +78,6 @@ export function MessageList({ messages, streaming, conversationId, onRetry, onSe
       ))}
       {streaming.isStreaming && (
         <div className="message-bubble assistant streaming msg-enter">
-          <div className="message-avatar assistant-avatar">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <rect x="1" y="1" width="14" height="14" rx="4" stroke="currentColor" strokeWidth="1.5"/>
-              <circle cx="6" cy="8" r="1.25" fill="currentColor"/>
-              <circle cx="10" cy="8" r="1.25" fill="currentColor"/>
-            </svg>
-          </div>
           <div className="message-body">
             {streaming.toolCalls.length > 0 && (
               <div className="message-tools">

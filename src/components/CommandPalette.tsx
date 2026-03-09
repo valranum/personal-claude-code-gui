@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Conversation } from "../types";
+import { apiFetch } from "../utils/api";
 
 interface CommandItem {
   id: string;
@@ -46,7 +47,7 @@ export function CommandPalette({
 
   useEffect(() => {
     if (open) {
-      fetch("/api/models")
+      apiFetch("/api/models")
         .then((r) => r.json())
         .then((data) => setModels(data.models || []))
         .catch(() => {});

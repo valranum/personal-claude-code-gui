@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Conversation } from "../types";
 import { formatRelativeTime } from "../utils/time";
+import { FileTree } from "./FileTree";
+import { apiFetch } from "../utils/api";
 
 interface SearchResult {
   conversation: Conversation;
@@ -8,9 +10,12 @@ interface SearchResult {
   matchContext?: string;
 }
 
+type SidebarTab = "chats" | "files";
+
 interface SidebarProps {
   conversations: Conversation[];
   activeId: string | null;
+  activeCwd?: string;
   onSelect: (id: string) => void;
   onCreate: (cwd?: string) => void;
   onDelete: (id: string) => void;
@@ -19,13 +24,12 @@ interface SidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
   width: number;
-  theme: "dark" | "light";
-  onToggleTheme: () => void;
 }
 
 export function Sidebar({
   conversations,
   activeId,
+  activeCwd,
   onSelect,
   onCreate,
   onDelete,
@@ -34,9 +38,8 @@ export function Sidebar({
   collapsed,
   onToggleCollapse,
   width,
-  theme,
-  onToggleTheme,
 }: SidebarProps) {
+  const [activeTab, setActiveTab] = useState<SidebarTab>("chats");
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -66,7 +69,7 @@ export function Sidebar({
     setSearching(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/conversations/search?q=${encodeURIComponent(search.trim())}`);
+        const res = await apiFetch(`/api/conversations/search?q=${encodeURIComponent(search.trim())}`);
         const data: SearchResult[] = await res.json();
         setSearchResults(data);
       } catch {
@@ -129,7 +132,7 @@ export function Sidebar({
         <button
           className="sidebar-btn"
           onClick={() => onCreate()}
-          title="New chat (⌘N)"
+          title="New Chat"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -149,24 +152,8 @@ export function Sidebar({
         <div className="sidebar-actions">
           <button
             className="sidebar-btn"
-            onClick={onToggleTheme}
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {theme === "dark" ? (
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <circle cx="8" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M8 1V3M8 13V15M1 8H3M13 8H15M3.05 3.05L4.46 4.46M11.54 11.54L12.95 12.95M12.95 3.05L11.54 4.46M4.46 11.54L3.05 12.95" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-            ) : (
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <path d="M14 10.5A6.5 6.5 0 015.5 2 6.5 6.5 0 1014 10.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            )}
-          </button>
-          <button
-            className="sidebar-btn"
             onClick={() => onCreate()}
-            title="New chat (⌘N)"
+            title="New Chat"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -183,6 +170,29 @@ export function Sidebar({
           </button>
         </div>
       </div>
+      <div className="sidebar-tabs">
+        <button
+          className={`sidebar-tab ${activeTab === "chats" ? "active" : ""}`}
+          onClick={() => setActiveTab("chats")}
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M2 3.5C2 2.67 2.67 2 3.5 2H12.5C13.33 2 14 2.67 14 3.5V10.5C14 11.33 13.33 12 12.5 12H5L2 15V3.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+          </svg>
+          Chats
+        </button>
+        <button
+          className={`sidebar-tab ${activeTab === "files" ? "active" : ""}`}
+          onClick={() => setActiveTab("files")}
+          disabled={!activeCwd}
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M2 4.5C2 3.67 2.67 3 3.5 3H6.5L8 4.5H12.5C13.33 4.5 14 5.17 14 6V11.5C14 12.33 13.33 13 12.5 13H3.5C2.67 13 2 12.33 2 11.5V4.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+          </svg>
+          Files
+        </button>
+      </div>
+      {activeTab === "chats" ? (
+        <>
       <div className="sidebar-search">
         <svg className="search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none">
           <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5"/>
@@ -253,7 +263,7 @@ export function Sidebar({
                     e.stopPropagation();
                     onPin(conv.id, !conv.pinned);
                   }}
-                  title={conv.pinned ? "Unstar" : "Star"}
+                  title={conv.pinned ? "Unfavorite" : "Favorite"}
                 >
                   <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
                     <path d="M8 1.5L9.8 5.6L14.2 6.1L11 9.1L11.8 13.5L8 11.4L4.2 13.5L5 9.1L1.8 6.1L6.2 5.6Z" stroke="currentColor" strokeWidth="1.3" fill={conv.pinned ? "currentColor" : "none"} strokeLinejoin="round"/>
@@ -315,6 +325,16 @@ export function Sidebar({
           </div>
         )}
       </div>
+        </>
+      ) : (
+        <div className="sidebar-filetree">
+          {activeCwd ? (
+            <FileTree cwd={activeCwd} onClose={() => setActiveTab("chats")} />
+          ) : (
+            <div className="sidebar-empty">Open a project folder to browse files.</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

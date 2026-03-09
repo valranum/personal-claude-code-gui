@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { apiFetch } from "../utils/api";
 import littleDude from "../assets/little-dude.png";
 
 interface WelcomeScreenProps {
@@ -18,7 +19,7 @@ export function WelcomeScreen({
     if (picking) return;
     setPicking(true);
     try {
-      const res = await fetch("/api/pick-folder", { method: "POST" });
+      const res = await apiFetch("/api/pick-folder", { method: "POST" });
       const data = await res.json();
       if (!data.cancelled && data.path) {
         onOpenFolder(data.path);

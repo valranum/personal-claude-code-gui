@@ -8,7 +8,10 @@ function ensureDataDir() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function filePath(id: string): string {
+  if (!UUID_RE.test(id)) throw new Error("Invalid conversation ID format");
   return path.join(DATA_DIR, `${id}.json`);
 }
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ChatMessage, ImageAttachment, ToolCallInfo, StreamingState } from "../types";
 import { connectSSE, SSEEvent } from "../utils/sse";
+import { apiFetch, getAuthToken } from "../utils/api";
 
 const EMPTY_STREAMING: StreamingState = {
   isStreaming: false,
@@ -46,7 +47,7 @@ export function useChat(
     }
     setMessages([]);
     setStreaming(EMPTY_STREAMING);
-    fetch(`/api/conversations/${conversationId}/messages`)
+    apiFetch(`/api/conversations/${conversationId}/messages`)
       .then((r) => r.json())
       .then((data: { messages: ChatMessage[]; lastTurnInputTokens: number }) => {
         setMessages(data.messages);
@@ -71,6 +72,7 @@ export function useChat(
     esRef.current?.close();
     toolCallsRef.current = [];
     const currentEffectId = ++effectIdRef.current;
+    let cancelled = false;
 
     const handleEvent = (event: SSEEvent) => {
       if (currentEffectId !== effectIdRef.current) return;
@@ -190,14 +192,18 @@ export function useChat(
       }
     };
 
-    const es = connectSSE(
-      `/api/conversations/${conversationId}/stream`,
-      handleEvent,
-    );
-    esRef.current = es;
+    getAuthToken().then(() => {
+      if (cancelled) return;
+      const es = connectSSE(
+        `/api/conversations/${conversationId}/stream`,
+        handleEvent,
+      );
+      esRef.current = es;
+    });
 
     return () => {
-      es.close();
+      cancelled = true;
+      esRef.current?.close();
       esRef.current = null;
     };
   }, [conversationId]);
@@ -208,7 +214,7 @@ export function useChat(
 
       if (content.trim() === "/clear") {
         try {
-          await fetch(`/api/conversations/${conversationId}/clear`, { method: "POST" });
+          await apiFetch(`/api/conversations/${conversationId}/clear`, { method: "POST" });
           setMessages([]);
         } catch {
           onErrorRef.current?.("Failed to clear conversation");
@@ -218,10 +224,10 @@ export function useChat(
       if (content.trim() === "/compact") {
         setStreaming({ isStreaming: true, text: "", toolCalls: [] });
         try {
-          const res = await fetch(`/api/conversations/${conversationId}/compact`, { method: "POST" });
+          const res = await apiFetch(`/api/conversations/${conversationId}/compact`, { method: "POST" });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error);
-          const reloaded = await fetch(`/api/conversations/${conversationId}/messages`);
+          const reloaded = await apiFetch(`/api/conversations/${conversationId}/messages`);
           const reloadedData = await reloaded.json();
           setMessages(reloadedData.messages);
         } catch {
@@ -245,7 +251,7 @@ export function useChat(
             params.set("scope", arg === "week" ? "week" : arg === "month" ? "month" : "week");
             if (isCustom) params.set("days", String(customDays));
           }
-          const res = await fetch(`/api/usage?${params}`);
+          const res = await apiFetch(`/api/usage?${params}`);
           const data = await res.json();
           const label = isCustom
             ? `Past ${customDays} day${customDays === 1 ? "" : "s"}`
@@ -276,7 +282,7 @@ export function useChat(
       setStreaming({ isStreaming: true, text: "", toolCalls: [] });
 
       try {
-        await fetch(`/api/conversations/${conversationId}/messages`, {
+        await apiFetch(`/api/conversations/${conversationId}/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ content, images }),
@@ -299,7 +305,7 @@ export function useChat(
       const withoutLast = prev.slice(0, lastUserIdx);
 
       setStreaming({ isStreaming: true, text: "", toolCalls: [] });
-      fetch(`/api/conversations/${conversationId}/messages`, {
+      apiFetch(`/api/conversations/${conversationId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: lastUserMsg.content }),
@@ -317,7 +323,7 @@ export function useChat(
   const abort = useCallback(async () => {
     if (!conversationId) return;
     try {
-      await fetch(`/api/conversations/${conversationId}/abort`, {
+      await apiFetch(`/api/conversations/${conversationId}/abort`, {
         method: "POST",
       });
     } catch {

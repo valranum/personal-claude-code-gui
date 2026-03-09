@@ -1,3 +1,5 @@
+import { getAuthTokenSync } from "./api";
+
 export interface SSEEvent {
   type: string;
   data: Record<string, unknown>;
@@ -8,7 +10,11 @@ export function connectSSE(
   onEvent: (event: SSEEvent) => void,
   onError?: (error: Event) => void,
 ): EventSource {
-  const es = new EventSource(url);
+  const token = getAuthTokenSync();
+  const separator = url.includes("?") ? "&" : "?";
+  const authedUrl = token ? `${url}${separator}token=${token}` : url;
+
+  const es = new EventSource(authedUrl);
 
   es.onmessage = (e) => {
     try {

@@ -1,18 +1,69 @@
 import express from "express";
 import cors from "cors";
+import rateLimit from "express-rate-limit";
 import fs from "fs";
 import path from "path";
 import os from "os";
 import { execFile } from "child_process";
-import { randomUUID } from "crypto";
+import { randomUUID, randomBytes } from "crypto";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import * as store from "./conversation-store.js";
 import * as sessionManager from "./session-manager.js";
 import { ChatMessage, ImageAttachment } from "./types.js";
 
 const app = express();
-app.use(cors());
-app.use(express.json({ limit: "50mb" }));
+
+const AUTH_TOKEN = randomBytes(32).toString("hex");
+const HOME_DIR = os.homedir();
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SHARE_TOKEN_RE = /^[0-9a-f]{32}$/i;
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
+
+function isPathWithinHome(resolved: string): boolean {
+  return resolved === HOME_DIR || resolved.startsWith(HOME_DIR + path.sep);
+}
+
+function isValidUUID(id: string): boolean {
+  return UUID_RE.test(id);
+}
+
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+  }),
+);
+app.use(express.json({ limit: "10mb" }));
+
+const messageLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 30,
+  message: { error: "Too many requests, please try again later" },
+});
+app.use("/api/conversations/:id/messages", messageLimiter);
+
+const generalLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 120,
+  message: { error: "Too many requests, please try again later" },
+});
+app.use("/api", generalLimiter);
+
+app.get("/api/auth/session", (_req, res) => {
+  res.json({ token: AUTH_TOKEN });
+});
+
+app.use("/api", (req, res, next) => {
+  if (req.path === "/auth/session") return next();
+
+  const bearer = req.headers.authorization?.replace("Bearer ", "");
+  const queryToken = req.query.token as string | undefined;
+
+  if (bearer === AUTH_TOKEN || queryToken === AUTH_TOKEN) {
+    return next();
+  }
+
+  res.status(401).json({ error: "Unauthorized" });
+});
 
 const DEFAULT_MODEL = "claude-opus-4-6";
 
@@ -68,13 +119,16 @@ async function generateTitle(
 
 // Browse directories for folder picker autocomplete
 app.get("/api/browse", (req, res) => {
-  const rawPath = (req.query.path as string) || os.homedir();
+  const rawPath = (req.query.path as string) || HOME_DIR;
   const resolved = rawPath.startsWith("~")
-    ? path.join(os.homedir(), rawPath.slice(1))
+    ? path.join(HOME_DIR, rawPath.slice(1))
     : path.resolve(rawPath);
 
-  // If the path ends with a separator or is a directory, list its contents.
-  // Otherwise treat it as a partial name and list the parent filtered by prefix.
+  if (!isPathWithinHome(resolved)) {
+    res.status(403).json({ error: "Access denied: path outside home directory" });
+    return;
+  }
+
   let dirToList: string;
   let prefix = "";
 
@@ -84,6 +138,11 @@ app.get("/api/browse", (req, res) => {
     } else {
       dirToList = path.dirname(resolved);
       prefix = path.basename(resolved).toLowerCase();
+    }
+
+    if (!isPathWithinHome(dirToList)) {
+      res.status(403).json({ error: "Access denied" });
+      return;
     }
 
     const entries = fs.readdirSync(dirToList, { withFileTypes: true });
@@ -116,6 +175,11 @@ app.get("/api/filetree", (req, res) => {
 
   try {
     const resolved = path.resolve(dirPath);
+    if (!isPathWithinHome(resolved)) {
+      res.status(403).json({ error: "Access denied: path outside home directory" });
+      return;
+    }
+
     const entries = fs.readdirSync(resolved, { withFileTypes: true });
     const results: { name: string; path: string; type: "file" | "directory" }[] = [];
 
@@ -167,11 +231,18 @@ app.get("/api/conversations", (_req, res) => {
 // Create conversation
 app.post("/api/conversations", (req, res) => {
   const { title, cwd, model } = req.body;
+
+  const resolvedCwd = cwd ? path.resolve(cwd) : process.cwd();
+  if (!fs.existsSync(resolvedCwd) || !fs.statSync(resolvedCwd).isDirectory()) {
+    res.status(400).json({ error: "Invalid workspace path" });
+    return;
+  }
+
   const id = randomUUID();
   const file = store.createConversation(
     id,
     title || "New Chat",
-    cwd || process.cwd(),
+    resolvedCwd,
     model || DEFAULT_MODEL,
   );
   res.json(file.conversation);
@@ -239,6 +310,15 @@ app.get("/api/conversations/search", (req, res) => {
   res.json(results);
 });
 
+// UUID validation middleware for :id param routes
+app.param("id", (req, res, next, id) => {
+  if (!isValidUUID(id)) {
+    res.status(400).json({ error: "Invalid conversation ID" });
+    return;
+  }
+  next();
+});
+
 // Update conversation (rename, change cwd, change model, etc.)
 app.patch("/api/conversations/:id", (req, res) => {
   const { title, cwd, model, pinned, systemPrompt } = req.body;
@@ -247,6 +327,15 @@ app.patch("/api/conversations/:id", (req, res) => {
     res.status(404).json({ error: "Not found" });
     return;
   }
+
+  if (cwd !== undefined) {
+    const resolvedCwd = path.resolve(cwd);
+    if (!fs.existsSync(resolvedCwd) || !fs.statSync(resolvedCwd).isDirectory()) {
+      res.status(400).json({ error: "Invalid workspace path" });
+      return;
+    }
+  }
+
   const updates: Record<string, unknown> = {};
   if (title !== undefined) updates.title = title;
   if (cwd !== undefined) updates.cwd = cwd;
@@ -347,6 +436,25 @@ app.post("/api/conversations/:id/messages", (req, res) => {
     content: string;
     images?: ImageAttachment[];
   };
+
+  if (typeof content !== "string" || content.trim().length === 0) {
+    res.status(400).json({ error: "Message content is required" });
+    return;
+  }
+  if (content.length > 100_000) {
+    res.status(400).json({ error: "Message too long" });
+    return;
+  }
+
+  if (images && images.length > 0) {
+    for (const img of images) {
+      if (!ALLOWED_IMAGE_TYPES.has(img.mediaType)) {
+        res.status(400).json({ error: `Invalid image type: ${img.mediaType}` });
+        return;
+      }
+    }
+  }
+
   const convFile = store.getConversation(req.params.id);
   if (!convFile) {
     res.status(404).json({ error: "Not found" });
@@ -385,7 +493,6 @@ app.post("/api/conversations/:id/messages", (req, res) => {
       };
       store.addMessage(req.params.id, assistantMsg);
 
-      // Auto-generate title after first exchange
       if (isFirstMessage) {
         const title = await generateTitle(content, text);
         store.updateConversation(req.params.id, { title });
@@ -396,7 +503,6 @@ app.post("/api/conversations/:id/messages", (req, res) => {
       }
     }
 
-    // Accumulate token usage and emit context window utilization
     if (tokenUsage && (tokenUsage.inputTokens > 0 || tokenUsage.outputTokens > 0)) {
       const current = store.getConversation(req.params.id);
       const prev = current?.conversation.tokenUsage;
@@ -409,12 +515,17 @@ app.post("/api/conversations/:id/messages", (req, res) => {
         lastTurnInputTokens: tokenUsage.inputTokens,
       });
 
-      // Emit per-turn input tokens so frontend can detect context window pressure
       session.events.emit("event", {
         type: "context_usage",
         data: { inputTokens: tokenUsage.inputTokens },
       });
     }
+  }).catch((err) => {
+    console.error("Message processing failed:", err);
+    session.events.emit("event", {
+      type: "error",
+      data: { message: err instanceof Error ? err.message : "Message processing failed" },
+    });
   });
 
   res.json({ ok: true, message: userMsg });
@@ -563,12 +674,12 @@ app.post("/api/conversations/:id/share", (req, res) => {
   }
 
   ensureSharedDir();
-  const token = randomUUID().replace(/-/g, "").slice(0, 12);
+  const token = randomBytes(16).toString("hex");
   const snapshot = {
     token,
     title: file.conversation.title,
     model: file.conversation.model,
-    cwd: file.conversation.cwd,
+    workspace: path.basename(file.conversation.cwd),
     createdAt: file.conversation.createdAt,
     sharedAt: new Date().toISOString(),
     messages: file.messages.map((m) => ({
@@ -591,6 +702,11 @@ app.post("/api/conversations/:id/share", (req, res) => {
 });
 
 app.get("/shared/:token", (req, res) => {
+  if (!SHARE_TOKEN_RE.test(req.params.token)) {
+    res.status(400).send("Invalid share token.");
+    return;
+  }
+
   ensureSharedDir();
   const fp = path.join(SHARED_DIR, `${req.params.token}.json`);
   if (!fs.existsSync(fp)) {
@@ -667,6 +783,7 @@ ${messagesHtml}
 </html>`;
 
   res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.setHeader("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'");
   res.send(html);
 });
 
@@ -675,7 +792,8 @@ function escapeHtml(str: string): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 // Usage endpoint
@@ -715,8 +833,9 @@ app.get("/api/usage", (req, res) => {
 });
 
 const PORT = 3001;
-app.listen(PORT, () => {
+app.listen(PORT, "127.0.0.1", () => {
   console.log(`Claude Code GUI server running on http://localhost:${PORT}`);
+  console.log(`Auth token: ${AUTH_TOKEN}`);
 });
 
 // Graceful shutdown
