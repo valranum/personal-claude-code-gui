@@ -38,7 +38,7 @@ To make the API key permanent so you don't have to set it every time, add `expor
 
 ## How It Works
 
-When you open the app, you'll see a welcome screen asking you to pick a project folder. This tells Claude where to work — it can read and edit files, run commands, and navigate within that folder.
+When you open the app, you'll see a welcome screen asking you to pick a project folder. This tells Claude where to work — it can read and edit files, run commands, and navigate within that folder. You can also skip this and start chatting without a folder.
 
 Once a folder is selected, you're in a chat. Type a message, press Enter, and Claude will respond. It can:
 
@@ -47,21 +47,71 @@ Once a folder is selected, you're in a chat. Type a message, press Enter, and Cl
 - **Search your codebase** — find files by name or search contents by keyword.
 - **Search the web** — look things up when it needs current information.
 
-### Tips
+## Features
 
-- **Enter** sends a message. **Shift+Enter** adds a new line.
-- **Esc** stops Claude mid-response.
-- **⌘N** (or Ctrl+N) starts a new conversation.
-- **⌘B** (or Ctrl+B) toggles the sidebar.
+### Models
+
+Switch between Claude models using the model selector in the top-right of the chat. Available models include Claude Opus 4.6, Sonnet 4.6, Sonnet 4, and Haiku 4.5. The default is Opus 4.6.
+
+### Image Upload
+
+Attach images to your messages by clicking the image icon next to the send button, or drag and drop images directly into the chat input.
+
+### Code Artifacts
+
+When Claude includes code blocks in a response, they appear as clickable cards. Click a card to open the code in a side panel with full syntax highlighting, line numbers, and a copy button — similar to artifacts on Claude's web interface.
+
+### Slash Commands
+
+Type `/` in the chat input to see available commands:
+
+- `/clear` — Reset conversation context and start fresh.
+- `/compact` — Summarize the conversation to free up context window space.
+- `/usage` — Check token usage. Supports scopes: `/usage week`, `/usage month`, `/usage 14` (custom number of days), or just `/usage` for the current conversation.
+
+### Command Palette
+
+Press **⌘K** (or Ctrl+K) to open the command palette for quick access to actions: new chat, toggle sidebar, toggle theme, switch models, export conversations, share, and jump to recent conversations.
+
+### Sharing
+
+Click the **Share** button next to Retry at the bottom of a conversation to create a read-only snapshot link. The link is copied to your clipboard and anyone with access to the server can view the shared conversation in their browser.
+
+### Export
+
+Export any conversation as Markdown or JSON. Available from the sidebar (hover over a conversation to see the export icon) or through the command palette.
+
+### Search
+
+The sidebar search searches across both conversation titles and message content. Results show where the match was found, with a context snippet for message-content matches.
+
+### Auto-Compact Suggestion
+
+When a conversation uses more than 75% of the context window (~150k tokens), a banner suggests compacting the conversation to free up space. Click "Compact now" or dismiss it.
+
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| **Enter** | Send message |
+| **Shift+Enter** | New line |
+| **Esc** | Stop generation |
+| **⌘N** / Ctrl+N | New conversation |
+| **⌘B** / Ctrl+B | Toggle sidebar |
+| **⌘K** / Ctrl+K | Command palette |
+
+### Other
+
 - Click the folder path at the top of the chat to change which folder Claude is working in.
-- Claude's responses include **syntax-highlighted code blocks** with a copy button.
 - **Tool calls** (file reads, shell commands, etc.) appear as collapsible blocks — click to see details.
 - Conversations auto-save and persist across restarts.
 - Use the **light/dark mode toggle** in the sidebar.
+- **Diff viewer** for file edits shows changes as syntax-highlighted diffs.
+- **Error boundaries** and **toast notifications** surface issues instead of failing silently.
 
 ## Important to Know
 
-Claude runs with full permissions in whatever folder you point it at. It can read, create, edit, and delete files, and run any shell command. This is by design — it makes for a smooth coding experience — but be aware of it.
+Claude runs with full permissions in whatever folder you point it at. It can read, create, edit, and delete files, and run any shell command. This is by design — it makes for a smooth coding experience — but be aware of it. Avoid pointing it at its own project folder if you're asking it to build something, as it may overwrite the app's own files.
 
 ## Available Tools
 
@@ -86,26 +136,40 @@ Claude runs with full permissions in whatever folder you point it at. It can rea
 
 ## Where Is My Data?
 
-Conversations are saved as JSON files in `data/conversations/`. You can back them up or delete them. They're gitignored so they won't be committed.
+- **Conversations** are saved as JSON files in `data/conversations/`. They're gitignored so they won't be committed.
+- **Shared conversation snapshots** are saved in `data/shared/`. Also gitignored.
+- You can back up or delete either folder freely.
 
 ## Project Structure
 
 ```
 claude-code-gui/
 ├── server/                  # Backend (Express + Claude Agent SDK)
-│   ├── index.ts             # API routes and SSE streaming
-│   ├── agent-session.ts     # Claude Agent SDK wrapper
+│   ├── index.ts             # API routes, SSE streaming, share/export/search endpoints
+│   ├── agent-session.ts     # Claude Agent SDK wrapper with abort support
 │   ├── conversation-store.ts# Conversation persistence
 │   ├── session-manager.ts   # Active session tracking
 │   └── types.ts
 ├── src/                     # Frontend (React + Vite + TypeScript)
-│   ├── App.tsx
-│   ├── App.css
+│   ├── App.tsx              # Main app with command palette, theme, layout
+│   ├── App.css              # All styles
 │   ├── components/          # UI components
-│   ├── hooks/               # React hooks
+│   │   ├── ArtifactPanel    # Side panel for viewing code artifacts
+│   │   ├── ChatInput        # Message input with slash commands and image upload
+│   │   ├── ChatView         # Main chat area with artifact split layout
+│   │   ├── CommandPalette   # ⌘K command palette
+│   │   ├── CompactSuggestionBanner
+│   │   ├── DiffViewer       # Syntax-highlighted diff display
+│   │   ├── MessageBubble    # Message rendering with code cards
+│   │   ├── MessageList      # Message list with retry/share actions
+│   │   ├── Sidebar          # Conversation list, search, export
+│   │   ├── ToolCallBlock    # Collapsible tool call display
+│   │   └── WorkspaceBar     # Folder path and model selector
+│   ├── hooks/               # React hooks (useChat, useConversations, useToast)
 │   ├── types/               # TypeScript types
-│   └── utils/               # Helpers
+│   └── utils/               # Helpers (SSE, time formatting)
 ├── data/conversations/      # Saved conversations (gitignored)
+├── data/shared/             # Shared conversation snapshots (gitignored)
 ├── package.json
 ├── vite.config.ts
 └── tsconfig.json
