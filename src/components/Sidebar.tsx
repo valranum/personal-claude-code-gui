@@ -150,7 +150,7 @@ export function Sidebar({
       <div className="sidebar-header">
         <div className="sidebar-title-group">
           <h1 className="sidebar-title">Claude Code</h1>
-          <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 11 }}>(for designers)</span>
+          <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 13 }}>(for designers)</span>
         </div>
         <div className="sidebar-actions">
           <Tooltip text="Collapse sidebar (⌘B)">
