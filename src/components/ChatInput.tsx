@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, KeyboardEvent, DragEvent } from "react";
 import { ImageAttachment } from "../types";
+import { Tooltip } from "./Tooltip";
 
 interface ModelOption {
   id: string;
@@ -315,18 +316,17 @@ export function ChatInput({
         </div>
         <div className="chat-input-bottom-bar">
           <div className="chat-input-bottom-left">
-            <button
-              className="chat-btn attach-btn"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={disabled || isStreaming}
-              title="Attach image"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3"/>
-                <circle cx="5.5" cy="5.5" r="1.25" fill="currentColor"/>
-                <path d="M2 11L5.5 7.5L8 10L10.5 7L14 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
+            <Tooltip text="Attach image (jpg, png, gif, webp)">
+              <button
+                className="chat-btn attach-btn"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={disabled || isStreaming}
+              >
+                <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+                  <path d="M7.5 4.5L11.5 8.5C12.6 9.6 12.6 11.4 11.5 12.5C10.4 13.6 8.6 13.6 7.5 12.5L3 8C2.2 7.2 2.2 5.8 3 5C3.8 4.2 5.2 4.2 6 5L10 9C10.4 9.4 10.4 10.1 10 10.5C9.6 10.9 8.9 10.9 8.5 10.5L5 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            </Tooltip>
           </div>
           {models && models.length > 0 && onChangeModel && (
             <div className="chat-input-bottom-right" ref={modelMenuRef}>

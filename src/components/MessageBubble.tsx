@@ -214,6 +214,10 @@ export function MessageBubble({ message, onOpenArtifact }: MessageBubbleProps) {
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
+                  a({ href, children, ...props }) {
+                    const safeHref = href && /^https?:\/\//i.test(href) ? href : href && !/^javascript:/i.test(href) ? href : undefined;
+                    return <a href={safeHref} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>;
+                  },
                   code({ className, children, ...props }) {
                     const match = /language-(\w+)/.exec(className || "");
                     const isInline = !match;

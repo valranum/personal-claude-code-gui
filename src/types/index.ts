@@ -42,5 +42,6 @@ export interface TokenUsage {
 export interface StreamingState {
   isStreaming: boolean;
   text: string;
+  thinking: string;
   toolCalls: ToolCallInfo[];
 }

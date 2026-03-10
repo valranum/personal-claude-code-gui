@@ -161,6 +161,7 @@ function AppContent() {
           conversations={conversations}
           activeId={activeId}
           onSelect={setActiveId}
+          onGoHome={() => setActiveId(null)}
           onCreate={createConversation}
           onDelete={deleteConversation}
           onRename={renameConversation}

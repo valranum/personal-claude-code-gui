@@ -22,7 +22,7 @@ interface MessageListProps {
 const SUGGESTED_PROMPTS = [
   { label: "Summarize this project", prompt: "Read the project structure and give me a concise summary of what this codebase does." },
   { label: "Find TODOs", prompt: "Search the codebase for all TODO and FIXME comments and list them." },
-  { label: "Check my code for bugs", prompt: "Review the codebase for potential bugs, edge cases, or issues and report what you find." },
+  { label: "Explain a file", prompt: "What are the main files in this project? Give me a brief overview of each." },
   { label: "Suggest a new feature", prompt: "Analyze this project and suggest useful features or improvements that could be added." },
 ];
 
@@ -78,15 +78,14 @@ export function MessageList({ messages, streaming, conversationId, onRetry, onSe
       {streaming.isStreaming && (
         <div className="message-bubble assistant streaming msg-enter">
           <div className="message-body">
-            {streaming.text ? (
+            {streaming.text && (
               <div className="message-content">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {streaming.text}
                 </ReactMarkdown>
               </div>
-            ) : (
-              <StreamingIndicator />
             )}
+            <StreamingIndicator toolCalls={streaming.toolCalls} />
           </div>
         </div>
       )}

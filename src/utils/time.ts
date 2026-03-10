@@ -1,6 +1,8 @@
 export function formatRelativeTime(iso: string): string {
+  if (!iso) return "";
   const now = Date.now();
   const then = new Date(iso).getTime();
+  if (isNaN(then)) return "";
   const diff = now - then;
 
   const seconds = Math.floor(diff / 1000);

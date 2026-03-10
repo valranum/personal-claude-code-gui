@@ -69,7 +69,7 @@ export function WelcomeScreen({
         </button>
         <button
           className="welcome-skip-link"
-          onClick={() => onOpenFolder()}
+          onClick={() => onOpenFolder(undefined)}
         >
           or start without a folder
         </button>

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Conversation } from "../types";
 import { apiFetch } from "../utils/api";
+import { Tooltip } from "./Tooltip";
 
 interface WorkspaceBarProps {
   conversation: Conversation | null;
@@ -64,41 +65,32 @@ export function WorkspaceBar({
   return (
     <div className="workspace-bar">
       <div className="workspace-bar-left">
-        {sidebarCollapsed && (
+        <Tooltip text="Change working directory">
           <button
-            className="workspace-menu-btn"
-            onClick={onToggleSidebar}
-            title="Show sidebar (⌘B)"
+            className="workspace-path-btn"
+            onClick={handleChangeCwd}
+            disabled={picking}
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M2 4H14M2 8H14M2 12H14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-          </button>
-        )}
-        <button
-          className="workspace-path-btn"
-          onClick={handleChangeCwd}
-          disabled={picking}
-          title="Change working directory"
-        >
           <svg className="workspace-folder-icon" width="15" height="15" viewBox="0 0 16 16" fill="none">
             <path d="M2 4.5C2 3.67 2.67 3 3.5 3H6.5L8 4.5H12.5C13.33 4.5 14 5.17 14 6V11.5C14 12.33 13.33 13 12.5 13H3.5C2.67 13 2 12.33 2 11.5V4.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
           </svg>
           <span className="workspace-path-dir">{dir}</span>
           <span className="workspace-path-name">{picking ? "Opening..." : name}</span>
         </button>
+        </Tooltip>
       </div>
       <div className="workspace-bar-right" ref={settingsRef}>
-        <button
-          className="settings-btn"
-          onClick={() => setShowSettings((s) => !s)}
-          title="Settings"
-        >
+        <Tooltip text="Settings">
+          <button
+            className="settings-btn"
+            onClick={() => setShowSettings((s) => !s)}
+          >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M6.86 1.5H9.14L9.6 3.42L11.18 4.15L13.02 3.24L14.76 5.26L13.52 6.92L13.68 8.7L15.36 9.62L14.64 11.86L12.72 11.82L11.58 13.14L11.88 15.08L9.64 15.58L8.6 13.92H7.4L6.36 15.58L4.12 15.08L4.42 13.14L3.28 11.82L1.36 11.86L0.64 9.62L2.32 8.7L2.48 6.92L1.24 5.26L2.98 3.24L4.82 4.15L6.4 3.42L6.86 1.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" transform="scale(0.88) translate(1.1, 0.8)"/>
             <circle cx="8" cy="8.5" r="2.2" stroke="currentColor" strokeWidth="1.2"/>
           </svg>
         </button>
+        </Tooltip>
         {showSettings && (
           <div className="settings-dropdown">
             <button

@@ -18,6 +18,7 @@ interface SidebarProps {
   activeId: string | null;
   activeCwd?: string;
   onSelect: (id: string) => void;
+  onGoHome: () => void;
   onCreate: (cwd?: string) => void;
   onDelete: (id: string) => void;
   onRename: (id: string, title: string) => void;
@@ -32,6 +33,7 @@ export function Sidebar({
   activeId,
   activeCwd,
   onSelect,
+  onGoHome,
   onCreate,
   onDelete,
   onRename,
@@ -134,7 +136,7 @@ export function Sidebar({
         <Tooltip text="New Chat (⌘N)">
           <button
             className="sidebar-btn"
-            onClick={() => onCreate()}
+            onClick={() => onCreate(activeCwd)}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -148,10 +150,10 @@ export function Sidebar({
   return (
     <div className="sidebar" style={{ width }}>
       <div className="sidebar-header">
-        <div className="sidebar-title-group">
+        <button className="sidebar-title-group" onClick={onGoHome}>
           <h1 className="sidebar-title">Claude Code</h1>
           <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 13 }}>(for designers)</span>
-        </div>
+        </button>
         <div className="sidebar-actions">
           <Tooltip text="Collapse sidebar (⌘B)">
             <button
@@ -201,7 +203,7 @@ export function Sidebar({
         />
         {searching && <span className="search-spinner" />}
       </div>
-      <button className="new-chat-list-btn" onClick={() => onCreate()}>
+      <button className="new-chat-list-btn" onClick={() => onCreate(activeCwd)}>
         <span className="new-chat-icon">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
             <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -260,61 +262,65 @@ export function Sidebar({
                 </div>
               )}
               <div className="conversation-actions">
-                <button
-                  className={`pin-btn ${conv.pinned ? "pinned" : ""}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onPin(conv.id, !conv.pinned);
-                  }}
-                  title={conv.pinned ? "Unfavorite" : "Favorite"}
-                >
-                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                    <path d="M8 1.5L9.8 5.6L14.2 6.1L11 9.1L11.8 13.5L8 11.4L4.2 13.5L5 9.1L1.8 6.1L6.2 5.6Z" stroke="currentColor" strokeWidth="1.3" fill={conv.pinned ? "currentColor" : "none"} strokeLinejoin="round"/>
-                  </svg>
-                </button>
-                <button
-                  className="conversation-action-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setExportMenuId(exportMenuId === conv.id ? null : conv.id);
-                  }}
-                  title="Export"
-                >
-                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                    <path d="M8 2V10M5 7L8 10L11 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M3 13H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                  </svg>
-                </button>
+                <Tooltip text={conv.pinned ? "Unfavorite" : "Favorite"}>
+                  <button
+                    className={`pin-btn ${conv.pinned ? "pinned" : ""}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPin(conv.id, !conv.pinned);
+                    }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                      <path d="M8 1.5L9.8 5.6L14.2 6.1L11 9.1L11.8 13.5L8 11.4L4.2 13.5L5 9.1L1.8 6.1L6.2 5.6Z" stroke="currentColor" strokeWidth="1.3" fill={conv.pinned ? "currentColor" : "none"} strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                </Tooltip>
+                <Tooltip text="Export">
+                  <button
+                    className="conversation-action-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setExportMenuId(exportMenuId === conv.id ? null : conv.id);
+                    }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                      <path d="M8 2V10M5 7L8 10L11 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M3 13H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                  </button>
+                </Tooltip>
                 {exportMenuId === conv.id && (
                   <div className="export-dropdown" onClick={(e) => e.stopPropagation()}>
                     <button onClick={() => handleExport(conv.id, "md")}>Markdown</button>
                     <button onClick={() => handleExport(conv.id, "json")}>JSON</button>
                   </div>
                 )}
-                <button
-                  className="conversation-action-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRenameStart(conv);
-                  }}
-                  title="Rename"
-                >
-                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                    <path d="M11.5 1.5L14.5 4.5L5 14H2V11L11.5 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-                  </svg>
-                </button>
-                <button
-                  className="conversation-action-btn delete-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(conv.id);
-                  }}
-                  title="Delete"
-                >
-                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                    <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                  </svg>
-                </button>
+                <Tooltip text="Rename">
+                  <button
+                    className="conversation-action-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRenameStart(conv);
+                    }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                      <path d="M11.5 1.5L14.5 4.5L5 14H2V11L11.5 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                </Tooltip>
+                <Tooltip text="Delete">
+                  <button
+                    className="conversation-action-btn delete-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(conv.id);
+                    }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                      <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                  </button>
+                </Tooltip>
               </div>
             </div>
           </React.Fragment>

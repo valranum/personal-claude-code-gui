@@ -10,8 +10,14 @@ export function useConversations(onError?: (message: string) => void) {
 
   const refresh = useCallback(() => {
     apiFetch("/api/conversations")
-      .then((r) => r.json())
-      .then(setConversations)
+      .then((r) => {
+        if (!r.ok) throw new Error("Server error");
+        return r.json();
+      })
+      .then((data) => {
+        if (!Array.isArray(data)) throw new Error("Invalid response");
+        setConversations(data);
+      })
       .catch(() => {
         setConversations([]);
         onErrorRef.current?.("Failed to load conversations");
@@ -20,8 +26,13 @@ export function useConversations(onError?: (message: string) => void) {
 
   useEffect(() => {
     apiFetch("/api/conversations")
-      .then((r) => r.json())
-      .then((convs: Conversation[]) => {
+      .then((r) => {
+        if (!r.ok) throw new Error("Server error");
+        return r.json();
+      })
+      .then((data) => {
+        if (!Array.isArray(data)) throw new Error("Invalid response");
+        const convs: Conversation[] = data;
         setConversations(convs);
         if (convs.length > 0) {
           setActiveId(convs[0].id);
@@ -54,14 +65,12 @@ export function useConversations(onError?: (message: string) => void) {
       try {
         await apiFetch(`/api/conversations/${id}`, { method: "DELETE" });
         setConversations((prev) => prev.filter((c) => c.id !== id));
-        if (activeId === id) {
-          setActiveId(null);
-        }
+        setActiveId((current) => (current === id ? null : current));
       } catch {
         onErrorRef.current?.("Failed to delete conversation");
       }
     },
-    [activeId],
+    [],
   );
 
   const renameConversation = useCallback(
@@ -72,6 +81,7 @@ export function useConversations(onError?: (message: string) => void) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title }),
         });
+        if (!res.ok) throw new Error("Server error");
         const updated: Conversation = await res.json();
         setConversations((prev) =>
           prev.map((c) => (c.id === id ? updated : c)),
@@ -91,6 +101,7 @@ export function useConversations(onError?: (message: string) => void) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ cwd }),
         });
+        if (!res.ok) throw new Error("Server error");
         const updated: Conversation = await res.json();
         setConversations((prev) =>
           prev.map((c) => (c.id === id ? updated : c)),
@@ -113,17 +124,24 @@ export function useConversations(onError?: (message: string) => void) {
 
   const pinConversation = useCallback(
     async (id: string, pinned: boolean) => {
+      setConversations((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, pinned } : c)),
+      );
       try {
         const res = await apiFetch(`/api/conversations/${id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pinned }),
         });
+        if (!res.ok) throw new Error("Server error");
         const updated: Conversation = await res.json();
         setConversations((prev) =>
           prev.map((c) => (c.id === id ? updated : c)),
         );
       } catch {
+        setConversations((prev) =>
+          prev.map((c) => (c.id === id ? { ...c, pinned: !pinned } : c)),
+        );
         onErrorRef.current?.("Failed to pin conversation");
       }
     },
@@ -138,6 +156,7 @@ export function useConversations(onError?: (message: string) => void) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ model }),
         });
+        if (!res.ok) throw new Error("Server error");
         const updated: Conversation = await res.json();
         setConversations((prev) =>
           prev.map((c) => (c.id === id ? updated : c)),

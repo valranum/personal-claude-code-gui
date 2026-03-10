@@ -32,5 +32,9 @@ export async function apiFetch(
   const token = await getAuthToken();
   const headers = new Headers(options.headers);
   headers.set("Authorization", `Bearer ${token}`);
-  return fetch(url, { ...options, headers });
+  const res = await fetch(url, { ...options, headers });
+  if (res.status === 401) {
+    cachedToken = null;
+  }
+  return res;
 }

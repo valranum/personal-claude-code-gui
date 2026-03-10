@@ -206,8 +206,10 @@ app.get("/api/filetree", (req, res) => {
 
 // Native OS folder picker dialog
 app.post("/api/pick-folder", (_req, res) => {
-  const script =
-    'set f to POSIX path of (choose folder with prompt "Choose a project folder")\nreturn f';
+  const devDir = path.join(HOME_DIR, "Development");
+  const defaultDir = fs.existsSync(devDir) ? devDir : HOME_DIR;
+  const sanitizedDir = defaultDir.replace(/[\\"]/g, "");
+  const script = `set f to POSIX path of (choose folder with prompt "Choose a project folder" default location POSIX file "${sanitizedDir}")\nreturn f`;
   execFile("osascript", ["-e", script], (err, stdout) => {
     if (err) {
       res.json({ cancelled: true, path: null });
@@ -232,7 +234,7 @@ app.get("/api/conversations", (_req, res) => {
 app.post("/api/conversations", (req, res) => {
   const { title, cwd, model } = req.body;
 
-  const resolvedCwd = cwd ? path.resolve(cwd) : process.cwd();
+  const resolvedCwd = cwd ? path.resolve(cwd) : HOME_DIR;
   if (!fs.existsSync(resolvedCwd) || !fs.statSync(resolvedCwd).isDirectory()) {
     res.status(400).json({ error: "Invalid workspace path" });
     return;

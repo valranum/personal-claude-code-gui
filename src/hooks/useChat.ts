@@ -6,6 +6,7 @@ import { apiFetch, getAuthToken } from "../utils/api";
 const EMPTY_STREAMING: StreamingState = {
   isStreaming: false,
   text: "",
+  thinking: "",
   toolCalls: [],
 };
 
@@ -29,16 +30,28 @@ export function useChat(
   onError?: (message: string) => void,
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [streaming, setStreaming] = useState<StreamingState>(EMPTY_STREAMING);
+  const [streaming, _setStreaming] = useState<StreamingState>(EMPTY_STREAMING);
   const [showCompactSuggestion, setShowCompactSuggestion] = useState(false);
+
+  const setStreaming = useCallback((val: StreamingState | ((prev: StreamingState) => StreamingState)) => {
+    _setStreaming((prev) => {
+      const next = typeof val === "function" ? val(prev) : val;
+      isStreamingRef.current = next.isStreaming;
+      return next;
+    });
+  }, []);
   const dismissedRef = useRef<Set<string>>(new Set());
   const esRef = useRef<EventSource | null>(null);
   const toolCallsRef = useRef<ToolCallInfo[]>([]);
   const effectIdRef = useRef(0);
   const onErrorRef = useRef(onError);
+  const fetchAbortRef = useRef<AbortController | null>(null);
+  const isStreamingRef = useRef(false);
+  const resultHandledRef = useRef(false);
   onErrorRef.current = onError;
 
   useEffect(() => {
+    fetchAbortRef.current?.abort();
     if (!conversationId) {
       setMessages([]);
       setStreaming(EMPTY_STREAMING);
@@ -47,9 +60,15 @@ export function useChat(
     }
     setMessages([]);
     setStreaming(EMPTY_STREAMING);
+    const controller = new AbortController();
+    fetchAbortRef.current = controller;
     apiFetch(`/api/conversations/${conversationId}/messages`)
-      .then((r) => r.json())
-      .then((data: { messages: ChatMessage[]; lastTurnInputTokens: number }) => {
+      .then((r) => {
+        if (controller.signal.aborted) return;
+        return r.json();
+      })
+      .then((data: { messages: ChatMessage[]; lastTurnInputTokens: number } | undefined) => {
+        if (!data || controller.signal.aborted) return;
         setMessages(data.messages);
         if (
           data.lastTurnInputTokens >= CONTEXT_TOKEN_THRESHOLD &&
@@ -60,10 +79,12 @@ export function useChat(
           setShowCompactSuggestion(false);
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
         setMessages([]);
         onErrorRef.current?.("Failed to load messages");
       });
+    return () => controller.abort();
   }, [conversationId]);
 
   useEffect(() => {
@@ -78,8 +99,9 @@ export function useChat(
       if (currentEffectId !== effectIdRef.current) return;
       switch (event.type) {
         case "processing":
-          setStreaming({ isStreaming: true, text: "", toolCalls: [] });
+          setStreaming({ isStreaming: true, text: "", thinking: "", toolCalls: [] });
           toolCallsRef.current = [];
+          resultHandledRef.current = false;
           break;
 
         case "result": {
@@ -98,6 +120,7 @@ export function useChat(
           ]);
           setStreaming(EMPTY_STREAMING);
           toolCallsRef.current = [];
+          resultHandledRef.current = true;
           break;
         }
 
@@ -129,7 +152,7 @@ export function useChat(
 
         case "done":
           setStreaming((prev) => {
-            if (prev.isStreaming && prev.text) {
+            if (!resultHandledRef.current && prev.isStreaming && prev.text) {
               setMessages((msgs) => [
                 ...msgs,
                 {
@@ -145,6 +168,7 @@ export function useChat(
               ]);
             }
             toolCallsRef.current = [];
+            resultHandledRef.current = false;
             return EMPTY_STREAMING;
           });
           break;
@@ -161,11 +185,23 @@ export function useChat(
           break;
         }
 
+        case "thinking": {
+          const data = event.data as Record<string, unknown>;
+          if (typeof data.content === "string") {
+            setStreaming((prev) => ({
+              ...prev,
+              thinking: prev.thinking + data.content,
+            }));
+          }
+          break;
+        }
+
         case "message": {
           const data = event.data as Record<string, unknown>;
           if (typeof data.content === "string") {
             setStreaming((prev) => ({
               ...prev,
+              thinking: "",
               text: prev.text + data.content,
             }));
           }
@@ -210,7 +246,7 @@ export function useChat(
 
   const sendMessage = useCallback(
     async (content: string, images?: ImageAttachment[]) => {
-      if (!conversationId || streaming.isStreaming) return;
+      if (!conversationId || isStreamingRef.current) return;
 
       if (content.trim() === "/clear") {
         try {
@@ -222,7 +258,7 @@ export function useChat(
         return;
       }
       if (content.trim() === "/compact") {
-        setStreaming({ isStreaming: true, text: "", toolCalls: [] });
+        setStreaming({ isStreaming: true, text: "", thinking: "", toolCalls: [] });
         try {
           const res = await apiFetch(`/api/conversations/${conversationId}/compact`, { method: "POST" });
           const data = await res.json();
@@ -279,7 +315,7 @@ export function useChat(
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, userMsg]);
-      setStreaming({ isStreaming: true, text: "", toolCalls: [] });
+      setStreaming({ isStreaming: true, text: "", thinking: "", toolCalls: [] });
 
       try {
         await apiFetch(`/api/conversations/${conversationId}/messages`, {
@@ -291,13 +327,14 @@ export function useChat(
         onErrorRef.current?.("Failed to send message");
       }
     },
-    [conversationId, streaming.isStreaming],
+    [conversationId, setStreaming],
   );
 
   const retry = useCallback(async () => {
-    if (!conversationId || streaming.isStreaming) return;
+    if (!conversationId || isStreamingRef.current) return;
 
     let lastContent: string | undefined;
+    let lastImages: ImageAttachment[] | undefined;
 
     setMessages((prev) => {
       const lastUserIdx = prev.findLastIndex((m) => m.role === "user");
@@ -305,6 +342,7 @@ export function useChat(
 
       const lastUserMsg = prev[lastUserIdx];
       lastContent = lastUserMsg.content;
+      lastImages = lastUserMsg.images;
       const withoutLast = prev.slice(0, lastUserIdx);
 
       return [
@@ -315,19 +353,19 @@ export function useChat(
 
     if (!lastContent) return;
 
-    setStreaming({ isStreaming: true, text: "", toolCalls: [] });
+    setStreaming({ isStreaming: true, text: "", thinking: "", toolCalls: [] });
     toolCallsRef.current = [];
 
     try {
       await apiFetch(`/api/conversations/${conversationId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: lastContent }),
+        body: JSON.stringify({ content: lastContent, images: lastImages }),
       });
     } catch {
       onErrorRef.current?.("Failed to retry message");
     }
-  }, [conversationId, streaming.isStreaming]);
+  }, [conversationId, setStreaming]);
 
   const abort = useCallback(async () => {
     if (!conversationId) return;

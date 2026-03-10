@@ -100,6 +100,7 @@ export class AgentSession {
       permissionMode: "acceptEdits",
       cwd: this.cwd,
       abortController: this.abortController,
+      includePartialMessages: true,
     };
 
     if (this.systemPrompt) {
@@ -180,7 +181,9 @@ export class AgentSession {
             this.emit("message", { content });
           } else if (Array.isArray(content)) {
             for (const block of content as Array<Record<string, unknown>>) {
-              if (block.type === "text" && typeof block.text === "string") {
+              if (block.type === "thinking" && typeof block.thinking === "string") {
+                this.emit("thinking", { content: block.thinking });
+              } else if (block.type === "text" && typeof block.text === "string") {
                 this.emit("message", { content: block.text });
               } else if (block.type === "tool_use") {
                 const tc: ToolCallInfo = {
@@ -199,10 +202,33 @@ export class AgentSession {
 
         if (msg.type === "content_block_delta") {
           const delta = msg.delta as Record<string, unknown> | undefined;
+          if (delta?.type === "thinking_delta" && typeof delta.thinking === "string") {
+            this.emit("thinking", { content: delta.thinking });
+            continue;
+          }
           if (delta?.type === "text_delta" && typeof delta.text === "string") {
             this.emit("message", { content: delta.text });
             continue;
           }
+        }
+
+        if (msg.type === "stream_event") {
+          const event = msg.event as Record<string, unknown> | undefined;
+          if (event?.type === "content_block_start") {
+            const block = event.content_block as Record<string, unknown> | undefined;
+            if (block?.type === "thinking" && typeof block.thinking === "string") {
+              this.emit("thinking", { content: block.thinking });
+              continue;
+            }
+          }
+          if (event?.type === "content_block_delta") {
+            const delta = event.delta as Record<string, unknown> | undefined;
+            if (delta?.type === "thinking_delta" && typeof delta.thinking === "string") {
+              this.emit("thinking", { content: delta.thinking });
+              continue;
+            }
+          }
+          continue;
         }
 
         this.emit("message", msg);
