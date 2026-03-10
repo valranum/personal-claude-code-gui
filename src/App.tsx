@@ -33,6 +33,7 @@ function AppContent() {
     updateConversationModel,
     updateLocalTitle,
     pinConversation,
+    refresh,
   } = useConversations((msg) => addToast(msg, "error"));
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -141,6 +142,11 @@ function AppContent() {
     }
   }, [activeId, addToast]);
 
+  const handleFork = useCallback((newConversationId: string) => {
+    refresh();
+    setActiveId(newConversationId);
+  }, [refresh, setActiveId]);
+
   const handleShare = useCallback(async () => {
     if (!activeId) return;
     try {
@@ -186,6 +192,7 @@ function AppContent() {
             onChangeCwd={updateConversationCwd}
             onChangeModel={updateConversationModel}
             onTitleUpdate={updateLocalTitle}
+            onFork={handleFork}
             theme={theme}
             onToggleTheme={toggleTheme}
           />

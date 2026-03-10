@@ -3,6 +3,8 @@ import { Conversation } from "../types";
 import { apiFetch } from "../utils/api";
 import { Tooltip } from "./Tooltip";
 import { FaqModal } from "./FaqModal";
+import { MCPConfigPanel } from "./MCPConfigPanel";
+import { SystemPromptModal } from "./SystemPromptModal";
 
 interface WorkspaceBarProps {
   conversation: Conversation | null;
@@ -32,6 +34,8 @@ export function WorkspaceBar({
   const [picking, setPicking] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showFaq, setShowFaq] = useState(false);
+  const [showMcp, setShowMcp] = useState(false);
+  const [showSystemPrompt, setShowSystemPrompt] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -128,6 +132,34 @@ export function WorkspaceBar({
               </svg>
               <span>FAQ</span>
             </button>
+            <button
+              className="settings-option"
+              onClick={() => {
+                setShowMcp(true);
+                setShowSettings(false);
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <rect x="1" y="4" width="14" height="8" rx="2" stroke="currentColor" strokeWidth="1.3"/>
+                <circle cx="5" cy="8" r="1.5" fill="currentColor"/>
+                <circle cx="11" cy="8" r="1.5" fill="currentColor"/>
+                <path d="M5 8H11" stroke="currentColor" strokeWidth="1.3"/>
+              </svg>
+              <span>MCP Servers</span>
+            </button>
+            <button
+              className="settings-option"
+              onClick={() => {
+                setShowSystemPrompt(true);
+                setShowSettings(false);
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M2 3.5C2 2.67 2.67 2 3.5 2H12.5C13.33 2 14 2.67 14 3.5V10.5C14 11.33 13.33 12 12.5 12H5L2 15V3.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+                <path d="M5 6H11M5 9H9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+              <span>System Prompt</span>
+            </button>
             <div className="settings-divider" />
             <a
               className="settings-option"
@@ -148,6 +180,15 @@ export function WorkspaceBar({
         )}
       </div>
       <FaqModal open={showFaq} onClose={() => setShowFaq(false)} />
+      {showMcp && conversation && (
+        <MCPConfigPanel cwd={conversation.cwd} onClose={() => setShowMcp(false)} />
+      )}
+      {showSystemPrompt && conversation && (
+        <SystemPromptModal
+          conversation={conversation}
+          onClose={() => setShowSystemPrompt(false)}
+        />
+      )}
     </div>
   );
 }

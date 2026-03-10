@@ -16,6 +16,7 @@ interface MessageListProps {
   onSendPrompt: (content: string) => void;
   onToast?: (message: string, type?: "info" | "error") => void;
   onOpenArtifact?: (language: string, code: string) => void;
+  onEditMessage?: (messageId: string) => void;
   renderInput?: () => React.ReactNode;
 }
 
@@ -26,7 +27,7 @@ const SUGGESTED_PROMPTS = [
   { label: "Suggest a new feature", prompt: "Analyze this project and suggest useful features or improvements that could be added." },
 ];
 
-export function MessageList({ messages, streaming, conversationId, onRetry, onSendPrompt, onToast, onOpenArtifact, renderInput }: MessageListProps) {
+export function MessageList({ messages, streaming, conversationId, onRetry, onSendPrompt, onToast, onOpenArtifact, onEditMessage, renderInput }: MessageListProps) {
   const scrollRef = useAutoScroll([messages, streaming]);
   const [sharing, setSharing] = useState(false);
 
@@ -73,7 +74,7 @@ export function MessageList({ messages, streaming, conversationId, onRetry, onSe
         </div>
       )}
       {messages.map((msg) => (
-        <MessageBubble key={msg.id} message={msg} onOpenArtifact={onOpenArtifact} />
+        <MessageBubble key={msg.id} message={msg} onOpenArtifact={onOpenArtifact} onEdit={onEditMessage} />
       ))}
       {streaming.isStreaming && (
         <div className="message-bubble assistant streaming msg-enter">

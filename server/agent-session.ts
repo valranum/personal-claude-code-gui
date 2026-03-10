@@ -1,6 +1,6 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { EventEmitter } from "events";
-import { ImageAttachment, ToolCallInfo, TokenUsage } from "./types.js";
+import { ImageAttachment, ToolCallInfo, TokenUsage, MCPServerConfig } from "./types.js";
 
 const COST_PER_MILLION: Record<string, { input: number; output: number }> = {
   "claude-opus-4-6": { input: 15, output: 75 },
@@ -15,16 +15,18 @@ export class AgentSession {
   model: string;
   systemPrompt?: string;
   sessionId?: string;
+  mcpServers?: MCPServerConfig[];
   events: EventEmitter;
   private isRunning = false;
   private abortController: AbortController | null = null;
 
-  constructor(conversationId: string, cwd: string, model: string, sessionId?: string, systemPrompt?: string) {
+  constructor(conversationId: string, cwd: string, model: string, sessionId?: string, systemPrompt?: string, mcpServers?: MCPServerConfig[]) {
     this.conversationId = conversationId;
     this.cwd = cwd;
     this.model = model;
     this.systemPrompt = systemPrompt;
     this.sessionId = sessionId;
+    this.mcpServers = mcpServers;
     this.events = new EventEmitter();
     this.events.setMaxListeners(20);
   }
@@ -105,6 +107,21 @@ export class AgentSession {
 
     if (this.systemPrompt) {
       options.systemPrompt = this.systemPrompt;
+    }
+
+    if (this.mcpServers && this.mcpServers.length > 0) {
+      options.mcpServers = this.mcpServers.map((s) => {
+        if (s.transport === "sse" && s.url) {
+          return { name: s.name, transport: "sse" as const, url: s.url };
+        }
+        return {
+          name: s.name,
+          transport: "stdio" as const,
+          command: s.command || "",
+          args: s.args || [],
+          env: s.env,
+        };
+      });
     }
 
     if (this.sessionId) {

@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChatMessage } from "../types";
 import { formatTimestamp } from "../utils/time";
+import { DiffSummary } from "./DiffSummary";
 
 function CopyButton({ text, className = "" }: { text: string; className?: string }) {
   const [copied, setCopied] = useState(false);
@@ -31,6 +32,7 @@ function CopyButton({ text, className = "" }: { text: string; className?: string
 interface MessageBubbleProps {
   message: ChatMessage;
   onOpenArtifact?: (language: string, code: string) => void;
+  onEdit?: (messageId: string) => void;
 }
 
 const LANG_LABELS: Record<string, string> = {
@@ -127,7 +129,7 @@ function detectLangFromPath(filePath: string): string {
   return EXT_TO_LANG[ext] || ext || "text";
 }
 
-export function MessageBubble({ message, onOpenArtifact }: MessageBubbleProps) {
+export function MessageBubble({ message, onOpenArtifact, onEdit }: MessageBubbleProps) {
   const autoOpened = useRef(false);
 
   const writtenFiles = useMemo(() => {
@@ -220,6 +222,17 @@ export function MessageBubble({ message, onOpenArtifact }: MessageBubbleProps) {
           </span>
           <span className="message-time">{formatTimestamp(message.timestamp)}</span>
           <CopyButton text={message.content} className={message.role === "user" ? "copy-msg-btn-hover-only" : ""} />
+          {message.role === "user" && onEdit && (
+            <button
+              className="copy-msg-btn copy-msg-btn-hover-only edit-msg-btn"
+              onClick={() => onEdit(message.id)}
+              title="Edit &amp; branch"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M11.5 1.5L14.5 4.5L5 14H2V11L11.5 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          )}
         </div>
         <div className="message-content">
           {message.role === "user" && message.images && message.images.length > 0 && (
@@ -283,6 +296,9 @@ export function MessageBubble({ message, onOpenArtifact }: MessageBubbleProps) {
                     />
                   ))}
                 </div>
+              )}
+              {message.toolCalls && message.toolCalls.length > 0 && (
+                <DiffSummary toolCalls={message.toolCalls} onOpenArtifact={onOpenArtifact} />
               )}
             </>
           ) : (

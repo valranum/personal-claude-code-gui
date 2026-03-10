@@ -22,6 +22,7 @@ interface ChatViewProps {
   onChangeCwd: (id: string, cwd: string) => void;
   onChangeModel: (id: string, model: string) => void;
   onTitleUpdate: (conversationId: string, title: string) => void;
+  onFork?: (newConversationId: string) => void;
   theme: "dark" | "light";
   onToggleTheme: () => void;
 }
@@ -34,6 +35,7 @@ export function ChatView({
   onChangeCwd,
   onChangeModel,
   onTitleUpdate,
+  onFork,
   theme,
   onToggleTheme,
 }: ChatViewProps) {
@@ -62,6 +64,22 @@ export function ChatView({
       .then((data) => setModels(data.models || []))
       .catch(() => {});
   }, []);
+
+  const handleEditMessage = useCallback(async (messageId: string) => {
+    if (!conversationId || !onFork) return;
+    try {
+      const res = await apiFetch(`/api/conversations/${conversationId}/fork`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId }),
+      });
+      if (!res.ok) throw new Error("Fork failed");
+      const newConv = await res.json();
+      onFork(newConv.id);
+    } catch {
+      addToast("Failed to branch conversation", "error");
+    }
+  }, [conversationId, onFork, addToast]);
 
   const handleOpenArtifact = useCallback((language: string, code: string) => {
     setArtifact({ language, code });
@@ -119,6 +137,7 @@ export function ChatView({
           onSendPrompt={sendMessage}
           onToast={(msg, type) => addToast(msg, type || "info")}
           onOpenArtifact={handleOpenArtifact}
+          onEditMessage={onFork ? handleEditMessage : undefined}
           renderInput={isEmpty ? () => (
             <ChatInput
               onSend={sendMessage}
@@ -131,6 +150,7 @@ export function ChatView({
               onChangeModel={conversation ? (modelId) => onChangeModel(conversation.id, modelId) : undefined}
               tokenUsage={conversation?.tokenUsage}
               contextTokens={contextTokens}
+              cwd={conversation?.cwd}
             />
           ) : undefined}
         />
@@ -154,6 +174,7 @@ export function ChatView({
             onChangeModel={conversation ? (modelId) => onChangeModel(conversation.id, modelId) : undefined}
             tokenUsage={conversation?.tokenUsage}
             contextTokens={contextTokens}
+            cwd={conversation?.cwd}
           />
         )}
       </div>

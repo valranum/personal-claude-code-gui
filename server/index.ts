@@ -4,12 +4,13 @@ import rateLimit from "express-rate-limit";
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { execFile } from "child_process";
+import { execFile, execFileSync } from "child_process";
 import { randomUUID, randomBytes } from "crypto";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import * as store from "./conversation-store.js";
 import * as sessionManager from "./session-manager.js";
-import { ChatMessage, ImageAttachment } from "./types.js";
+import { ChatMessage, ImageAttachment, MCPServerConfig } from "./types.js";
+import * as workspaceConfig from "./workspace-config.js";
 
 const app = express();
 
@@ -204,6 +205,53 @@ app.get("/api/filetree", (req, res) => {
   }
 });
 
+// Recursive file search for @mentions
+app.get("/api/files/search", (req, res) => {
+  const cwd = req.query.cwd as string | undefined;
+  const q = ((req.query.q as string) || "").toLowerCase().trim();
+
+  if (!cwd) {
+    res.json([]);
+    return;
+  }
+
+  const resolved = path.resolve(cwd);
+  if (!isPathWithinHome(resolved)) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+
+  const SKIP = new Set(["node_modules", ".git", ".next", "dist", "build", "__pycache__", ".cache", "coverage", ".venv", "venv"]);
+  const results: string[] = [];
+  const MAX_RESULTS = 15;
+  const MAX_DEPTH = 5;
+
+  function walk(dir: string, depth: number) {
+    if (depth > MAX_DEPTH || results.length >= MAX_RESULTS) return;
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (results.length >= MAX_RESULTS) break;
+        if (entry.name.startsWith(".") || SKIP.has(entry.name)) continue;
+        const rel = path.relative(resolved, path.join(dir, entry.name));
+        if (entry.isDirectory()) {
+          if (!q || rel.toLowerCase().includes(q)) {
+            results.push(rel + "/");
+          }
+          walk(path.join(dir, entry.name), depth + 1);
+        } else if (entry.isFile()) {
+          if (!q || rel.toLowerCase().includes(q)) {
+            results.push(rel);
+          }
+        }
+      }
+    } catch { /* permission denied, etc */ }
+  }
+
+  walk(resolved, 0);
+  res.json(results);
+});
+
 // Native OS folder picker dialog
 app.post("/api/pick-folder", (_req, res) => {
   const devDir = path.join(HOME_DIR, "Development");
@@ -218,6 +266,177 @@ app.post("/api/pick-folder", (_req, res) => {
     const picked = stdout.trim().replace(/\/$/, "");
     res.json({ cancelled: false, path: picked });
   });
+});
+
+// MCP server management
+app.get("/api/mcp-servers", (req, res) => {
+  const cwd = req.query.cwd as string | undefined;
+  if (!cwd) {
+    res.json([]);
+    return;
+  }
+  const config = workspaceConfig.getConfig(cwd);
+  res.json(config.mcpServers || []);
+});
+
+app.post("/api/mcp-servers", (req, res) => {
+  const { cwd, server } = req.body as { cwd: string; server: MCPServerConfig };
+  if (!cwd || !server || !server.name) {
+    res.status(400).json({ error: "cwd and server are required" });
+    return;
+  }
+  const config = workspaceConfig.getConfig(cwd);
+  config.mcpServers.push({ ...server, id: server.id || randomUUID() });
+  workspaceConfig.saveConfig(cwd, config);
+  res.json(config.mcpServers);
+});
+
+app.delete("/api/mcp-servers/:serverId", (req, res) => {
+  const cwd = req.query.cwd as string | undefined;
+  if (!cwd) {
+    res.status(400).json({ error: "cwd is required" });
+    return;
+  }
+  const config = workspaceConfig.getConfig(cwd);
+  config.mcpServers = config.mcpServers.filter((s) => s.id !== req.params.serverId);
+  workspaceConfig.saveConfig(cwd, config);
+  res.json(config.mcpServers);
+});
+
+// Workspace config
+app.get("/api/workspace-config", (req, res) => {
+  const cwd = req.query.cwd as string | undefined;
+  if (!cwd) {
+    res.status(400).json({ error: "cwd is required" });
+    return;
+  }
+  res.json(workspaceConfig.getConfig(cwd));
+});
+
+app.patch("/api/workspace-config", (req, res) => {
+  const { cwd, ...updates } = req.body;
+  if (!cwd) {
+    res.status(400).json({ error: "cwd is required" });
+    return;
+  }
+  const config = workspaceConfig.getConfig(cwd);
+  if (updates.defaultSystemPrompt !== undefined) {
+    config.defaultSystemPrompt = updates.defaultSystemPrompt;
+  }
+  workspaceConfig.saveConfig(cwd, config);
+  res.json(config);
+});
+
+// Git status
+app.get("/api/git/status", (req, res) => {
+  const cwd = req.query.cwd as string | undefined;
+  if (!cwd) {
+    res.json({ isRepo: false });
+    return;
+  }
+  const resolved = path.resolve(cwd);
+  if (!isPathWithinHome(resolved)) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+  try {
+    const output = execFileSync("git", ["status", "--porcelain", "-b"], { cwd: resolved, encoding: "utf-8", timeout: 5000 });
+    const lines = output.split("\n").filter(Boolean);
+    const branchLine = lines[0] || "";
+    const branchMatch = branchLine.match(/^## (.+?)(?:\.{3}|$)/);
+    const branch = branchMatch ? branchMatch[1] : "unknown";
+    const files = lines.slice(1).map((l) => ({
+      status: l.slice(0, 2).trim(),
+      path: l.slice(3),
+    }));
+    res.json({ isRepo: true, branch, files });
+  } catch {
+    res.json({ isRepo: false });
+  }
+});
+
+// Git log
+app.get("/api/git/log", (req, res) => {
+  const cwd = req.query.cwd as string | undefined;
+  const count = parseInt((req.query.count as string) || "20", 10);
+  if (!cwd) {
+    res.json([]);
+    return;
+  }
+  const resolved = path.resolve(cwd);
+  if (!isPathWithinHome(resolved)) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+  try {
+    const output = execFileSync(
+      "git", ["log", `--format=%H|%h|%s|%an|%ar`, `-${Math.min(count, 50)}`],
+      { cwd: resolved, encoding: "utf-8", timeout: 5000 },
+    );
+    const commits = output.split("\n").filter(Boolean).map((line) => {
+      const [hash, short, subject, author, date] = line.split("|");
+      return { hash, short, subject, author, date };
+    });
+    res.json(commits);
+  } catch {
+    res.json([]);
+  }
+});
+
+// Git diff stat
+app.get("/api/git/diff", (req, res) => {
+  const cwd = req.query.cwd as string | undefined;
+  if (!cwd) {
+    res.json({ stat: "" });
+    return;
+  }
+  const resolved = path.resolve(cwd);
+  if (!isPathWithinHome(resolved)) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+  try {
+    const output = execFileSync("git", ["diff", "--stat"], { cwd: resolved, encoding: "utf-8", timeout: 5000 });
+    res.json({ stat: output });
+  } catch {
+    res.json({ stat: "" });
+  }
+});
+
+// CLAUDE.md read
+app.get("/api/claude-md", (req, res) => {
+  const cwd = req.query.cwd as string | undefined;
+  if (!cwd) {
+    res.status(400).json({ error: "cwd is required" });
+    return;
+  }
+  const resolved = path.resolve(cwd);
+  if (!isPathWithinHome(resolved)) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+  const fp = path.join(resolved, "CLAUDE.md");
+  if (fs.existsSync(fp)) {
+    res.json({ exists: true, content: fs.readFileSync(fp, "utf-8") });
+  } else {
+    res.json({ exists: false, content: "" });
+  }
+});
+
+// CLAUDE.md write
+app.put("/api/claude-md", (req, res) => {
+  const { cwd, content } = req.body;
+  if (!cwd || typeof content !== "string") {
+    res.status(400).json({ error: "cwd and content are required" });
+    return;
+  }
+  const resolved = path.resolve(cwd);
+  if (!isPathWithinHome(resolved)) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+  fs.writeFileSync(path.join(resolved, "CLAUDE.md"), content, "utf-8");
+  res.json({ ok: true });
 });
 
 // Available models
@@ -247,6 +466,14 @@ app.post("/api/conversations", (req, res) => {
     resolvedCwd,
     model || DEFAULT_MODEL,
   );
+
+  // Auto-apply workspace default system prompt
+  const wsConfig = workspaceConfig.getConfig(resolvedCwd);
+  if (wsConfig.defaultSystemPrompt) {
+    store.updateConversation(id, { systemPrompt: wsConfig.defaultSystemPrompt });
+    file.conversation.systemPrompt = wsConfig.defaultSystemPrompt;
+  }
+
   res.json(file.conversation);
 });
 
@@ -361,6 +588,46 @@ app.delete("/api/conversations/:id", (req, res) => {
   res.json({ ok: true });
 });
 
+// Fork conversation (branch from a specific message)
+app.post("/api/conversations/:id/fork", (req, res) => {
+  const { messageId } = req.body;
+  if (!messageId) {
+    res.status(400).json({ error: "messageId is required" });
+    return;
+  }
+
+  const convFile = store.getConversation(req.params.id);
+  if (!convFile) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  const msgIndex = convFile.messages.findIndex((m) => m.id === messageId);
+  if (msgIndex === -1) {
+    res.status(404).json({ error: "Message not found" });
+    return;
+  }
+
+  const newId = randomUUID();
+  const now = new Date().toISOString();
+  const messagesUpTo = convFile.messages.slice(0, msgIndex);
+  store.createConversation(
+    newId,
+    convFile.conversation.title + " (branch)",
+    convFile.conversation.cwd,
+    convFile.conversation.model,
+  );
+  const file = store.getConversation(newId)!;
+  file.messages = messagesUpTo;
+  file.conversation.forkedFrom = { conversationId: req.params.id, messageId };
+  file.conversation.systemPrompt = convFile.conversation.systemPrompt;
+  file.conversation.updatedAt = now;
+  const fp = path.join(process.cwd(), "data", "conversations", `${newId}.json`);
+  fs.writeFileSync(fp, JSON.stringify(file, null, 2));
+
+  res.json(file.conversation);
+});
+
 // Get messages
 app.get("/api/conversations/:id/messages", (req, res) => {
   const file = store.getConversation(req.params.id);
@@ -391,12 +658,14 @@ app.get("/api/conversations/:id/stream", (req, res) => {
     return;
   }
 
+  const wsConfig = workspaceConfig.getConfig(convFile.conversation.cwd);
   const session = sessionManager.getOrCreateSession(
     req.params.id,
     convFile.conversation.cwd,
     convFile.conversation.model || DEFAULT_MODEL,
     convFile.conversation.sdkSessionId,
     convFile.conversation.systemPrompt,
+    wsConfig.mcpServers.length > 0 ? wsConfig.mcpServers : undefined,
   );
 
   const onEvent = (event: { type: string; data: unknown }) => {
@@ -463,6 +732,32 @@ app.post("/api/conversations/:id/messages", (req, res) => {
     return;
   }
 
+  // Extract @file mentions and prepend file contents
+  const mentionRe = /@([\w./_-]+[\w./_-])/g;
+  const mentions: string[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = mentionRe.exec(content)) !== null) {
+    mentions.push(match[1]);
+  }
+
+  let augmentedContent = content;
+  if (mentions.length > 0) {
+    const fileBlocks: string[] = [];
+    for (const mention of mentions) {
+      const filePath = path.resolve(convFile.conversation.cwd, mention);
+      if (!isPathWithinHome(filePath)) continue;
+      try {
+        if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+          const fileContent = fs.readFileSync(filePath, "utf-8").slice(0, 50_000);
+          fileBlocks.push(`<file path="${mention}">\n${fileContent}\n</file>`);
+        }
+      } catch { /* skip unreadable files */ }
+    }
+    if (fileBlocks.length > 0) {
+      augmentedContent = fileBlocks.join("\n\n") + "\n\n" + content;
+    }
+  }
+
   const userMsg: ChatMessage = {
     id: randomUUID(),
     role: "user",
@@ -472,19 +767,21 @@ app.post("/api/conversations/:id/messages", (req, res) => {
   };
   store.addMessage(req.params.id, userMsg);
 
+  const msgWsConfig = workspaceConfig.getConfig(convFile.conversation.cwd);
   const session = sessionManager.getOrCreateSession(
     req.params.id,
     convFile.conversation.cwd,
     convFile.conversation.model || DEFAULT_MODEL,
     convFile.conversation.sdkSessionId,
     convFile.conversation.systemPrompt,
+    msgWsConfig.mcpServers.length > 0 ? msgWsConfig.mcpServers : undefined,
   );
 
   const isFirstMessage =
     convFile.messages.filter((m) => m.role === "user").length === 0;
 
   // Run agent in background — events stream via SSE
-  session.sendMessage(content, images).then(async ({ text, toolCalls, tokenUsage }) => {
+  session.sendMessage(augmentedContent, images).then(async ({ text, toolCalls, tokenUsage }) => {
     if (text) {
       const assistantMsg: ChatMessage = {
         id: randomUUID(),

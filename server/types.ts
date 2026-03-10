@@ -8,6 +8,7 @@ export interface Conversation {
   tokenUsage?: TokenUsage;
   lastTurnInputTokens?: number;
   pinned?: boolean;
+  forkedFrom?: { conversationId: string; messageId: string };
   createdAt: string;
   updatedAt: string;
 }
@@ -49,4 +50,19 @@ export interface TokenUsage {
 export interface SSEEvent {
   type: string;
   data: unknown;
+}
+
+export interface MCPServerConfig {
+  id: string;
+  name: string;
+  transport: "stdio" | "sse";
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  url?: string;
+}
+
+export interface WorkspaceConfig {
+  mcpServers: MCPServerConfig[];
+  defaultSystemPrompt?: string;
 }

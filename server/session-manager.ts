@@ -1,4 +1,5 @@
 import { AgentSession } from "./agent-session.js";
+import { MCPServerConfig } from "./types.js";
 
 const sessions = new Map<string, AgentSession>();
 
@@ -8,10 +9,11 @@ export function getOrCreateSession(
   model: string,
   sessionId?: string,
   systemPrompt?: string,
+  mcpServers?: MCPServerConfig[],
 ): AgentSession {
   let session = sessions.get(conversationId);
   if (!session) {
-    session = new AgentSession(conversationId, cwd, model, sessionId, systemPrompt);
+    session = new AgentSession(conversationId, cwd, model, sessionId, systemPrompt, mcpServers);
     sessions.set(conversationId, session);
   }
   return session;

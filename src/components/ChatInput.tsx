@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, KeyboardEvent, DragEvent } from "react";
 import { ImageAttachment, TokenUsage } from "../types";
 import { Tooltip } from "./Tooltip";
+import { apiFetch } from "../utils/api";
 
 interface ModelOption {
   id: string;
@@ -18,6 +19,7 @@ interface ChatInputProps {
   onChangeModel?: (modelId: string) => void;
   tokenUsage?: TokenUsage;
   contextTokens?: number;
+  cwd?: string;
 }
 
 function readFileAsBase64(file: File): Promise<ImageAttachment> {
@@ -119,6 +121,7 @@ export function ChatInput({
   onChangeModel,
   tokenUsage,
   contextTokens = 0,
+  cwd,
 }: ChatInputProps) {
   const [value, setValue] = useState("");
   const [images, setImages] = useState<ImageAttachment[]>([]);
@@ -126,10 +129,17 @@ export function ChatInput({
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [slashActiveIdx, setSlashActiveIdx] = useState(0);
   const [showModelMenu, setShowModelMenu] = useState(false);
+  const [showAtMenu, setShowAtMenu] = useState(false);
+  const [atQuery, setAtQuery] = useState("");
+  const [atActiveIdx, setAtActiveIdx] = useState(0);
+  const [atResults, setAtResults] = useState<string[]>([]);
+  const [atStartPos, setAtStartPos] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const slashMenuRef = useRef<HTMLDivElement>(null);
   const modelMenuRef = useRef<HTMLDivElement>(null);
+  const atMenuRef = useRef<HTMLDivElement>(null);
+  const atDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -166,6 +176,68 @@ export function ChatInput({
     return () => window.removeEventListener("keydown", handler);
   }, [isStreaming, onAbort]);
 
+  // @mention search
+  useEffect(() => {
+    if (!showAtMenu || !cwd) {
+      setAtResults([]);
+      return;
+    }
+    if (atDebounceRef.current) clearTimeout(atDebounceRef.current);
+    atDebounceRef.current = setTimeout(async () => {
+      try {
+        const url = atQuery
+          ? `/api/files/search?cwd=${encodeURIComponent(cwd)}&q=${encodeURIComponent(atQuery)}`
+          : `/api/files/search?cwd=${encodeURIComponent(cwd)}`;
+        const res = await apiFetch(url);
+        const data: string[] = await res.json();
+        setAtResults(data);
+        setAtActiveIdx(0);
+      } catch {
+        setAtResults([]);
+      }
+    }, 150);
+    return () => { if (atDebounceRef.current) clearTimeout(atDebounceRef.current); };
+  }, [showAtMenu, atQuery, cwd]);
+
+  const selectAtFile = useCallback(
+    (filePath: string) => {
+      const before = value.slice(0, atStartPos);
+      const after = value.slice(textareaRef.current?.selectionStart ?? value.length);
+      const newValue = before + "@" + filePath + " " + after;
+      setValue(newValue);
+      setShowAtMenu(false);
+      setAtResults([]);
+      setTimeout(() => {
+        if (textareaRef.current) {
+          const pos = before.length + filePath.length + 2;
+          textareaRef.current.selectionStart = pos;
+          textareaRef.current.selectionEnd = pos;
+          textareaRef.current.focus();
+        }
+      }, 0);
+    },
+    [value, atStartPos],
+  );
+
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const newVal = e.target.value;
+      setValue(newVal);
+
+      const cursorPos = e.target.selectionStart ?? newVal.length;
+      const textBefore = newVal.slice(0, cursorPos);
+      const atMatch = textBefore.match(/@([\w./_-]*)$/);
+      if (atMatch && cwd) {
+        setShowAtMenu(true);
+        setAtQuery(atMatch[1]);
+        setAtStartPos(cursorPos - atMatch[0].length);
+      } else {
+        setShowAtMenu(false);
+      }
+    },
+    [cwd],
+  );
+
   const filteredCommands = value.startsWith("/")
     ? SLASH_COMMANDS.filter((c) =>
         c.command.toLowerCase().startsWith(value.toLowerCase()),
@@ -197,6 +269,29 @@ export function ChatInput({
   }, []);
 
   const handleKeyDown = (e: KeyboardEvent) => {
+    if (showAtMenu && atResults.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setAtActiveIdx((i) => (i + 1) % atResults.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setAtActiveIdx((i) => (i - 1 + atResults.length) % atResults.length);
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        selectAtFile(atResults[atActiveIdx]);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setShowAtMenu(false);
+        return;
+      }
+    }
+
     if (showSlashMenu) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -294,6 +389,30 @@ export function ChatInput({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
+        {showAtMenu && atResults.length > 0 && (
+          <div className="at-menu" ref={atMenuRef}>
+            {atResults.map((file, i) => (
+              <div
+                key={file}
+                className={`at-menu-item ${i === atActiveIdx ? "active" : ""}`}
+                onMouseEnter={() => setAtActiveIdx(i)}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  selectAtFile(file);
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  {file.endsWith("/") ? (
+                    <path d="M2 4.5C2 3.67 2.67 3 3.5 3H6.5L8 4.5H12.5C13.33 4.5 14 5.17 14 6V11.5C14 12.33 13.33 13 12.5 13H3.5C2.67 13 2 12.33 2 11.5V4.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+                  ) : (
+                    <path d="M9 2H4.5C3.67 2 3 2.67 3 3.5V12.5C3 13.33 3.67 14 4.5 14H11.5C12.33 14 13 13.33 13 12.5V6L9 2Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+                  )}
+                </svg>
+                <span className="at-menu-path">{file}</span>
+              </div>
+            ))}
+          </div>
+        )}
         {showSlashMenu && (
           <div className="slash-menu" ref={slashMenuRef}>
             {filteredCommands.map((cmd, i) => (
@@ -343,7 +462,7 @@ export function ChatInput({
               : placeholder || "Message Claude..."
           }
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           disabled={disabled || isStreaming}

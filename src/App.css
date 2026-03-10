@@ -2969,3 +2969,759 @@ body,
   color: var(--text-muted);
   white-space: pre-line;
 }
+
+/* ── @mention menu ── */
+.at-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  margin-bottom: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 100;
+  padding: 4px;
+}
+
+.at-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: background 0.1s;
+}
+
+.at-menu-item:hover,
+.at-menu-item.active {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.at-menu-item svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.at-menu-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+/* ── CLAUDE.md editor ── */
+.sidebar-claude-md {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.claude-md-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 8px 12px;
+}
+
+.claude-md-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0 8px;
+}
+
+.claude-md-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.claude-md-dirty {
+  color: var(--warning);
+  margin-left: 2px;
+}
+
+.claude-md-save-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.claude-md-save-btn:hover:not(:disabled) {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.claude-md-save-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.claude-md-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 4px 0 8px;
+  line-height: 1.5;
+}
+
+.claude-md-textarea {
+  flex: 1;
+  width: 100%;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 10px;
+  resize: none;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.claude-md-textarea:focus {
+  border-color: var(--accent);
+}
+
+.claude-md-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.claude-md-loading {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ── MCP Config Panel ── */
+.mcp-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.mcp-panel {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: 480px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-md);
+}
+
+.mcp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.mcp-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mcp-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+}
+
+.mcp-close:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.mcp-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+}
+
+.mcp-loading,
+.mcp-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 12px;
+}
+
+.mcp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.mcp-server-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.mcp-server-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mcp-server-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mcp-server-transport {
+  font-size: 11px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mcp-server-detail {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mcp-delete-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.mcp-delete-btn:hover {
+  color: var(--error);
+  background: var(--bg-hover);
+}
+
+.mcp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.mcp-input {
+  padding: 8px 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  font-family: var(--font-sans);
+}
+
+.mcp-input:focus {
+  border-color: var(--accent);
+}
+
+.mcp-input::placeholder {
+  color: var(--text-muted);
+}
+
+.mcp-transport-toggle {
+  display: flex;
+  gap: 4px;
+}
+
+.mcp-transport-btn {
+  flex: 1;
+  padding: 6px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mcp-transport-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.mcp-form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.mcp-cancel-btn,
+.mcp-add-btn {
+  padding: 6px 16px;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+
+.mcp-cancel-btn {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.mcp-add-btn {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.mcp-add-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.mcp-add-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s;
+}
+
+.mcp-add-trigger:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── Git Panel ── */
+.sidebar-git {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.git-panel {
+  padding: 8px 12px;
+}
+
+.git-loading,
+.git-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 20px;
+}
+
+.git-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0 10px;
+}
+
+.git-branch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.git-refresh {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+}
+
+.git-refresh:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.git-section {
+  margin-bottom: 16px;
+}
+
+.git-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.git-files {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.git-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+.git-file:hover {
+  background: var(--bg-hover);
+}
+
+.git-file-status {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 11px;
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.git-file-path {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-commits {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.git-commit {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+.git-commit:hover {
+  background: var(--bg-hover);
+}
+
+.git-commit-hash {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.git-commit-subject {
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-commit-date {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Diff Summary ── */
+.diff-summary {
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.diff-summary-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.diff-summary-header:hover {
+  background: var(--bg-hover);
+}
+
+.diff-summary-count {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.diff-badge {
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.diff-badge.created {
+  background: rgba(46, 160, 67, 0.15);
+  color: var(--success);
+}
+
+.diff-badge.edited {
+  background: rgba(232, 196, 74, 0.15);
+  color: var(--warning);
+}
+
+.diff-summary-chevron {
+  margin-left: auto;
+  transition: transform 0.2s;
+}
+
+.diff-summary-chevron.expanded {
+  transform: rotate(180deg);
+}
+
+.diff-summary-files {
+  display: flex;
+  flex-direction: column;
+}
+
+.diff-summary-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.1s;
+  border-top: 1px solid var(--border-light);
+}
+
+.diff-summary-file:hover {
+  background: var(--bg-hover);
+}
+
+.diff-file-badge {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.diff-file-badge.created {
+  background: rgba(46, 160, 67, 0.2);
+  color: var(--success);
+}
+
+.diff-file-badge.edited {
+  background: rgba(232, 196, 74, 0.2);
+  color: var(--warning);
+}
+
+.diff-file-name {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── System Prompt Modal ── */
+.sysprompt-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.sysprompt-panel {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: 520px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-md);
+}
+
+.sysprompt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sysprompt-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.sysprompt-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+}
+
+.sysprompt-close:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.sysprompt-body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sysprompt-textarea {
+  width: 100%;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 10px;
+  resize: vertical;
+  outline: none;
+  min-height: 120px;
+}
+
+.sysprompt-textarea:focus {
+  border-color: var(--accent);
+}
+
+.sysprompt-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.sysprompt-load-default {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+}
+
+.sysprompt-load-default:hover {
+  text-decoration: underline;
+}
+
+.sysprompt-saved {
+  font-size: 12px;
+  color: var(--success);
+  text-align: center;
+}
+
+.sysprompt-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.sysprompt-btn {
+  padding: 8px 16px;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+
+.sysprompt-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.sysprompt-btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.sysprompt-btn-secondary:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.sysprompt-btn-primary {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.sysprompt-btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
