@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Sidebar } from "./components/Sidebar";
+import { DockableLayout } from "./components/DockableLayout";
+import { ChatsPanel } from "./components/ChatsPanel";
+import { FilesPanel } from "./components/FilesPanel";
 import { ChatView } from "./components/ChatView";
 import { WelcomeScreen } from "./components/WelcomeScreen";
 import { CommandPalette } from "./components/CommandPalette";
@@ -36,9 +38,6 @@ function AppContent() {
     refresh,
   } = useConversations((msg) => addToast(msg, "error"));
 
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState(280);
-  const [isResizing, setIsResizing] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     return (localStorage.getItem("theme") as "dark" | "light") || "dark";
   });
@@ -57,44 +56,12 @@ function AppContent() {
     setTheme((t) => (t === "dark" ? "light" : "dark"));
   }, []);
 
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (!isResizing) return;
-      const newWidth = Math.min(Math.max(e.clientX, 200), 480);
-      setSidebarWidth(newWidth);
-    },
-    [isResizing],
-  );
-
-  const handleMouseUp = useCallback(() => {
-    setIsResizing(false);
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
-  }, []);
-
-  useEffect(() => {
-    if (isResizing) {
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-    }
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isResizing, handleMouseMove, handleMouseUp]);
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMod = e.metaKey || e.ctrlKey;
       if (isMod && e.key === "n") {
         e.preventDefault();
         createConversation();
-      }
-      if (isMod && e.key === "b") {
-        e.preventDefault();
-        setSidebarCollapsed((c) => !c);
       }
       if (isMod && e.key === "k") {
         e.preventDefault();
@@ -161,37 +128,40 @@ function AppContent() {
     }
   }, [activeId, addToast]);
 
+  const handleChangeCwd = useCallback((newCwd: string) => {
+    if (activeId) updateConversationCwd(activeId, newCwd);
+  }, [activeId, updateConversationCwd]);
+
+  const chatsContent = (
+    <ChatsPanel
+      conversations={conversations}
+      activeId={activeId}
+      activeCwd={activeConversation?.cwd}
+      onSelect={setActiveId}
+      onCreate={createConversation}
+      onDelete={deleteConversation}
+      onRename={renameConversation}
+      onPin={pinConversation}
+    />
+  );
+
+  const filesContent = activeConversation ? (
+    <FilesPanel
+      cwd={activeConversation.cwd}
+      onChangeCwd={handleChangeCwd}
+      onFileClick={setOpenFilePath}
+    />
+  ) : (
+    <div className="sidebar-empty">Open a project folder to browse files.</div>
+  );
+
   return (
     <>
-      <div className="app">
-        <Sidebar
-          conversations={conversations}
-          activeId={activeId}
-          onSelect={setActiveId}
-          onGoHome={() => setActiveId(null)}
-          onCreate={createConversation}
-          onDelete={deleteConversation}
-          onRename={renameConversation}
-          onPin={pinConversation}
-          activeCwd={activeConversation?.cwd}
-          collapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
-          width={sidebarWidth}
-          onFileClick={setOpenFilePath}
-        />
-        {!sidebarCollapsed && (
-          <div
-            className="sidebar-resize-handle"
-            onMouseDown={() => setIsResizing(true)}
-          />
-        )}
+      <DockableLayout chatsContent={chatsContent} filesContent={filesContent}>
         {activeConversation ? (
           <ChatView
             conversationId={activeId}
             conversation={activeConversation}
-            onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
-            sidebarCollapsed={sidebarCollapsed}
-            onChangeCwd={updateConversationCwd}
             onChangeModel={updateConversationModel}
             onTitleUpdate={updateLocalTitle}
             onFork={handleFork}
@@ -201,20 +171,16 @@ function AppContent() {
             onCloseFile={() => setOpenFilePath(null)}
           />
         ) : (
-          <WelcomeScreen
-            onOpenFolder={handleOpenFolder}
-            sidebarCollapsed={sidebarCollapsed}
-            onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
-          />
+          <WelcomeScreen onOpenFolder={handleOpenFolder} />
         )}
-      </div>
+      </DockableLayout>
       <CommandPalette
         open={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
         conversations={conversations}
         activeId={activeId}
         onNewConversation={createConversation}
-        onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
+        onToggleSidebar={() => {}}
         onToggleTheme={toggleTheme}
         onSelectConversation={setActiveId}
         onChangeModel={handlePaletteChangeModel}

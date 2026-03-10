@@ -19,9 +19,6 @@ interface ArtifactState {
 interface ChatViewProps {
   conversationId: string | null;
   conversation: Conversation | null;
-  onToggleSidebar: () => void;
-  sidebarCollapsed: boolean;
-  onChangeCwd: (id: string, cwd: string) => void;
   onChangeModel: (id: string, model: string) => void;
   onTitleUpdate: (conversationId: string, title: string) => void;
   onFork?: (newConversationId: string) => void;
@@ -34,9 +31,6 @@ interface ChatViewProps {
 export function ChatView({
   conversationId,
   conversation,
-  onToggleSidebar,
-  sidebarCollapsed,
-  onChangeCwd,
   onChangeModel,
   onTitleUpdate,
   onFork,
@@ -157,9 +151,6 @@ export function ChatView({
       <div className="chat-main">
         <WorkspaceBar
           conversation={conversation}
-          onChangeCwd={onChangeCwd}
-          sidebarCollapsed={sidebarCollapsed}
-          onToggleSidebar={onToggleSidebar}
           theme={theme}
           onToggleTheme={onToggleTheme}
           previewOpen={previewOpen}

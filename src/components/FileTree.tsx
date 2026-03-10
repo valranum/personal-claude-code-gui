@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "../utils/api";
+import { Tooltip } from "./Tooltip";
 
 interface FileEntry {
   name: string;
@@ -11,6 +12,7 @@ interface FileTreeProps {
   cwd: string;
   onClose: () => void;
   onFileClick?: (filePath: string) => void;
+  onChangeCwd?: (newCwd: string) => void;
 }
 
 function FileIcon() {
@@ -124,9 +126,11 @@ function TreeNode({ entry, onFileClick }: { entry: FileEntry; onFileClick?: (pat
   );
 }
 
-export function FileTree({ cwd, onClose, onFileClick }: FileTreeProps) {
+export function FileTree({ cwd, onClose, onFileClick, onChangeCwd }: FileTreeProps) {
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [rootExpanded, setRootExpanded] = useState(true);
 
   const fetchRoot = useCallback(async () => {
     setLoading(true);
@@ -145,11 +149,37 @@ export function FileTree({ cwd, onClose, onFileClick }: FileTreeProps) {
     fetchRoot();
   }, [fetchRoot]);
 
+  const handleChangeCwd = async () => {
+    if (picking || !onChangeCwd) return;
+    setPicking(true);
+    try {
+      const res = await apiFetch("/api/pick-folder", { method: "POST" });
+      const data = await res.json();
+      if (!data.cancelled && data.path && data.path !== cwd) {
+        onChangeCwd(data.path);
+      }
+    } finally {
+      setPicking(false);
+    }
+  };
+
+  const rootName = cwd.split("/").filter(Boolean).pop() || cwd;
+
   return (
     <div className="filetree-panel">
       <div className="filetree-header">
         <span className="filetree-header-label">Files</span>
         <div className="filetree-header-actions">
+          {onChangeCwd && (
+            <Tooltip text="Change working directory">
+              <button className="filetree-header-btn" onClick={handleChangeCwd} disabled={picking} title="Change folder">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                  <path d="M2 4.5C2 3.67 2.67 3 3.5 3H6.5L8 4.5H12.5C13.33 4.5 14 5.17 14 6V11.5C14 12.33 13.33 13 12.5 13H3.5C2.67 13 2 12.33 2 11.5V4.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                  <path d="M6 9h4M8 7v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+              </button>
+            </Tooltip>
+          )}
           <button className="filetree-header-btn" onClick={fetchRoot} title="Refresh">
             <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
               <path
@@ -169,12 +199,30 @@ export function FileTree({ cwd, onClose, onFileClick }: FileTreeProps) {
         </div>
       </div>
       <div className="filetree-body">
-        {loading && entries.length === 0 ? (
-          <div className="filetree-loading">Loading...</div>
-        ) : entries.length === 0 ? (
-          <div className="filetree-empty">No files found</div>
-        ) : (
-          entries.map((entry) => <TreeNode key={entry.path} entry={entry} onFileClick={onFileClick} />)
+        <div
+          className="filetree-root"
+          onClick={() => setRootExpanded((v) => !v)}
+          role="button"
+          title={cwd}
+        >
+          <span className={`filetree-toggle ${rootExpanded ? "expanded" : ""}`}>
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+              <path d="M2 1L6 4L2 7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <span className="filetree-root-name">{rootName.toUpperCase()}</span>
+          {loading && <span className="filetree-spinner" />}
+        </div>
+        {rootExpanded && (
+          <div className="filetree-children">
+            {loading && entries.length === 0 ? (
+              <div className="filetree-loading">Loading...</div>
+            ) : entries.length === 0 ? (
+              <div className="filetree-empty">No files found</div>
+            ) : (
+              entries.map((entry) => <TreeNode key={entry.path} entry={entry} onFileClick={onFileClick} />)
+            )}
+          </div>
         )}
       </div>
     </div>

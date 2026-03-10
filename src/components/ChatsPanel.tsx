@@ -10,35 +10,27 @@ interface SearchResult {
   matchContext?: string;
 }
 
-interface SidebarProps {
+interface ChatsPanelProps {
   conversations: Conversation[];
   activeId: string | null;
   activeCwd?: string;
   onSelect: (id: string) => void;
-  onGoHome: () => void;
   onCreate: (cwd?: string) => void;
   onDelete: (id: string) => void;
   onRename: (id: string, title: string) => void;
   onPin: (id: string, pinned: boolean) => void;
-  collapsed: boolean;
-  onToggleCollapse: () => void;
-  width: number;
 }
 
-export function Sidebar({
+export function ChatsPanel({
   conversations,
   activeId,
   activeCwd,
   onSelect,
-  onGoHome,
   onCreate,
   onDelete,
   onRename,
   onPin,
-  collapsed,
-  onToggleCollapse,
-  width,
-}: SidebarProps) {
+}: ChatsPanelProps) {
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -56,7 +48,6 @@ export function Sidebar({
     }
   }, [editingId]);
 
-  // Debounced server search
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
@@ -84,7 +75,6 @@ export function Sidebar({
     };
   }, [search]);
 
-  // Close export menu on outside click
   useEffect(() => {
     if (!exportMenuId) return;
     const handler = () => setExportMenuId(null);
@@ -117,55 +107,12 @@ export function Sidebar({
     setExportMenuId(null);
   }, []);
 
-  if (collapsed) {
-    return (
-      <div className="sidebar sidebar-collapsed">
-        <Tooltip text="Expand sidebar (⌘B)">
-          <button
-            className="sidebar-btn collapse-btn"
-            onClick={onToggleCollapse}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M6 3L11 8L6 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-        </Tooltip>
-        <Tooltip text="New Chat (⌘N)">
-          <button
-            className="sidebar-btn"
-            onClick={() => onCreate(activeCwd)}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-          </button>
-        </Tooltip>
-      </div>
-    );
-  }
-
   return (
-    <div className="sidebar" style={{ width }}>
-      <div className="sidebar-header">
-        <span className="sidebar-header-label">Chats</span>
-        <div className="sidebar-actions">
-          <Tooltip text="Collapse sidebar (⌘B)">
-            <button
-              className="sidebar-btn collapse-btn"
-              onClick={onToggleCollapse}
-            >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <path d="M11 3L6 8L11 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-          </Tooltip>
-        </div>
-      </div>
-      <>
+    <div className="chats-panel">
       <div className="sidebar-search">
         <svg className="search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none">
-          <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5"/>
-          <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
         <input
           className="search-input"
@@ -178,7 +125,7 @@ export function Sidebar({
       <button className="new-chat-list-btn" onClick={() => onCreate(activeCwd)}>
         <span className="new-chat-icon">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         </span>
         New chat
@@ -187,7 +134,7 @@ export function Sidebar({
         {pinnedCount > 0 && (
           <div className="pinned-divider">
             <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
-              <path d="M8 1.5L9.8 5.6L14.2 6.1L11 9.1L11.8 13.5L8 11.4L4.2 13.5L5 9.1L1.8 6.1L6.2 5.6Z" stroke="currentColor" strokeWidth="1.3" fill="currentColor" strokeLinejoin="round"/>
+              <path d="M8 1.5L9.8 5.6L14.2 6.1L11 9.1L11.8 13.5L8 11.4L4.2 13.5L5 9.1L1.8 6.1L6.2 5.6Z" stroke="currentColor" strokeWidth="1.3" fill="currentColor" strokeLinejoin="round" />
             </svg>
             Starred
           </div>
@@ -219,7 +166,7 @@ export function Sidebar({
                   <span className="conversation-title">
                     {conv.pinned && (
                       <svg className="conversation-pin-icon" width="10" height="10" viewBox="0 0 16 16" fill="none">
-                        <path d="M8 1.5L9.8 5.6L14.2 6.1L11 9.1L11.8 13.5L8 11.4L4.2 13.5L5 9.1L1.8 6.1L6.2 5.6Z" stroke="currentColor" strokeWidth="1.3" fill="currentColor" strokeLinejoin="round"/>
+                        <path d="M8 1.5L9.8 5.6L14.2 6.1L11 9.1L11.8 13.5L8 11.4L4.2 13.5L5 9.1L1.8 6.1L6.2 5.6Z" stroke="currentColor" strokeWidth="1.3" fill="currentColor" strokeLinejoin="round" />
                       </svg>
                     )}
                     {conv.title}
@@ -243,7 +190,7 @@ export function Sidebar({
                     }}
                   >
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                      <path d="M8 1.5L9.8 5.6L14.2 6.1L11 9.1L11.8 13.5L8 11.4L4.2 13.5L5 9.1L1.8 6.1L6.2 5.6Z" stroke="currentColor" strokeWidth="1.3" fill={conv.pinned ? "currentColor" : "none"} strokeLinejoin="round"/>
+                      <path d="M8 1.5L9.8 5.6L14.2 6.1L11 9.1L11.8 13.5L8 11.4L4.2 13.5L5 9.1L1.8 6.1L6.2 5.6Z" stroke="currentColor" strokeWidth="1.3" fill={conv.pinned ? "currentColor" : "none"} strokeLinejoin="round" />
                     </svg>
                   </button>
                 </Tooltip>
@@ -256,8 +203,8 @@ export function Sidebar({
                     }}
                   >
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                      <path d="M8 2V10M5 7L8 10L11 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M3 13H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      <path d="M8 2V10M5 7L8 10L11 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M3 13H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                     </svg>
                   </button>
                 </Tooltip>
@@ -276,7 +223,7 @@ export function Sidebar({
                     }}
                   >
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                      <path d="M11.5 1.5L14.5 4.5L5 14H2V11L11.5 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+                      <path d="M11.5 1.5L14.5 4.5L5 14H2V11L11.5 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
                     </svg>
                   </button>
                 </Tooltip>
@@ -293,7 +240,7 @@ export function Sidebar({
                     }}
                   >
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                      <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                     </svg>
                   </button>
                 </Tooltip>
@@ -310,7 +257,6 @@ export function Sidebar({
           </div>
         )}
       </div>
-        </>
       {deleteConfirmId && (
         <div className="delete-confirm-overlay" onClick={() => setDeleteConfirmId(null)}>
           <div className="delete-confirm-dialog" onClick={(e) => e.stopPropagation()}>
