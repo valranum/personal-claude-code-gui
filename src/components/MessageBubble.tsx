@@ -1,8 +1,32 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChatMessage } from "../types";
 import { formatTimestamp } from "../utils/time";
+
+function CopyButton({ text, className = "" }: { text: string; className?: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <button className={`copy-msg-btn ${className}`} onClick={handleCopy} title="Copy message">
+      {copied ? (
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <path d="M3 8.5L6.5 12L13 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ) : (
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <rect x="5" y="5" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+          <path d="M11 5V3.5C11 2.67 10.33 2 9.5 2H3.5C2.67 2 2 2.67 2 3.5V9.5C2 10.33 2.67 11 3.5 11H5" stroke="currentColor" strokeWidth="1.3"/>
+        </svg>
+      )}
+    </button>
+  );
+}
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -195,6 +219,7 @@ export function MessageBubble({ message, onOpenArtifact }: MessageBubbleProps) {
             {message.role === "user" ? "You" : "Claude"}
           </span>
           <span className="message-time">{formatTimestamp(message.timestamp)}</span>
+          <CopyButton text={message.content} className={message.role === "user" ? "copy-msg-btn-hover-only" : ""} />
         </div>
         <div className="message-content">
           {message.role === "user" && message.images && message.images.length > 0 && (

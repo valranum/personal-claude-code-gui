@@ -32,6 +32,7 @@ export function useChat(
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, _setStreaming] = useState<StreamingState>(EMPTY_STREAMING);
   const [showCompactSuggestion, setShowCompactSuggestion] = useState(false);
+  const [contextTokens, setContextTokens] = useState(0);
 
   const setStreaming = useCallback((val: StreamingState | ((prev: StreamingState) => StreamingState)) => {
     _setStreaming((prev) => {
@@ -56,10 +57,12 @@ export function useChat(
       setMessages([]);
       setStreaming(EMPTY_STREAMING);
       setShowCompactSuggestion(false);
+      setContextTokens(0);
       return;
     }
     setMessages([]);
     setStreaming(EMPTY_STREAMING);
+    setContextTokens(0);
     const controller = new AbortController();
     fetchAbortRef.current = controller;
     apiFetch(`/api/conversations/${conversationId}/messages`)
@@ -70,6 +73,7 @@ export function useChat(
       .then((data: { messages: ChatMessage[]; lastTurnInputTokens: number } | undefined) => {
         if (!data || controller.signal.aborted) return;
         setMessages(data.messages);
+        setContextTokens(data.lastTurnInputTokens || 0);
         if (
           data.lastTurnInputTokens >= CONTEXT_TOKEN_THRESHOLD &&
           !dismissedRef.current.has(conversationId)
@@ -210,6 +214,7 @@ export function useChat(
 
         case "context_usage": {
           const { inputTokens } = event.data as { inputTokens: number };
+          setContextTokens(inputTokens);
           if (
             inputTokens >= CONTEXT_TOKEN_THRESHOLD &&
             conversationId &&
@@ -383,5 +388,5 @@ export function useChat(
     if (conversationId) dismissedRef.current.add(conversationId);
   }, [conversationId]);
 
-  return { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion };
+  return { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens };
 }

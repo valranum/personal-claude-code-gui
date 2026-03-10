@@ -47,6 +47,7 @@ export function Sidebar({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [exportMenuId, setExportMenuId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
   const [searching, setSearching] = useState(false);
   const editRef = useRef<HTMLInputElement>(null);
@@ -313,7 +314,7 @@ export function Sidebar({
                     className="conversation-action-btn delete-btn"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onDelete(conv.id);
+                      setDeleteConfirmId(conv.id);
                     }}
                   >
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
@@ -342,6 +343,17 @@ export function Sidebar({
           ) : (
             <div className="sidebar-empty">Open a project folder to browse files.</div>
           )}
+        </div>
+      )}
+      {deleteConfirmId && (
+        <div className="delete-confirm-overlay" onClick={() => setDeleteConfirmId(null)}>
+          <div className="delete-confirm-dialog" onClick={(e) => e.stopPropagation()}>
+            <p>Delete this conversation? This can't be undone.</p>
+            <div className="delete-confirm-actions">
+              <button className="delete-confirm-cancel" onClick={() => setDeleteConfirmId(null)}>Cancel</button>
+              <button className="delete-confirm-delete" onClick={() => { onDelete(deleteConfirmId); setDeleteConfirmId(null); }}>Delete</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

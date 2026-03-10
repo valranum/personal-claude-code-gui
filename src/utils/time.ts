@@ -27,7 +27,10 @@ export function formatRelativeTime(iso: string): string {
 }
 
 export function formatTimestamp(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString(undefined, {
     hour: "numeric",
     minute: "2-digit",
   });

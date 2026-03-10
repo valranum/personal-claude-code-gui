@@ -6,6 +6,7 @@ export interface Conversation {
   systemPrompt?: string;
   sdkSessionId?: string;
   pinned?: boolean;
+  tokenUsage?: TokenUsage;
   createdAt: string;
   updatedAt: string;
 }

@@ -750,7 +750,7 @@ body,
 
 .message-header {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 8px;
   margin-bottom: 6px;
 }
@@ -764,6 +764,31 @@ body,
 .message-time {
   font-size: 11px;
   color: var(--text-muted);
+}
+
+.copy-msg-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  transition: opacity 0.15s ease;
+  margin-left: auto;
+  align-self: center;
+}
+
+.copy-msg-btn-hover-only {
+  opacity: 0;
+}
+
+.message-bubble:hover .copy-msg-btn-hover-only {
+  opacity: 1;
+}
+
+.copy-msg-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
 }
 
 /* ── Message Content ── */
@@ -2778,4 +2803,169 @@ body,
 
 .error-boundary-retry:hover {
   background: var(--accent-hover);
+}
+
+/* ── Delete Confirmation ── */
+.delete-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.15s ease;
+}
+
+.delete-confirm-dialog {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  width: 320px;
+  max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.delete-confirm-dialog p {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.delete-confirm-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.delete-confirm-cancel {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.delete-confirm-cancel:hover {
+  background: var(--bg-secondary);
+}
+
+.delete-confirm-delete {
+  background: #dc2626;
+  border: none;
+  color: white;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.delete-confirm-delete:hover {
+  background: #b91c1c;
+}
+
+/* ── Token Badge ── */
+.token-badge {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-hover);
+  padding: 2px 8px;
+  border-radius: 10px;
+  cursor: default;
+}
+
+.context-ring {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.context-ring:hover {
+  opacity: 1;
+}
+
+/* ── FAQ Modal ── */
+.faq-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.15s ease;
+}
+
+.faq-modal {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: 520px;
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.faq-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.faq-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.faq-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+}
+
+.faq-close:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.faq-content {
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+
+.faq-item {
+  margin-bottom: 16px;
+}
+
+.faq-item:last-child {
+  margin-bottom: 0;
+}
+
+.faq-question {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  color: var(--text-primary);
+}
+
+.faq-answer {
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+  color: var(--text-muted);
+  white-space: pre-line;
 }

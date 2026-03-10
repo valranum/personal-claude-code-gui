@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, KeyboardEvent, DragEvent } from "react";
-import { ImageAttachment } from "../types";
+import { ImageAttachment, TokenUsage } from "../types";
 import { Tooltip } from "./Tooltip";
 
 interface ModelOption {
@@ -16,6 +16,8 @@ interface ChatInputProps {
   models?: ModelOption[];
   currentModel?: string;
   onChangeModel?: (modelId: string) => void;
+  tokenUsage?: TokenUsage;
+  contextTokens?: number;
 }
 
 function readFileAsBase64(file: File): Promise<ImageAttachment> {
@@ -43,6 +45,69 @@ const SLASH_COMMANDS = [
   { command: "/usage", description: "Usage for this chat, or /usage week · month · 14" },
 ];
 
+function formatTokenCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return n.toString();
+}
+
+function formatCostBadge(cost: number): string {
+  if (cost < 0.005) return "<$0.01";
+  return `$${cost.toFixed(2)}`;
+}
+
+const CONTEXT_WINDOW = 200_000;
+
+function ContextRing({ tokens }: { tokens: number }) {
+  const pct = Math.min(tokens / CONTEXT_WINDOW, 1);
+  const display = `${(pct * 100).toFixed(1)}%`;
+  const used = formatTokenCount(tokens);
+  const total = formatTokenCount(CONTEXT_WINDOW);
+  const tooltipText = `${display} · ${used} / ${total} context used`;
+
+  const size = 22;
+  const stroke = 2.5;
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ * (1 - pct);
+
+  let ringColor = "var(--text-muted)";
+  if (pct >= 0.9) ringColor = "#ef4444";
+  else if (pct >= 0.7) ringColor = "#f59e0b";
+
+  return (
+    <Tooltip text={tooltipText}>
+      <div className="context-ring" aria-label={tooltipText}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            stroke="var(--border-color)"
+            strokeWidth={stroke}
+          />
+          {pct > 0 && (
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={r}
+              fill="none"
+              stroke={ringColor}
+              strokeWidth={stroke}
+              strokeDasharray={circ}
+              strokeDashoffset={offset}
+              strokeLinecap="round"
+              transform={`rotate(-90 ${size / 2} ${size / 2})`}
+              style={{ transition: "stroke-dashoffset 0.4s ease, stroke 0.3s ease" }}
+            />
+          )}
+        </svg>
+      </div>
+    </Tooltip>
+  );
+}
+
 export function ChatInput({
   onSend,
   onAbort,
@@ -52,6 +117,8 @@ export function ChatInput({
   models,
   currentModel,
   onChangeModel,
+  tokenUsage,
+  contextTokens = 0,
 }: ChatInputProps) {
   const [value, setValue] = useState("");
   const [images, setImages] = useState<ImageAttachment[]>([]);
@@ -328,8 +395,15 @@ export function ChatInput({
               </button>
             </Tooltip>
           </div>
+          <div className="chat-input-bottom-right">
+            {contextTokens > 0 && <ContextRing tokens={contextTokens} />}
+            {tokenUsage && tokenUsage.estimatedCost > 0 && (
+              <Tooltip text={`${formatTokenCount(tokenUsage.inputTokens)} in · ${formatTokenCount(tokenUsage.outputTokens)} out`}>
+                <span className="token-badge">{formatCostBadge(tokenUsage.estimatedCost)}</span>
+              </Tooltip>
+            )}
           {models && models.length > 0 && onChangeModel && (
-            <div className="chat-input-bottom-right" ref={modelMenuRef}>
+            <div className="model-selector" ref={modelMenuRef}>
               <button
                 className="chat-input-model-btn"
                 onClick={() => setShowModelMenu((s) => !s)}
@@ -362,6 +436,7 @@ export function ChatInput({
               )}
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>

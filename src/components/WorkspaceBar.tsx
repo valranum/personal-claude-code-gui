@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Conversation } from "../types";
 import { apiFetch } from "../utils/api";
 import { Tooltip } from "./Tooltip";
+import { FaqModal } from "./FaqModal";
 
 interface WorkspaceBarProps {
   conversation: Conversation | null;
@@ -30,6 +31,7 @@ export function WorkspaceBar({
 }: WorkspaceBarProps) {
   const [picking, setPicking] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showFaq, setShowFaq] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -112,6 +114,20 @@ export function WorkspaceBar({
               )}
               <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
             </button>
+            <button
+              className="settings-option"
+              onClick={() => {
+                setShowFaq(true);
+                setShowSettings(false);
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.3"/>
+                <path d="M6 6.5C6 5.4 6.9 4.5 8 4.5C9.1 4.5 10 5.4 10 6.5C10 7.3 9.5 8 8.8 8.3C8.3 8.5 8 8.9 8 9.4V9.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                <circle cx="8" cy="11.5" r="0.7" fill="currentColor"/>
+              </svg>
+              <span>FAQ</span>
+            </button>
             <div className="settings-divider" />
             <a
               className="settings-option"
@@ -131,6 +147,7 @@ export function WorkspaceBar({
           </div>
         )}
       </div>
+      <FaqModal open={showFaq} onClose={() => setShowFaq(false)} />
     </div>
   );
 }

@@ -48,7 +48,7 @@ export function WelcomeScreen({
       )}
       <div className="welcome-screen">
         <img src={littleDude} alt="Claude" className="welcome-logo" />
-        <h1 className="welcome-title">Claude Code <span style={{ fontWeight: 400, opacity: 0.6 }}>(for designers)</span></h1>
+        <h1 className="welcome-title">Claude Code <span style={{ fontWeight: 400, opacity: 0.6, fontSize: '0.82em' }}>(for designers)</span></h1>
         <p className="welcome-subtitle">
           Open a folder to start working with Claude.
         </p>

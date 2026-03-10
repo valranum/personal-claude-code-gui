@@ -38,7 +38,7 @@ export function ChatView({
   onToggleTheme,
 }: ChatViewProps) {
   const { addToast } = useToast();
-  const { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion } = useChat(
+  const { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens } = useChat(
     conversationId,
     (title) => {
       if (conversationId) onTitleUpdate(conversationId, title);
@@ -129,6 +129,8 @@ export function ChatView({
               models={models}
               currentModel={conversation?.model}
               onChangeModel={conversation ? (modelId) => onChangeModel(conversation.id, modelId) : undefined}
+              tokenUsage={conversation?.tokenUsage}
+              contextTokens={contextTokens}
             />
           ) : undefined}
         />
@@ -147,6 +149,11 @@ export function ChatView({
             onAbort={abort}
             isStreaming={streaming.isStreaming}
             disabled={!conversationId}
+            models={models}
+            currentModel={conversation?.model}
+            onChangeModel={conversation ? (modelId) => onChangeModel(conversation.id, modelId) : undefined}
+            tokenUsage={conversation?.tokenUsage}
+            contextTokens={contextTokens}
           />
         )}
       </div>
