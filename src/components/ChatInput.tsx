@@ -67,13 +67,13 @@ function ContextRing({ tokens }: { tokens: number }) {
   const total = formatTokenCount(CONTEXT_WINDOW);
   const tooltipText = `${display} · ${used} / ${total} context used`;
 
-  const size = 22;
+  const size = 13;
   const stroke = 2.5;
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ * (1 - pct);
 
-  let ringColor = "var(--text-muted)";
+  let ringColor = "rgba(180, 180, 190, 0.9)";
   if (pct >= 0.9) ringColor = "#ef4444";
   else if (pct >= 0.7) ringColor = "#f59e0b";
 
@@ -86,7 +86,7 @@ function ContextRing({ tokens }: { tokens: number }) {
             cy={size / 2}
             r={r}
             fill="none"
-            stroke="var(--border-color)"
+            stroke="rgba(255, 255, 255, 0.12)"
             strokeWidth={stroke}
           />
           {pct > 0 && (

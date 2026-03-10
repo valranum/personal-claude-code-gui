@@ -46,6 +46,7 @@ export function ChatView({
       if (conversationId) onTitleUpdate(conversationId, title);
     },
     (msg) => addToast(msg, "error"),
+    (msg) => addToast(msg, "info"),
   );
 
   const isEmpty = messages.length === 0 && !streaming.isStreaming;

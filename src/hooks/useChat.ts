@@ -23,16 +23,23 @@ function formatCost(cost: number): string {
 
 // ~75% of 200k context window — trigger compact suggestion
 const CONTEXT_TOKEN_THRESHOLD = 150_000;
+// ~95% of 200k context window — auto-compact before sending
+const AUTO_COMPACT_THRESHOLD = 190_000;
 
 export function useChat(
   conversationId: string | null,
   onTitleUpdate?: (title: string) => void,
   onError?: (message: string) => void,
+  onInfo?: (message: string) => void,
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, _setStreaming] = useState<StreamingState>(EMPTY_STREAMING);
   const [showCompactSuggestion, setShowCompactSuggestion] = useState(false);
-  const [contextTokens, setContextTokens] = useState(0);
+  const [contextTokens, _setContextTokens] = useState(0);
+  const setContextTokens = useCallback((v: number) => {
+    _setContextTokens(v);
+    contextTokensRef.current = v;
+  }, []);
 
   const setStreaming = useCallback((val: StreamingState | ((prev: StreamingState) => StreamingState)) => {
     _setStreaming((prev) => {
@@ -46,10 +53,13 @@ export function useChat(
   const toolCallsRef = useRef<ToolCallInfo[]>([]);
   const effectIdRef = useRef(0);
   const onErrorRef = useRef(onError);
+  const onInfoRef = useRef(onInfo);
+  const contextTokensRef = useRef(0);
   const fetchAbortRef = useRef<AbortController | null>(null);
   const isStreamingRef = useRef(false);
   const resultHandledRef = useRef(false);
   onErrorRef.current = onError;
+  onInfoRef.current = onInfo;
 
   useEffect(() => {
     fetchAbortRef.current?.abort();
@@ -310,6 +320,22 @@ export function useChat(
           onErrorRef.current?.("Failed to fetch usage data");
         }
         return;
+      }
+
+      if (contextTokensRef.current >= AUTO_COMPACT_THRESHOLD) {
+        try {
+          const res = await apiFetch(`/api/conversations/${conversationId}/compact`, { method: "POST" });
+          if (res.ok) {
+            const reloaded = await apiFetch(`/api/conversations/${conversationId}/messages`);
+            const reloadedData = await reloaded.json();
+            setMessages(reloadedData.messages);
+            setContextTokens(0);
+            setShowCompactSuggestion(false);
+            onInfoRef.current?.("Conversation was automatically compacted to free up context.");
+          }
+        } catch {
+          // compact failed — continue with send anyway
+        }
       }
 
       const userMsg: ChatMessage = {

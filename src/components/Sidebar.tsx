@@ -2,8 +2,6 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Conversation } from "../types";
 import { formatRelativeTime } from "../utils/time";
 import { FileTree } from "./FileTree";
-import { ClaudeMdEditor } from "./ClaudeMdEditor";
-import { GitPanel } from "./GitPanel";
 import { Tooltip } from "./Tooltip";
 import { apiFetch } from "../utils/api";
 
@@ -13,7 +11,7 @@ interface SearchResult {
   matchContext?: string;
 }
 
-type SidebarTab = "chats" | "files" | "claude-md" | "git";
+type SidebarTab = "chats" | "files";
 
 interface SidebarProps {
   conversations: Conversation[];
@@ -190,30 +188,6 @@ export function Sidebar({
           </svg>
           Files
         </button>
-        <button
-          className={`sidebar-tab ${activeTab === "claude-md" ? "active" : ""}`}
-          onClick={() => setActiveTab("claude-md")}
-          disabled={!activeCwd}
-        >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <path d="M9 2H4.5C3.67 2 3 2.67 3 3.5V12.5C3 13.33 3.67 14 4.5 14H11.5C12.33 14 13 13.33 13 12.5V6L9 2Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
-            <path d="M9 2V6H13" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
-          </svg>
-          CLAUDE
-        </button>
-        <button
-          className={`sidebar-tab ${activeTab === "git" ? "active" : ""}`}
-          onClick={() => setActiveTab("git")}
-          disabled={!activeCwd}
-        >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <path d="M5 3V10M11 3V7C11 8.66 9.66 10 8 10H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <circle cx="5" cy="12" r="2" stroke="currentColor" strokeWidth="1.3"/>
-            <circle cx="5" cy="3" r="1.5" fill="currentColor"/>
-            <circle cx="11" cy="3" r="1.5" fill="currentColor"/>
-          </svg>
-          Git
-        </button>
       </div>
       {activeTab === "chats" ? (
         <>
@@ -368,22 +342,6 @@ export function Sidebar({
             <FileTree cwd={activeCwd} onClose={() => setActiveTab("chats")} />
           ) : (
             <div className="sidebar-empty">Open a project folder to browse files.</div>
-          )}
-        </div>
-      ) : activeTab === "claude-md" ? (
-        <div className="sidebar-claude-md">
-          {activeCwd ? (
-            <ClaudeMdEditor cwd={activeCwd} />
-          ) : (
-            <div className="sidebar-empty">Open a project folder to edit CLAUDE.md.</div>
-          )}
-        </div>
-      ) : activeTab === "git" ? (
-        <div className="sidebar-git">
-          {activeCwd ? (
-            <GitPanel cwd={activeCwd} />
-          ) : (
-            <div className="sidebar-empty">Open a project folder to see git info.</div>
           )}
         </div>
       ) : null}

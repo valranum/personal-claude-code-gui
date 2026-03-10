@@ -68,6 +68,8 @@ app.use("/api", (req, res, next) => {
 
 const DEFAULT_MODEL = "claude-opus-4-6";
 
+const DEFAULT_SYSTEM_PROMPT = `You are Claude, a helpful AI assistant. You can help with a wide range of tasks — answering questions, brainstorming ideas, writing, research, analysis, and general conversation — in addition to reading, writing, and editing code. Treat every question as valid and worth answering, whether it's about code or not. Be friendly, clear, and concise.`;
+
 const AVAILABLE_MODELS = [
   { id: "claude-opus-4-6", name: "Claude Opus 4.6" },
   { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6" },
@@ -467,12 +469,11 @@ app.post("/api/conversations", (req, res) => {
     model || DEFAULT_MODEL,
   );
 
-  // Auto-apply workspace default system prompt
+  // Apply system prompt: workspace config overrides the default
   const wsConfig = workspaceConfig.getConfig(resolvedCwd);
-  if (wsConfig.defaultSystemPrompt) {
-    store.updateConversation(id, { systemPrompt: wsConfig.defaultSystemPrompt });
-    file.conversation.systemPrompt = wsConfig.defaultSystemPrompt;
-  }
+  const prompt = wsConfig.defaultSystemPrompt || DEFAULT_SYSTEM_PROMPT;
+  store.updateConversation(id, { systemPrompt: prompt });
+  file.conversation.systemPrompt = prompt;
 
   res.json(file.conversation);
 });
