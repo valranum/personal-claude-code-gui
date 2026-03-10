@@ -23,6 +23,62 @@ function formatCost(cost: number): string {
 
 // ~75% of 200k context window — trigger compact suggestion
 const CONTEXT_TOKEN_THRESHOLD = 150_000;
+
+const WORD_TO_NUM: Record<string, number> = {
+  one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7,
+  eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13,
+  fourteen: 14, fifteen: 15, twenty: 20, thirty: 30, sixty: 60, ninety: 90,
+};
+
+function parseUsageQuery(input: string): { scope: "conversation" | "range"; days?: number; label: string } | null {
+  if (input.startsWith("/usage")) {
+    const arg = input.split(/\s+/)[1] || "";
+    const num = parseInt(arg, 10);
+    if (!isNaN(num) && num > 0) return { scope: "range", days: num, label: `Past ${num} day${num === 1 ? "" : "s"}` };
+    if (arg === "week") return { scope: "range", days: 7, label: "Past 7 days" };
+    if (arg === "month") return { scope: "range", days: 30, label: "Past 30 days" };
+    return { scope: "conversation", label: "This conversation" };
+  }
+
+  const lower = input.toLowerCase();
+  const usageKeywords = /\b(usage|tokens?|how much|how many|cost|spent|spending|consumed|used)\b/;
+  if (!usageKeywords.test(lower)) return null;
+
+  const thisConv = /\b(this (conversation|chat|session)|current (conversation|chat|session))\b/;
+  if (thisConv.test(lower)) return { scope: "conversation", label: "This conversation" };
+
+  const yearMatch = lower.match(/\b(?:past|last)\s+(?:a\s+)?year\b/);
+  if (yearMatch) return { scope: "range", days: 365, label: "Past year" };
+
+  const monthMatch = lower.match(/\b(?:past|last)\s+(\w+)\s+months?\b/);
+  if (monthMatch) {
+    const n = parseInt(monthMatch[1], 10) || WORD_TO_NUM[monthMatch[1]] || 1;
+    const days = n * 30;
+    return { scope: "range", days, label: `Past ${n} month${n === 1 ? "" : "s"}` };
+  }
+  if (/\b(?:past|last|this)\s+month\b/.test(lower)) return { scope: "range", days: 30, label: "Past month" };
+
+  const weekMatch = lower.match(/\b(?:past|last)\s+(\w+)\s+weeks?\b/);
+  if (weekMatch) {
+    const n = parseInt(weekMatch[1], 10) || WORD_TO_NUM[weekMatch[1]] || 1;
+    const days = n * 7;
+    return { scope: "range", days, label: `Past ${n} week${n === 1 ? "" : "s"}` };
+  }
+  if (/\b(?:past|last|this)\s+week\b/.test(lower)) return { scope: "range", days: 7, label: "Past week" };
+
+  const dayMatch = lower.match(/\b(?:past|last)\s+(\w+)\s+days?\b/);
+  if (dayMatch) {
+    const n = parseInt(dayMatch[1], 10) || WORD_TO_NUM[dayMatch[1]] || 1;
+    return { scope: "range", days: n, label: `Past ${n} day${n === 1 ? "" : "s"}` };
+  }
+
+  if (/\b(today|past day|last day)\b/.test(lower)) return { scope: "range", days: 1, label: "Today" };
+  if (/\byesterday\b/.test(lower)) return { scope: "range", days: 2, label: "Past 2 days" };
+
+  if (usageKeywords.test(lower)) return { scope: "conversation", label: "This conversation" };
+
+  return null;
+}
 // ~95% of 200k context window — auto-compact before sending
 const AUTO_COMPACT_THRESHOLD = 190_000;
 
@@ -288,31 +344,23 @@ export function useChat(
         }
         return;
       }
-      if (content.trim().startsWith("/usage")) {
-        const arg = content.trim().split(/\s+/)[1] || "";
-        const customDays = parseInt(arg, 10);
-        const isCustom = !isNaN(customDays) && customDays > 0;
-        const scope = arg === "week" || arg === "month" || isCustom ? "range" : "conversation";
+      const usageQuery = parseUsageQuery(content.trim());
+      if (usageQuery) {
         try {
           const params = new URLSearchParams();
-          if (scope === "conversation") {
+          if (usageQuery.scope === "conversation") {
             params.set("scope", "conversation");
             params.set("id", conversationId);
           } else {
-            params.set("scope", arg === "week" ? "week" : arg === "month" ? "month" : "week");
-            if (isCustom) params.set("days", String(customDays));
+            params.set("scope", "week");
+            if (usageQuery.days) params.set("days", String(usageQuery.days));
           }
           const res = await apiFetch(`/api/usage?${params}`);
           const data = await res.json();
-          const label = isCustom
-            ? `Past ${customDays} day${customDays === 1 ? "" : "s"}`
-            : arg === "week" ? "Past 7 days"
-            : arg === "month" ? "Past 30 days"
-            : "This conversation";
           const systemMsg: ChatMessage = {
             id: crypto.randomUUID(),
             role: "system",
-            content: `**${label}** — ${formatTokens(data.inputTokens)} input tokens · ${formatTokens(data.outputTokens)} output tokens · ${formatCost(data.estimatedCost)}`,
+            content: `**${usageQuery.label}** — ${formatTokens(data.inputTokens)} input tokens · ${formatTokens(data.outputTokens)} output tokens · ${formatCost(data.estimatedCost)}`,
             timestamp: new Date().toISOString(),
           };
           setMessages((prev) => [...prev, systemMsg]);

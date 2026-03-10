@@ -516,11 +516,6 @@ export function ChatInput({
           </div>
           <div className="chat-input-bottom-right">
             {contextTokens > 0 && <ContextRing tokens={contextTokens} />}
-            {tokenUsage && tokenUsage.estimatedCost > 0 && (
-              <Tooltip text={`${formatTokenCount(tokenUsage.inputTokens)} in · ${formatTokenCount(tokenUsage.outputTokens)} out`}>
-                <span className="token-badge">{formatCostBadge(tokenUsage.estimatedCost)}</span>
-              </Tooltip>
-            )}
           {models && models.length > 0 && onChangeModel && (
             <div className="model-selector" ref={modelMenuRef}>
               <button
