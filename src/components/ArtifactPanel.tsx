@@ -7,9 +7,11 @@ interface ArtifactPanelProps {
   code: string;
   onClose: () => void;
   widthPercent?: number;
+  showBackToPreview?: boolean;
+  onBackToPreview?: () => void;
 }
 
-export function ArtifactPanel({ language, code, onClose, widthPercent = 45 }: ArtifactPanelProps) {
+export function ArtifactPanel({ language, code, onClose, widthPercent = 45, showBackToPreview, onBackToPreview }: ArtifactPanelProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -48,6 +50,14 @@ export function ArtifactPanel({ language, code, onClose, widthPercent = 45 }: Ar
               </>
             )}
           </button>
+          {showBackToPreview && onBackToPreview && (
+            <button className="artifact-copy-btn" onClick={onBackToPreview} title="Back to preview">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M10 3L5 8L10 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Preview
+            </button>
+          )}
           <button className="artifact-close-btn" onClick={onClose} title="Close panel">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>

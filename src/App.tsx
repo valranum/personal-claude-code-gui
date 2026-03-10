@@ -106,6 +106,7 @@ function AppContent() {
   }, [createConversation]);
 
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [openFilePath, setOpenFilePath] = useState<string | null>(null);
 
   const handleOpenFolder = useCallback(
     (cwd?: string) => {
@@ -176,6 +177,7 @@ function AppContent() {
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
           width={sidebarWidth}
+          onFileClick={setOpenFilePath}
         />
         {!sidebarCollapsed && (
           <div
@@ -195,6 +197,8 @@ function AppContent() {
             onFork={handleFork}
             theme={theme}
             onToggleTheme={toggleTheme}
+            openFilePath={openFilePath}
+            onCloseFile={() => setOpenFilePath(null)}
           />
         ) : (
           <WelcomeScreen

@@ -10,6 +10,7 @@ interface FileEntry {
 interface FileTreeProps {
   cwd: string;
   onClose: () => void;
+  onFileClick?: (filePath: string) => void;
 }
 
 function FileIcon() {
@@ -57,13 +58,16 @@ function FolderIcon({ open }: { open?: boolean }) {
   );
 }
 
-function TreeNode({ entry }: { entry: FileEntry }) {
+function TreeNode({ entry, onFileClick }: { entry: FileEntry; onFileClick?: (path: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const [children, setChildren] = useState<FileEntry[] | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const toggle = useCallback(async () => {
-    if (entry.type !== "directory") return;
+  const handleClick = useCallback(async () => {
+    if (entry.type !== "directory") {
+      onFileClick?.(entry.path);
+      return;
+    }
 
     if (expanded) {
       setExpanded(false);
@@ -84,7 +88,7 @@ function TreeNode({ entry }: { entry: FileEntry }) {
     }
 
     setExpanded(true);
-  }, [entry, expanded, children]);
+  }, [entry, expanded, children, onFileClick]);
 
   const isDir = entry.type === "directory";
 
@@ -92,8 +96,8 @@ function TreeNode({ entry }: { entry: FileEntry }) {
     <div>
       <div
         className={`filetree-item ${isDir ? "directory" : "file"}`}
-        onClick={toggle}
-        role={isDir ? "button" : undefined}
+        onClick={handleClick}
+        role="button"
       >
         {isDir && (
           <span className={`filetree-toggle ${expanded ? "expanded" : ""}`}>
@@ -112,7 +116,7 @@ function TreeNode({ entry }: { entry: FileEntry }) {
       {expanded && children && children.length > 0 && (
         <div className="filetree-children">
           {children.map((child) => (
-            <TreeNode key={child.path} entry={child} />
+            <TreeNode key={child.path} entry={child} onFileClick={onFileClick} />
           ))}
         </div>
       )}
@@ -120,7 +124,7 @@ function TreeNode({ entry }: { entry: FileEntry }) {
   );
 }
 
-export function FileTree({ cwd, onClose }: FileTreeProps) {
+export function FileTree({ cwd, onClose, onFileClick }: FileTreeProps) {
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -170,7 +174,7 @@ export function FileTree({ cwd, onClose }: FileTreeProps) {
         ) : entries.length === 0 ? (
           <div className="filetree-empty">No files found</div>
         ) : (
-          entries.map((entry) => <TreeNode key={entry.path} entry={entry} />)
+          entries.map((entry) => <TreeNode key={entry.path} entry={entry} onFileClick={onFileClick} />)
         )}
       </div>
     </div>

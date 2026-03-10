@@ -26,6 +26,7 @@ interface SidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
   width: number;
+  onFileClick?: (filePath: string) => void;
 }
 
 export function Sidebar({
@@ -41,6 +42,7 @@ export function Sidebar({
   collapsed,
   onToggleCollapse,
   width,
+  onFileClick,
 }: SidebarProps) {
   const [activeTab, setActiveTab] = useState<SidebarTab>("chats");
   const [search, setSearch] = useState("");
@@ -339,7 +341,7 @@ export function Sidebar({
       ) : activeTab === "files" ? (
         <div className="sidebar-filetree">
           {activeCwd ? (
-            <FileTree cwd={activeCwd} onClose={() => setActiveTab("chats")} />
+            <FileTree cwd={activeCwd} onClose={() => setActiveTab("chats")} onFileClick={onFileClick} />
           ) : (
             <div className="sidebar-empty">Open a project folder to browse files.</div>
           )}

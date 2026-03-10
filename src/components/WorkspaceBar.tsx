@@ -13,6 +13,8 @@ interface WorkspaceBarProps {
   onToggleSidebar: () => void;
   theme: "dark" | "light";
   onToggleTheme: () => void;
+  previewOpen?: boolean;
+  onTogglePreview?: () => void;
 }
 
 function shortenPath(fullPath: string): { dir: string; name: string } {
@@ -30,6 +32,8 @@ export function WorkspaceBar({
   onToggleSidebar,
   theme,
   onToggleTheme,
+  previewOpen,
+  onTogglePreview,
 }: WorkspaceBarProps) {
   const [picking, setPicking] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -86,6 +90,20 @@ export function WorkspaceBar({
         </Tooltip>
       </div>
       <div className="workspace-bar-right" ref={settingsRef}>
+        {onTogglePreview && (
+          <Tooltip text={previewOpen ? "Close preview" : "Live preview"}>
+            <button
+              className={`preview-toggle-btn${previewOpen ? " active" : ""}`}
+              onClick={onTogglePreview}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <rect x="1.5" y="2.5" width="13" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
+                <path d="M1.5 4.5H14.5" stroke="currentColor" strokeWidth="1.2"/>
+                <path d="M5 8L7 10L11 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.6"/>
+              </svg>
+            </button>
+          </Tooltip>
+        )}
         <Tooltip text="Settings">
           <button
             className="settings-btn"

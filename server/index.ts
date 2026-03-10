@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
+import net from "net";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -207,6 +208,52 @@ app.get("/api/filetree", (req, res) => {
   }
 });
 
+// Read a single file
+app.get("/api/files/read", (req, res) => {
+  const filePath = req.query.path as string | undefined;
+  if (!filePath) {
+    res.status(400).json({ error: "path is required" });
+    return;
+  }
+  const resolved = path.resolve(filePath);
+  if (!isPathWithinHome(resolved)) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+  try {
+    const stat = fs.statSync(resolved);
+    if (stat.size > 2 * 1024 * 1024) {
+      res.status(413).json({ error: "File too large (max 2MB)" });
+      return;
+    }
+    const content = fs.readFileSync(resolved, "utf-8");
+    res.json({ content, path: resolved });
+  } catch {
+    res.status(404).json({ error: "File not found" });
+  }
+});
+
+// Write/save a file
+app.post("/api/files/write", (req, res) => {
+  const { path: filePath, content } = req.body;
+  if (!filePath || typeof content !== "string") {
+    res.status(400).json({ error: "path and content are required" });
+    return;
+  }
+  const resolved = path.resolve(filePath);
+  if (!isPathWithinHome(resolved)) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+  try {
+    fs.writeFileSync(resolved, content, "utf-8");
+    res.json({ ok: true });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "Write failed";
+    res.status(500).json({ error: msg });
+  }
+});
+
 // Recursive file search for @mentions
 app.get("/api/files/search", (req, res) => {
   const cwd = req.query.cwd as string | undefined;
@@ -268,6 +315,130 @@ app.post("/api/pick-folder", (_req, res) => {
     const picked = stdout.trim().replace(/\/$/, "");
     res.json({ cancelled: false, path: picked });
   });
+});
+
+// Detect dev server on common ports
+const DEV_SERVER_PORTS = [5173, 5174, 3000, 4200, 8080, 8000, 4321];
+const OWN_PORT = 3001;
+
+async function checkPortServesHtml(port: number): Promise<boolean> {
+  if (port === OWN_PORT) return false;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 800);
+    const resp = await fetch(`http://127.0.0.1:${port}`, { signal: controller.signal });
+    clearTimeout(timeout);
+    const ct = resp.headers.get("content-type") || "";
+    return ct.includes("text/html");
+  } catch {
+    return false;
+  }
+}
+
+function detectProjectType(cwd: string): { framework: string; devScript: string | null } | null {
+  try {
+    const pkgPath = path.join(cwd, "package.json");
+    if (!fs.existsSync(pkgPath)) return null;
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+    const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+    const scripts = pkg.scripts || {};
+    const devScript = scripts.dev ? "dev" : scripts.start ? "start" : scripts.serve ? "serve" : null;
+
+    if (deps["next"]) return { framework: "Next.js", devScript };
+    if (deps["nuxt"]) return { framework: "Nuxt", devScript };
+    if (deps["@sveltejs/kit"]) return { framework: "SvelteKit", devScript };
+    if (deps["svelte"]) return { framework: "Svelte", devScript };
+    if (deps["gatsby"]) return { framework: "Gatsby", devScript };
+    if (deps["astro"]) return { framework: "Astro", devScript };
+    if (deps["vue"]) return { framework: "Vue", devScript };
+    if (deps["react"]) return { framework: "React", devScript };
+    if (deps["angular"]) return { framework: "Angular", devScript };
+    if (devScript) return { framework: "Web project", devScript };
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+app.get("/api/detect-dev-server", async (req, res) => {
+  const cwd = req.query.cwd as string | undefined;
+  const project = cwd ? detectProjectType(cwd) : null;
+
+  for (const port of DEV_SERVER_PORTS) {
+    if (await checkPortServesHtml(port)) {
+      res.json({ found: true, url: `http://localhost:${port}`, project });
+      return;
+    }
+  }
+  res.json({ found: false, url: null, project });
+});
+
+const devServerProcesses = new Map<string, { proc: ReturnType<typeof import("child_process").spawn>; port: number | null }>();
+
+app.post("/api/start-dev-server", async (req, res) => {
+  const { cwd } = req.body;
+  if (!cwd || typeof cwd !== "string") {
+    res.status(400).json({ error: "cwd is required" });
+    return;
+  }
+
+  if (devServerProcesses.has(cwd)) {
+    const existing = devServerProcesses.get(cwd)!;
+    if (existing.port) {
+      res.json({ url: `http://localhost:${existing.port}`, started: false });
+      return;
+    }
+  }
+
+  const project = detectProjectType(cwd);
+  if (!project || !project.devScript) {
+    res.status(400).json({ error: "No dev script found in package.json" });
+    return;
+  }
+
+  const { spawn } = await import("child_process");
+  const proc = spawn("npm", ["run", project.devScript], {
+    cwd,
+    stdio: ["ignore", "pipe", "pipe"],
+    env: { ...process.env, BROWSER: "none", FORCE_COLOR: "0" },
+    detached: false,
+  });
+
+  devServerProcesses.set(cwd, { proc, port: null });
+
+  proc.on("close", () => devServerProcesses.delete(cwd));
+
+  let resolved = false;
+  const maxWait = 20_000;
+  const start = Date.now();
+
+  const pollForServer = async (): Promise<{ url: string | null }> => {
+    while (Date.now() - start < maxWait) {
+      for (const port of DEV_SERVER_PORTS) {
+        if (await checkPortServesHtml(port)) {
+          const entry = devServerProcesses.get(cwd);
+          if (entry) entry.port = port;
+          return { url: `http://localhost:${port}` };
+        }
+      }
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    return { url: null };
+  };
+
+  try {
+    const result = await pollForServer();
+    resolved = true;
+    if (result.url) {
+      res.json({ url: result.url, started: true });
+    } else {
+      res.status(504).json({ error: "Dev server started but no port responded in time" });
+    }
+  } catch {
+    if (!resolved) {
+      res.status(500).json({ error: "Failed to start dev server" });
+    }
+  }
 });
 
 // MCP server management
