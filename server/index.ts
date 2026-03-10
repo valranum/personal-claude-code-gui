@@ -69,7 +69,9 @@ app.use("/api", (req, res, next) => {
 
 const DEFAULT_MODEL = "claude-opus-4-6";
 
-const DEFAULT_SYSTEM_PROMPT = `You are Claude, a helpful AI assistant. You can help with a wide range of tasks — answering questions, brainstorming ideas, writing, research, analysis, and general conversation — in addition to reading, writing, and editing code. Treat every question as valid and worth answering, whether it's about code or not. Be friendly, clear, and concise.`;
+const DEFAULT_SYSTEM_PROMPT = `You are Claude, a helpful AI assistant. You can help with a wide range of tasks — answering questions, brainstorming ideas, writing, research, analysis, and general conversation — in addition to reading, writing, and editing code. Treat every question as valid and worth answering, whether it's about code or not. Be friendly, clear, and concise.
+
+You have access to web search and web fetch tools. When a user asks about current events, weather, live data, recent news, or anything that requires up-to-date information, use the WebSearch tool to look it up. Never say you can't access the internet — you can. Always try to find the answer.`;
 
 const AVAILABLE_MODELS = [
   { id: "claude-opus-4-6", name: "Claude Opus 4.6" },

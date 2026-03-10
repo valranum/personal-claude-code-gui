@@ -1151,7 +1151,7 @@ body,
   align-items: center;
   justify-content: space-between;
   padding: 0 12px;
-  height: 42px;
+  height: 48px;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -1439,7 +1439,7 @@ body,
   align-items: center;
   justify-content: space-between;
   padding: 0 8px 0 12px;
-  height: 42px;
+  height: 48px;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
