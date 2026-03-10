@@ -23,7 +23,7 @@ export function listConversations(): Conversation[] {
       const data: ConversationFile = JSON.parse(
         fs.readFileSync(path.join(DATA_DIR, f), "utf-8"),
       );
-      return data.conversation;
+      return { ...data.conversation, messageCount: data.messages.length };
     })
     .sort(
       (a, b) =>

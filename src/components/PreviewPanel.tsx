@@ -82,16 +82,11 @@ export function PreviewPanel({
 
   const hasDevScript = project?.devScript != null;
 
-  const browserIcon = (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-      <rect x="6" y="9" width="36" height="28" rx="4" stroke="currentColor" strokeWidth="2" opacity="0.3"/>
-      <path d="M6 15H42" stroke="currentColor" strokeWidth="2" opacity="0.2"/>
-      <circle cx="11" cy="12" r="1.2" fill="currentColor" opacity="0.2"/>
-      <circle cx="15" cy="12" r="1.2" fill="currentColor" opacity="0.2"/>
-      <circle cx="19" cy="12" r="1.2" fill="currentColor" opacity="0.2"/>
-      <path d="M18 27L22 23L26 27" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.4"/>
-      <path d="M28 25L30 23L32 25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.3"/>
-      <circle cx="31" cy="20" r="2" stroke="currentColor" strokeWidth="1.5" opacity="0.3"/>
+  const previewIcon = (
+    <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+      <path d="M22 12C12 12 5 22 5 22C5 22 12 32 22 32C32 32 39 22 39 22C39 22 32 12 22 12Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" opacity="0.45"/>
+      <circle cx="22" cy="22" r="6" stroke="currentColor" strokeWidth="2" opacity="0.45"/>
+      <circle cx="22" cy="22" r="2.5" fill="currentColor" opacity="0.35"/>
     </svg>
   );
 
@@ -99,7 +94,7 @@ export function PreviewPanel({
     if (startError) {
       return (
         <div className="preview-empty">
-          <div className="preview-empty-icon">{browserIcon}</div>
+          <div className="preview-empty-icon">{previewIcon}</div>
           <p className="preview-empty-title">Couldn't start the preview</p>
           <p className="preview-empty-hint">
             You can try again, or enter a URL directly in the bar above if your project is already running somewhere.
@@ -119,7 +114,7 @@ export function PreviewPanel({
     if (hasDevScript) {
       return (
         <div className="preview-empty">
-          <div className="preview-empty-icon">{browserIcon}</div>
+          <div className="preview-empty-icon">{previewIcon}</div>
           <p className="preview-empty-title">
             Preview your {project?.framework || "project"}
           </p>
@@ -138,7 +133,7 @@ export function PreviewPanel({
 
     return (
       <div className="preview-empty">
-        <div className="preview-empty-icon">{browserIcon}</div>
+        <div className="preview-empty-icon">{previewIcon}</div>
         <p className="preview-empty-title">Preview your project</p>
         <p className="preview-empty-hint">
           Enter a URL in the bar above to preview any web page, or ask Claude to help set up your project.

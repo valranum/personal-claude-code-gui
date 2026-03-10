@@ -1557,6 +1557,7 @@ body,
   font-weight: 500;
   color: var(--text-secondary);
   margin: 0;
+  font-family: var(--font-sans);
 }
 
 .preview-empty-hint {
@@ -1565,6 +1566,7 @@ body,
   margin: 0;
   max-width: 260px;
   line-height: 1.5;
+  font-family: var(--font-sans);
 }
 
 .preview-empty-hint code {

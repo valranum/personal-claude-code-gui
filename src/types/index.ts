@@ -8,6 +8,7 @@ export interface Conversation {
   pinned?: boolean;
   forkedFrom?: { conversationId: string; messageId: string };
   tokenUsage?: TokenUsage;
+  messageCount?: number;
   createdAt: string;
   updatedAt: string;
 }

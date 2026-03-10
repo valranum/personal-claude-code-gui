@@ -316,7 +316,11 @@ export function Sidebar({
                     className="conversation-action-btn delete-btn"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setDeleteConfirmId(conv.id);
+                      if (conv.title === "New Chat") {
+                        onDelete(conv.id);
+                      } else {
+                        setDeleteConfirmId(conv.id);
+                      }
                     }}
                   >
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
