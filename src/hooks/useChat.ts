@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ChatMessage, ImageAttachment, ToolCallInfo, StreamingState } from "../types";
 import { connectSSE, SSEEvent } from "../utils/sse";
-import { apiFetch, getAuthToken } from "../utils/api";
+import { apiFetch, getAuthToken, getAuthTokenSync } from "../utils/api";
 
 const EMPTY_STREAMING: StreamingState = {
   isStreaming: false,
@@ -21,6 +21,7 @@ function formatCost(cost: number): string {
   return `$${cost.toFixed(2)}`;
 }
 
+const CONTEXT_WINDOW = 200_000;
 // ~75% of 200k context window — trigger compact suggestion
 const CONTEXT_TOKEN_THRESHOLD = 150_000;
 
@@ -87,6 +88,8 @@ export function useChat(
   onTitleUpdate?: (title: string) => void,
   onError?: (message: string) => void,
   onInfo?: (message: string) => void,
+  cwd?: string,
+  model?: string,
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, _setStreaming] = useState<StreamingState>(EMPTY_STREAMING);
@@ -114,6 +117,10 @@ export function useChat(
   const fetchAbortRef = useRef<AbortController | null>(null);
   const isStreamingRef = useRef(false);
   const resultHandledRef = useRef(false);
+  const cwdRef = useRef(cwd);
+  const modelRef = useRef(model || "");
+  cwdRef.current = cwd;
+  modelRef.current = model || "";
   onErrorRef.current = onError;
   onInfoRef.current = onInfo;
 
@@ -368,6 +375,214 @@ export function useChat(
           onErrorRef.current?.("Failed to fetch usage data");
         }
         return;
+      }
+
+      if (content.trim() === "/context") {
+        const tokens = contextTokensRef.current;
+        const pct = Math.min(tokens / CONTEXT_WINDOW, 1);
+        const pctStr = (pct * 100).toFixed(1);
+        const barLen = 30;
+        const filled = Math.round(pct * barLen);
+        const bar = "█".repeat(filled) + "░".repeat(barLen - filled);
+        const available = CONTEXT_WINDOW - tokens;
+        let status = "🟢 Healthy";
+        if (pct >= 0.9) status = "🔴 Critical — consider /compact";
+        else if (pct >= 0.75) status = "🟡 Getting full — consider /compact";
+        const systemMsg: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: "system",
+          content: [
+            `**Context Window Usage**`,
+            `\`${bar}\` ${pctStr}%`,
+            `**Used:** ${formatTokens(tokens)} / ${formatTokens(CONTEXT_WINDOW)} tokens`,
+            `**Available:** ${formatTokens(available)} tokens`,
+            `**Status:** ${status}`,
+          ].join("\n"),
+          timestamp: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, systemMsg]);
+        return;
+      }
+
+      if (content.trim() === "/cost") {
+        try {
+          const params = new URLSearchParams({ scope: "conversation", id: conversationId });
+          const res = await apiFetch(`/api/usage?${params}`);
+          const data = await res.json();
+          const convRes = await apiFetch(`/api/conversations/${conversationId}/messages`);
+          const convData = await convRes.json();
+          const msgCount = (convData.messages || []).length;
+          const systemMsg: ChatMessage = {
+            id: crypto.randomUUID(),
+            role: "system",
+            content: [
+              `**Session Cost Summary**`,
+              `**Input:** ${formatTokens(data.inputTokens)} tokens`,
+              `**Output:** ${formatTokens(data.outputTokens)} tokens`,
+              `**Total:** ${formatTokens(data.inputTokens + data.outputTokens)} tokens`,
+              `**Estimated cost:** ${formatCost(data.estimatedCost)}`,
+              `**Messages:** ${msgCount}`,
+            ].join("\n"),
+            timestamp: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, systemMsg]);
+        } catch {
+          onErrorRef.current?.("Failed to fetch cost data");
+        }
+        return;
+      }
+
+      if (content.trim().startsWith("/export")) {
+        try {
+          const arg = content.trim().split(/\s+/)[1] || "md";
+          const format = arg === "json" ? "json" : "md";
+          const token = getAuthTokenSync();
+          const url = `/api/conversations/${conversationId}/export?format=${format}&token=${token}`;
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          const systemMsg: ChatMessage = {
+            id: crypto.randomUUID(),
+            role: "system",
+            content: `**Exported** conversation as \`.${format}\` — check your downloads.`,
+            timestamp: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, systemMsg]);
+        } catch {
+          onErrorRef.current?.("Failed to export conversation");
+        }
+        return;
+      }
+
+      if (content.trim() === "/diff") {
+        if (!cwdRef.current) {
+          onErrorRef.current?.("No workspace selected");
+          return;
+        }
+        try {
+          const statusRes = await apiFetch(`/api/git/status?cwd=${encodeURIComponent(cwdRef.current)}`);
+          const statusData = await statusRes.json();
+          if (!statusData.isRepo) {
+            const systemMsg: ChatMessage = {
+              id: crypto.randomUUID(),
+              role: "system",
+              content: "**Not a git repository** — `/diff` requires a git workspace.",
+              timestamp: new Date().toISOString(),
+            };
+            setMessages((prev) => [...prev, systemMsg]);
+            return;
+          }
+          const diffRes = await apiFetch(`/api/git/diff?cwd=${encodeURIComponent(cwdRef.current)}`);
+          const diffData = await diffRes.json();
+          const stat = diffData.stat?.trim();
+          const lines: string[] = [`**Git Changes** (branch: \`${statusData.branch}\`)`];
+          if (statusData.files && statusData.files.length > 0) {
+            lines.push("");
+            for (const f of statusData.files) {
+              const statusIcon = f.status === "M" ? "modified" : f.status === "A" ? "added" : f.status === "D" ? "deleted" : f.status === "?" || f.status === "??" ? "untracked" : f.status;
+              lines.push(`- \`${f.path}\` — ${statusIcon}`);
+            }
+          }
+          if (stat) {
+            lines.push("");
+            lines.push("```");
+            lines.push(stat);
+            lines.push("```");
+          }
+          if (!stat && (!statusData.files || statusData.files.length === 0)) {
+            lines.push("\nNo uncommitted changes.");
+          }
+          const systemMsg: ChatMessage = {
+            id: crypto.randomUUID(),
+            role: "system",
+            content: lines.join("\n"),
+            timestamp: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, systemMsg]);
+        } catch {
+          onErrorRef.current?.("Failed to fetch git diff");
+        }
+        return;
+      }
+
+      if (content.trim() === "/status") {
+        try {
+          const convRes = await apiFetch(`/api/conversations/${conversationId}/messages`);
+          const convData = await convRes.json();
+          const msgCount = (convData.messages || []).length;
+          const tokens = contextTokensRef.current;
+          const pct = (Math.min(tokens / CONTEXT_WINDOW, 1) * 100).toFixed(1);
+          const lines: string[] = [
+            `**Session Status**`,
+            `**Model:** ${modelRef.current || "unknown"}`,
+          ];
+          if (cwdRef.current) lines.push(`**Workspace:** \`${cwdRef.current}\``);
+          lines.push(`**Messages:** ${msgCount}`);
+          lines.push(`**Context:** ${pct}% used (${formatTokens(tokens)} / ${formatTokens(CONTEXT_WINDOW)})`);
+
+          if (cwdRef.current) {
+            try {
+              const gitRes = await apiFetch(`/api/git/status?cwd=${encodeURIComponent(cwdRef.current)}`);
+              const gitData = await gitRes.json();
+              if (gitData.isRepo) {
+                lines.push(`**Git branch:** \`${gitData.branch}\``);
+                const changed = gitData.files?.length || 0;
+                lines.push(`**Uncommitted files:** ${changed}`);
+              }
+            } catch { /* skip git info */ }
+          }
+          const systemMsg: ChatMessage = {
+            id: crypto.randomUUID(),
+            role: "system",
+            content: lines.join("\n"),
+            timestamp: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, systemMsg]);
+        } catch {
+          onErrorRef.current?.("Failed to fetch status");
+        }
+        return;
+      }
+
+      if (content.trim() === "/review") {
+        if (!cwdRef.current) {
+          onErrorRef.current?.("No workspace selected");
+          return;
+        }
+        try {
+          const statusRes = await apiFetch(`/api/git/status?cwd=${encodeURIComponent(cwdRef.current)}`);
+          const statusData = await statusRes.json();
+          if (!statusData.isRepo || !statusData.files || statusData.files.length === 0) {
+            const systemMsg: ChatMessage = {
+              id: crypto.randomUUID(),
+              role: "system",
+              content: "**No changes to review** — working tree is clean.",
+              timestamp: new Date().toISOString(),
+            };
+            setMessages((prev) => [...prev, systemMsg]);
+            return;
+          }
+          const diffRes = await apiFetch(`/api/git/diff?cwd=${encodeURIComponent(cwdRef.current)}&full=true`);
+          const diffData = await diffRes.json();
+          const changedFiles = statusData.files.map((f: { status: string; path: string }) => `${f.status} ${f.path}`).join("\n");
+          const reviewPrompt = [
+            "Please review the current uncommitted changes in this repository.",
+            "Focus on: potential bugs, code quality, security issues, and suggestions for improvement.",
+            "",
+            "Changed files:",
+            changedFiles,
+            "",
+            diffData.stat ? `Diff stats:\n${diffData.stat}` : "",
+            diffData.diff ? `\nFull diff:\n\`\`\`diff\n${diffData.diff}\n\`\`\`` : "",
+          ].filter(Boolean).join("\n");
+          content = reviewPrompt;
+        } catch {
+          onErrorRef.current?.("Failed to get changes for review");
+          return;
+        }
       }
 
       if (contextTokensRef.current >= AUTO_COMPACT_THRESHOLD) {

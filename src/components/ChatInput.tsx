@@ -44,6 +44,12 @@ const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const SLASH_COMMANDS = [
   { command: "/clear", description: "Clear conversation history and reset context" },
   { command: "/compact", description: "Summarize and compact the conversation" },
+  { command: "/context", description: "Show context window usage breakdown" },
+  { command: "/cost", description: "Show session cost and token summary" },
+  { command: "/diff", description: "Show uncommitted git changes" },
+  { command: "/export", description: "Export conversation as markdown or /export json" },
+  { command: "/review", description: "Ask Claude to review uncommitted changes" },
+  { command: "/status", description: "Show model, workspace, and session info" },
   { command: "/usage", description: "Usage for this chat, or /usage week · month · 14" },
 ];
 

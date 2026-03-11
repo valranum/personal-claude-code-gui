@@ -558,9 +558,10 @@ app.get("/api/git/log", (req, res) => {
   }
 });
 
-// Git diff stat
+// Git diff stat (optionally with full diff for /review)
 app.get("/api/git/diff", (req, res) => {
   const cwd = req.query.cwd as string | undefined;
+  const full = req.query.full === "true";
   if (!cwd) {
     res.json({ stat: "" });
     return;
@@ -571,10 +572,17 @@ app.get("/api/git/diff", (req, res) => {
     return;
   }
   try {
-    const output = execFileSync("git", ["diff", "--stat"], { cwd: resolved, encoding: "utf-8", timeout: 5000 });
-    res.json({ stat: output });
+    const stat = execFileSync("git", ["diff", "--stat"], { cwd: resolved, encoding: "utf-8", timeout: 5000 });
+    let diff = "";
+    if (full) {
+      try {
+        const rawDiff = execFileSync("git", ["diff"], { cwd: resolved, encoding: "utf-8", timeout: 10000 });
+        diff = rawDiff.slice(0, 50_000);
+      } catch { /* skip if diff too large */ }
+    }
+    res.json({ stat, diff });
   } catch {
-    res.json({ stat: "" });
+    res.json({ stat: "", diff: "" });
   }
 });
 

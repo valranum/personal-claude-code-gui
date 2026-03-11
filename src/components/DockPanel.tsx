@@ -1,4 +1,5 @@
 import { useCallback, ReactNode } from "react";
+import { Tooltip } from "./Tooltip";
 
 type ResizeEdge = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
@@ -155,27 +156,29 @@ export function FloatingPanel({
         <span className="fp-icon">{PANEL_ICONS[id]}</span>
         <span className="fp-title">{title}</span>
         {onPopOut && (
+          <Tooltip text="Pop out to window">
+            <button
+              className="fp-popout-btn"
+              onClick={(e) => { e.stopPropagation(); onPopOut(id); }}
+            >
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                <path d="M9 2H14V7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M14 2L8 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                <path d="M12 9V13H3V4H7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </Tooltip>
+        )}
+        <Tooltip text={`Hide ${title}`}>
           <button
-            className="fp-popout-btn"
-            onClick={(e) => { e.stopPropagation(); onPopOut(id); }}
-            title="Pop out to window"
+            className="fp-close"
+            onClick={(e) => { e.stopPropagation(); onToggleVisible(id); }}
           >
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-              <path d="M9 2H14V7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M14 2L8 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-              <path d="M12 9V13H3V4H7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </button>
-        )}
-        <button
-          className="fp-close"
-          onClick={(e) => { e.stopPropagation(); onToggleVisible(id); }}
-          title={`Hide ${title}`}
-        >
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-            <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-        </button>
+        </Tooltip>
       </div>
       <div className="fp-body">{children}</div>
     </div>

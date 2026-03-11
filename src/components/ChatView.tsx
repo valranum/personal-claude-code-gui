@@ -47,6 +47,8 @@ export function ChatView({
     },
     (msg) => addToast(msg, "error"),
     (msg) => addToast(msg, "info"),
+    conversation?.cwd,
+    conversation?.model,
   );
 
   const isEmpty = messages.length === 0 && !streaming.isStreaming;

@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect, ReactNode } from "react";
 import { FloatingPanel, PanelRect, getPanelIcon } from "./DockPanel";
 import { PopoutWindow } from "./PopoutWindow";
+import { Tooltip } from "./Tooltip";
 
 type DockPosition = "left" | "right" | "top" | "bottom";
 type DropZone = DockPosition | "center";
@@ -440,26 +441,28 @@ export function DockableLayout({
             >
               <span className="fp-icon">{getPanelIcon(p.id)}</span>
               <span className="fp-title">{p.title}</span>
-              <button
-                className="fp-popout-btn"
-                onClick={(e) => { e.stopPropagation(); handlePopOut(p.id); }}
-                title="Pop out to window"
-              >
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                  <path d="M9 2H14V7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M14 2L8 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                  <path d="M12 9V13H3V4H7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-              <button
-                className="fp-close"
-                onClick={(e) => { e.stopPropagation(); handleToggleVisible(p.id); }}
-                title={`Hide ${p.title}`}
-              >
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                  <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </button>
+              <Tooltip text="Pop out to window">
+                <button
+                  className="fp-popout-btn"
+                  onClick={(e) => { e.stopPropagation(); handlePopOut(p.id); }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                    <path d="M9 2H14V7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M14 2L8 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                    <path d="M12 9V13H3V4H7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+              </Tooltip>
+              <Tooltip text={`Hide ${p.title}`}>
+                <button
+                  className="fp-close"
+                  onClick={(e) => { e.stopPropagation(); handleToggleVisible(p.id); }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                    <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </Tooltip>
             </div>
             <div className="fp-body">{p.content}</div>
             {i < panels.length - 1 && (
@@ -509,26 +512,28 @@ export function DockableLayout({
                 >
                   <span className="fp-icon">{getPanelIcon(p.id)}</span>
                   <span className="fp-title">{p.title}</span>
-                  <button
-                    className="fp-popout-btn"
-                    onClick={(e) => { e.stopPropagation(); handlePopOut(p.id); }}
-                    title="Pop out to window"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                      <path d="M9 2H14V7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M14 2L8 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                      <path d="M12 9V13H3V4H7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </button>
-                  <button
-                    className="fp-close"
-                    onClick={(e) => { e.stopPropagation(); handleToggleVisible(p.id); }}
-                    title={`Hide ${p.title}`}
-                  >
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                      <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    </svg>
-                  </button>
+                  <Tooltip text="Pop out to window">
+                    <button
+                      className="fp-popout-btn"
+                      onClick={(e) => { e.stopPropagation(); handlePopOut(p.id); }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                        <path d="M9 2H14V7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M14 2L8 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                        <path d="M12 9V13H3V4H7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                  </Tooltip>
+                  <Tooltip text={`Hide ${p.title}`}>
+                    <button
+                      className="fp-close"
+                      onClick={(e) => { e.stopPropagation(); handleToggleVisible(p.id); }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                        <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  </Tooltip>
                 </div>
                 <div className="fp-body fp-center-body">{p.content}</div>
               </div>
@@ -602,25 +607,25 @@ export function DockableLayout({
       {(hiddenPanels.length > 0 || poppedOutPanels.length > 0) && (
         <div className="fp-toolbar">
           {hiddenPanels.map((p) => (
-            <button
-              key={p.id}
-              className="fp-toolbar-btn"
-              onClick={() => handleToggleVisible(p.id)}
-              title={`Show ${p.title}`}
-            >
-              {getPanelIcon(p.id)}
-            </button>
+            <Tooltip key={p.id} text={`Show ${p.title}`} side="top">
+              <button
+                className="fp-toolbar-btn"
+                onClick={() => handleToggleVisible(p.id)}
+              >
+                {getPanelIcon(p.id)}
+              </button>
+            </Tooltip>
           ))}
           {poppedOutPanels.map((p) => (
-            <button
-              key={p.id}
-              className="fp-toolbar-btn fp-toolbar-btn-popout"
-              onClick={() => handlePopIn(p.id)}
-              title={`Bring ${p.title} back from external window`}
-            >
-              {getPanelIcon(p.id)}
-              <span className="fp-popout-dot" />
-            </button>
+            <Tooltip key={p.id} text={`Bring ${p.title} back`} side="top">
+              <button
+                className="fp-toolbar-btn fp-toolbar-btn-popout"
+                onClick={() => handlePopIn(p.id)}
+              >
+                {getPanelIcon(p.id)}
+                <span className="fp-popout-dot" />
+              </button>
+            </Tooltip>
           ))}
         </div>
       )}
