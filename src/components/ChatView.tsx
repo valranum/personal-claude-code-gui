@@ -6,7 +6,6 @@ import { ChatInput } from "./ChatInput";
 import { WorkspaceBar } from "./WorkspaceBar";
 import { CompactSuggestionBanner } from "./CompactSuggestionBanner";
 import { ArtifactPanel } from "./ArtifactPanel";
-import { PreviewPanel } from "./PreviewPanel";
 import { FileEditorPanel } from "./FileEditorPanel";
 import { Conversation } from "../types";
 import { apiFetch } from "../utils/api";
@@ -55,37 +54,11 @@ export function ChatView({
   const [artifact, setArtifact] = useState<ArtifactState | null>(null);
   const [models, setModels] = useState<{ id: string; name: string }[]>([]);
   const [artifactWidth, setArtifactWidth] = useState(45);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState("");
-  const [previewDetecting, setPreviewDetecting] = useState(false);
-  const previewDetectedRef = useRef(false);
   const isResizingArtifact = useRef(false);
 
   useEffect(() => {
     setArtifact(null);
   }, [conversationId]);
-
-  const [previewProject, setPreviewProject] = useState<{ framework: string; devScript: string | null } | null>(null);
-
-  const togglePreview = useCallback(() => {
-    setPreviewOpen((open) => {
-      const willOpen = !open;
-      if (willOpen && !previewDetectedRef.current) {
-        previewDetectedRef.current = true;
-        setPreviewDetecting(true);
-        const cwd = conversation?.cwd || "";
-        apiFetch(`/api/detect-dev-server?cwd=${encodeURIComponent(cwd)}`)
-          .then((r) => r.json())
-          .then((data: { found: boolean; url: string | null; project: { framework: string; devScript: string | null } | null }) => {
-            if (data.found && data.url) setPreviewUrl(data.url);
-            if (data.project) setPreviewProject(data.project);
-          })
-          .catch(() => {})
-          .finally(() => setPreviewDetecting(false));
-      }
-      return willOpen;
-    });
-  }, [conversation?.cwd]);
 
   useEffect(() => {
     apiFetch("/api/models")
@@ -142,7 +115,7 @@ export function ChatView({
     document.addEventListener("mouseup", onMouseUp);
   }, []);
 
-  const hasRightPanel = !!(artifact || previewOpen || openFilePath);
+  const hasRightPanel = !!(artifact || openFilePath);
   const chatViewClass = [
     "chat-view",
     hasRightPanel ? "has-artifact" : "",
@@ -155,8 +128,6 @@ export function ChatView({
           conversation={conversation}
           theme={theme}
           onToggleTheme={onToggleTheme}
-          previewOpen={previewOpen}
-          onTogglePreview={togglePreview}
         />
         <MessageList
           messages={messages}
@@ -219,24 +190,12 @@ export function ChatView({
               code={artifact.code}
               onClose={handleCloseArtifact}
               widthPercent={artifactWidth}
-              showBackToPreview={previewOpen}
-              onBackToPreview={() => setArtifact(null)}
             />
           ) : openFilePath ? (
             <FileEditorPanel
               filePath={openFilePath}
               onClose={() => onCloseFile?.()}
               widthPercent={artifactWidth}
-            />
-          ) : previewOpen ? (
-            <PreviewPanel
-              url={previewUrl}
-              onUrlChange={setPreviewUrl}
-              onClose={() => setPreviewOpen(false)}
-              widthPercent={artifactWidth}
-              detecting={previewDetecting}
-              project={previewProject}
-              cwd={conversation?.cwd || ""}
             />
           ) : null}
         </>

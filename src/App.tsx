@@ -3,6 +3,7 @@ import { DockableLayout } from "./components/DockableLayout";
 import { ChatsPanel } from "./components/ChatsPanel";
 import { FilesPanel } from "./components/FilesPanel";
 import { ChatView } from "./components/ChatView";
+import { PreviewPanel } from "./components/PreviewPanel";
 import { WelcomeScreen } from "./components/WelcomeScreen";
 import { CommandPalette } from "./components/CommandPalette";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -171,12 +172,17 @@ function AppContent() {
     <WelcomeScreen onOpenFolder={handleOpenFolder} />
   );
 
+  const previewContent = (
+    <PreviewPanel cwd={activeConversation?.cwd} />
+  );
+
   return (
     <>
       <DockableLayout
         chatsContent={chatsContent}
         filesContent={filesContent}
         mainContent={mainContent}
+        previewContent={previewContent}
       />
       <CommandPalette
         open={commandPaletteOpen}

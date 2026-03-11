@@ -5,9 +5,9 @@ import { Tooltip } from "./Tooltip";
 
 type DockPosition = "left" | "right" | "top" | "bottom";
 type DropZone = DockPosition | "center";
-type PanelId = "chats" | "files" | "main";
+type PanelId = "chats" | "files" | "main" | "preview";
 
-const ALL_PANEL_IDS: PanelId[] = ["chats", "files", "main"];
+const ALL_PANEL_IDS: PanelId[] = ["chats", "files", "main", "preview"];
 
 interface PanelConfig {
   x: number;
@@ -25,6 +25,7 @@ export interface LayoutState {
   chats: PanelConfig;
   files: PanelConfig;
   main: PanelConfig;
+  preview: PanelConfig;
   zOrder: PanelId[];
 }
 
@@ -48,7 +49,12 @@ function getDefaults(): LayoutState {
       visible: true, pinned: false, pinnedPosition: "left", pinnedSize: 400,
       isCenter: true,
     },
-    zOrder: ["chats", "files", "main"],
+    preview: {
+      x: 100, y: 100, width: 420, height: Math.max(300, h - 80),
+      visible: false, pinned: true, pinnedPosition: "right", pinnedSize: 420,
+      isCenter: false,
+    },
+    zOrder: ["chats", "files", "main", "preview"],
   };
 }
 
@@ -58,6 +64,11 @@ function loadLayout(): LayoutState {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed.main && parsed.chats && parsed.files && parsed.zOrder) {
+        const defaults = getDefaults();
+        if (!parsed.preview) {
+          parsed.preview = defaults.preview;
+          if (!parsed.zOrder.includes("preview")) parsed.zOrder.push("preview");
+        }
         return parsed;
       }
     }
@@ -81,12 +92,14 @@ interface DockableLayoutProps {
   chatsContent: ReactNode;
   filesContent: ReactNode;
   mainContent: ReactNode;
+  previewContent: ReactNode;
 }
 
 export function DockableLayout({
   chatsContent,
   filesContent,
   mainContent,
+  previewContent,
 }: DockableLayoutProps) {
   const [layout, setLayout] = useState<LayoutState>(loadLayout);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -123,6 +136,7 @@ export function DockableLayout({
     { id: "chats", title: "Convos", content: chatsContent },
     { id: "files", title: "Files", content: filesContent },
     { id: "main", title: "Chat", content: mainContent },
+    { id: "preview", title: "Preview", content: previewContent },
   ];
 
   /* ── Unified drag handler ── */

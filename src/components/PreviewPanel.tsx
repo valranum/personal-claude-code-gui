@@ -2,34 +2,39 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { apiFetch } from "../utils/api";
 
 interface PreviewPanelProps {
-  url: string;
-  onUrlChange: (url: string) => void;
-  onClose: () => void;
-  widthPercent?: number;
-  detecting?: boolean;
-  project?: { framework: string; devScript: string | null } | null;
   cwd?: string;
 }
 
-export function PreviewPanel({
-  url,
-  onUrlChange,
-  onClose,
-  widthPercent = 45,
-  detecting = false,
-  project,
-  cwd,
-}: PreviewPanelProps) {
+export function PreviewPanel({ cwd }: PreviewPanelProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [url, setUrl] = useState("");
   const [editing, setEditing] = useState(false);
-  const [editUrl, setEditUrl] = useState(url);
+  const [editUrl, setEditUrl] = useState("");
   const [iframeKey, setIframeKey] = useState(0);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState("");
+  const [detecting, setDetecting] = useState(false);
+  const [project, setProject] = useState<{ framework: string; devScript: string | null } | null>(null);
+  const detectedCwdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    setEditUrl(url);
-  }, [url]);
+    if (!cwd || cwd === detectedCwdRef.current) return;
+    detectedCwdRef.current = cwd;
+    setDetecting(true);
+    setUrl("");
+    setProject(null);
+    apiFetch(`/api/detect-dev-server?cwd=${encodeURIComponent(cwd)}`)
+      .then((r) => r.json())
+      .then((data: { found: boolean; url: string | null; project: { framework: string; devScript: string | null } | null }) => {
+        if (data.found && data.url) {
+          setUrl(data.url);
+          setEditUrl(data.url);
+        }
+        if (data.project) setProject(data.project);
+      })
+      .catch(() => {})
+      .finally(() => setDetecting(false));
+  }, [cwd]);
 
   const handleRefresh = useCallback(() => {
     setIframeKey((k) => k + 1);
@@ -41,7 +46,7 @@ export function PreviewPanel({
       finalUrl = `http://${finalUrl}`;
     }
     if (finalUrl) {
-      onUrlChange(finalUrl);
+      setUrl(finalUrl);
     }
     setEditing(false);
   };
@@ -69,7 +74,8 @@ export function PreviewPanel({
       });
       const data = await res.json();
       if (res.ok && data.url) {
-        onUrlChange(data.url);
+        setUrl(data.url);
+        setEditUrl(data.url);
       } else {
         setStartError(data.error || "Could not start preview");
       }
@@ -146,10 +152,7 @@ export function PreviewPanel({
   }
 
   return (
-    <div
-      className="preview-panel"
-      style={{ flex: `0 0 ${widthPercent}%`, maxWidth: `${widthPercent}%` }}
-    >
+    <div className="preview-panel preview-panel-standalone">
       <div className="preview-header">
         <div className="preview-url-bar">
           {editing ? (
@@ -197,11 +200,6 @@ export function PreviewPanel({
               <path d="M6 3H3.5C2.67 3 2 3.67 2 4.5V12.5C2 13.33 2.67 14 3.5 14H11.5C12.33 14 13 13.33 13 12.5V10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
               <path d="M9 2H14V7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M14 2L7 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-            </svg>
-          </button>
-          <button className="preview-action-btn" onClick={onClose} title="Close preview">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
             </svg>
           </button>
         </div>
