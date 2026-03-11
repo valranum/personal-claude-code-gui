@@ -10,54 +10,16 @@ interface WelcomeScreenProps {
   conversations: Conversation[];
 }
 
-type OnboardingStep = "type" | "framework" | "location";
+type OnboardingStep = "framework" | "location";
 
-const PROJECT_TYPES = [
-  { id: "website", label: "Website", emoji: "\u{1F310}" },
-  { id: "webapp", label: "Web App", emoji: "\u26A1" },
-  { id: "landing", label: "Landing Page", emoji: "\u{1F4C4}" },
-  { id: "component", label: "Components", emoji: "\u{1F9E9}" },
-  { id: "api", label: "API / Backend", emoji: "\u{1F527}" },
-  { id: "other", label: "Other", emoji: "\u2726" },
+const FRAMEWORKS = [
+  { id: "react", label: "React" },
+  { id: "nextjs", label: "Next.js" },
+  { id: "vue", label: "Vue" },
+  { id: "html", label: "HTML / CSS" },
+  { id: "astro", label: "Astro" },
+  { id: "auto", label: "Let Claude decide" },
 ];
-
-const FRAMEWORKS: Record<string, { id: string; label: string }[]> = {
-  website: [
-    { id: "react", label: "React" },
-    { id: "vue", label: "Vue" },
-    { id: "nextjs", label: "Next.js" },
-    { id: "astro", label: "Astro" },
-    { id: "vanilla", label: "Vanilla" },
-    { id: "auto", label: "Let Claude decide" },
-  ],
-  webapp: [
-    { id: "react", label: "React" },
-    { id: "vue", label: "Vue" },
-    { id: "nextjs", label: "Next.js" },
-    { id: "remix", label: "Remix" },
-    { id: "auto", label: "Let Claude decide" },
-  ],
-  landing: [
-    { id: "react", label: "React" },
-    { id: "html", label: "HTML / CSS" },
-    { id: "astro", label: "Astro" },
-    { id: "auto", label: "Let Claude decide" },
-  ],
-  component: [
-    { id: "react", label: "React" },
-    { id: "vue", label: "Vue" },
-    { id: "svelte", label: "Svelte" },
-    { id: "auto", label: "Let Claude decide" },
-  ],
-  api: [
-    { id: "express", label: "Express" },
-    { id: "fastify", label: "Fastify" },
-    { id: "hono", label: "Hono" },
-    { id: "python", label: "Python / Flask" },
-    { id: "auto", label: "Let Claude decide" },
-  ],
-  other: [{ id: "auto", label: "Let Claude decide" }],
-};
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -83,8 +45,7 @@ export function WelcomeScreen({
 }: WelcomeScreenProps) {
   const [picking, setPicking] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("type");
-  const [projectType, setProjectType] = useState<string | null>(null);
+  const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("framework");
   const [framework, setFramework] = useState<string | null>(null);
   const [projectPath, setProjectPath] = useState("~/Development/");
 
@@ -113,12 +74,9 @@ export function WelcomeScreen({
     .slice(0, 5);
 
   const handleCreateProject = () => {
-    const type = PROJECT_TYPES.find((t) => t.id === projectType);
-    const fw = (FRAMEWORKS[projectType || ""] || FRAMEWORKS.other).find(
-      (f) => f.id === framework,
-    );
+    const fw = FRAMEWORKS.find((f) => f.id === framework);
 
-    let prompt = `Create a new ${type?.label || "project"}`;
+    let prompt = "Create a new project";
     if (fw && fw.id !== "auto") {
       prompt += ` using ${fw.label}`;
     }
@@ -131,18 +89,14 @@ export function WelcomeScreen({
   const handleOnboardingBack = () => {
     if (onboardingStep === "location") {
       setOnboardingStep("framework");
-    } else if (onboardingStep === "framework") {
-      setOnboardingStep("type");
     } else {
       setShowOnboarding(false);
-      setProjectType(null);
       setFramework(null);
-      setOnboardingStep("type");
+      setOnboardingStep("framework");
     }
   };
 
-  const stepNumber =
-    onboardingStep === "type" ? 1 : onboardingStep === "framework" ? 2 : 3;
+  const stepNumber = onboardingStep === "framework" ? 1 : 2;
 
   if (showOnboarding) {
     return (
@@ -171,42 +125,15 @@ export function WelcomeScreen({
                 Back
               </button>
               <span className="welcome-onboarding-step">
-                Step {stepNumber} of 3
+                Step {stepNumber} of 2
               </span>
             </div>
 
-            {onboardingStep === "type" && (
-              <>
-                <h2 className="welcome-onboarding-title">
-                  What are you building?
-                </h2>
-                <div className="welcome-onboarding-grid">
-                  {PROJECT_TYPES.map((type) => (
-                    <button
-                      key={type.id}
-                      className={`welcome-pill ${projectType === type.id ? "active" : ""}`}
-                      onClick={() => setProjectType(type.id)}
-                    >
-                      <span className="welcome-pill-emoji">{type.emoji}</span>
-                      {type.label}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  className="welcome-onboarding-next"
-                  disabled={!projectType}
-                  onClick={() => setOnboardingStep("framework")}
-                >
-                  Next
-                </button>
-              </>
-            )}
-
-            {onboardingStep === "framework" && projectType && (
+            {onboardingStep === "framework" && (
               <>
                 <h2 className="welcome-onboarding-title">Pick a framework</h2>
                 <div className="welcome-onboarding-grid">
-                  {(FRAMEWORKS[projectType] || FRAMEWORKS.other).map((fw) => (
+                  {FRAMEWORKS.map((fw) => (
                     <button
                       key={fw.id}
                       className={`welcome-pill ${framework === fw.id ? "active" : ""}`}

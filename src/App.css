@@ -683,7 +683,8 @@ body,
   transform: translateX(-50%);
   z-index: 100;
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 0;
   padding: 4px;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
@@ -3303,7 +3304,23 @@ body,
   transform: translateX(-50%);
 }
 
-.fp-toolbar-settings {
+.fp-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fp-toolbar-center:not(:empty) + .fp-toolbar-right::before {
+  content: "";
+  display: block;
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.fp-toolbar-right {
   position: relative;
 }
 
@@ -3878,11 +3895,6 @@ body,
   background: var(--accent-subtle);
   color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-subtle);
-}
-
-.welcome-pill-emoji {
-  font-size: 16px;
-  line-height: 1;
 }
 
 .welcome-onboarding-next {

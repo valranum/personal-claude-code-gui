@@ -101,6 +101,7 @@ interface DockableLayoutProps {
   theme: "dark" | "light";
   onToggleTheme: () => void;
   conversation: Conversation | null;
+  onGoHome?: () => void;
 }
 
 export function DockableLayout({
@@ -111,6 +112,7 @@ export function DockableLayout({
   theme,
   onToggleTheme,
   conversation,
+  onGoHome,
 }: DockableLayoutProps) {
   const [layout, setLayout] = useState<LayoutState>(loadLayout);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -716,28 +718,42 @@ export function DockableLayout({
       )}
 
       <div className="fp-toolbar">
-        {hiddenPanels.map((p) => (
-          <Tooltip key={p.id} text={`Show ${p.title}`} side="top">
-            <button
-              className="fp-toolbar-btn"
-              onClick={() => handleToggleVisible(p.id)}
-            >
-              {getPanelIcon(p.id)}
-            </button>
-          </Tooltip>
-        ))}
-        {poppedOutPanels.map((p) => (
-          <Tooltip key={p.id} text={`Bring ${p.title} back`} side="top">
-            <button
-              className="fp-toolbar-btn fp-toolbar-btn-popout"
-              onClick={() => handlePopIn(p.id)}
-            >
-              {getPanelIcon(p.id)}
-              <span className="fp-popout-dot" />
-            </button>
-          </Tooltip>
-        ))}
-        <div className="fp-toolbar-settings" ref={settingsRef}>
+        <div className="fp-toolbar-group fp-toolbar-center">
+          {hiddenPanels.map((p) => (
+            <Tooltip key={p.id} text={`Show ${p.title}`} side="top">
+              <button
+                className="fp-toolbar-btn"
+                onClick={() => handleToggleVisible(p.id)}
+              >
+                {getPanelIcon(p.id)}
+              </button>
+            </Tooltip>
+          ))}
+          {poppedOutPanels.map((p) => (
+            <Tooltip key={p.id} text={`Bring ${p.title} back`} side="top">
+              <button
+                className="fp-toolbar-btn fp-toolbar-btn-popout"
+                onClick={() => handlePopIn(p.id)}
+              >
+                {getPanelIcon(p.id)}
+                <span className="fp-popout-dot" />
+              </button>
+            </Tooltip>
+          ))}
+        </div>
+        <div className="fp-toolbar-group fp-toolbar-right" ref={settingsRef}>
+          {conversation && onGoHome && (
+            <Tooltip text="Home" side="top">
+              <button
+                className="fp-toolbar-btn"
+                onClick={onGoHome}
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 8L8 3L13 8M4.5 9.5V13H6.5V10.5H9.5V13H11.5V9.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            </Tooltip>
+          )}
           <Tooltip text="Settings" side="top">
             <button
               className="fp-toolbar-btn"

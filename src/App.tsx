@@ -144,6 +144,10 @@ function AppContent() {
     if (activeId) updateConversationCwd(activeId, newCwd);
   }, [activeId, updateConversationCwd]);
 
+  const handleGoHome = useCallback(() => {
+    setActiveId(null);
+  }, [setActiveId]);
+
   const chatsContent = (
     <ChatsPanel
       conversations={conversations}
@@ -203,6 +207,7 @@ function AppContent() {
         theme={theme}
         onToggleTheme={toggleTheme}
         conversation={activeConversation ?? null}
+        onGoHome={handleGoHome}
       />
       <CommandPalette
         open={commandPaletteOpen}
