@@ -155,25 +155,29 @@ function AppContent() {
     <div className="sidebar-empty">Open a project folder to browse files.</div>
   );
 
+  const mainContent = activeConversation ? (
+    <ChatView
+      conversationId={activeId}
+      conversation={activeConversation}
+      onChangeModel={updateConversationModel}
+      onTitleUpdate={updateLocalTitle}
+      onFork={handleFork}
+      theme={theme}
+      onToggleTheme={toggleTheme}
+      openFilePath={openFilePath}
+      onCloseFile={() => setOpenFilePath(null)}
+    />
+  ) : (
+    <WelcomeScreen onOpenFolder={handleOpenFolder} />
+  );
+
   return (
     <>
-      <DockableLayout chatsContent={chatsContent} filesContent={filesContent}>
-        {activeConversation ? (
-          <ChatView
-            conversationId={activeId}
-            conversation={activeConversation}
-            onChangeModel={updateConversationModel}
-            onTitleUpdate={updateLocalTitle}
-            onFork={handleFork}
-            theme={theme}
-            onToggleTheme={toggleTheme}
-            openFilePath={openFilePath}
-            onCloseFile={() => setOpenFilePath(null)}
-          />
-        ) : (
-          <WelcomeScreen onOpenFolder={handleOpenFolder} />
-        )}
-      </DockableLayout>
+      <DockableLayout
+        chatsContent={chatsContent}
+        filesContent={filesContent}
+        mainContent={mainContent}
+      />
       <CommandPalette
         open={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}

@@ -2,8 +2,8 @@ import { useCallback, ReactNode } from "react";
 
 type ResizeEdge = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
-const MIN_WIDTH = 200;
-const MIN_HEIGHT = 150;
+const MIN_WIDTH = 160;
+const MIN_HEIGHT = 120;
 
 const PANEL_ICONS: Record<string, ReactNode> = {
   chats: (
@@ -14,6 +14,13 @@ const PANEL_ICONS: Record<string, ReactNode> = {
   files: (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
       <path d="M2 4.5C2 3.67 2.67 3 3.5 3H6.5L8 4.5H12.5C13.33 4.5 14 5.17 14 6V11.5C14 12.33 13.33 13 12.5 13H3.5C2.67 13 2 12.33 2 11.5V4.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+    </svg>
+  ),
+  main: (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+      <path d="M5 7L7.5 9.5L5 12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M9 12H12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
     </svg>
   ),
 };
@@ -41,6 +48,8 @@ interface FloatingPanelProps {
   onToggleVisible: (id: string) => void;
   onDragStart: (id: string, e: React.PointerEvent) => void;
   onPin: (id: string) => void;
+  onSendToCenter?: (id: string) => void;
+  onPopOut?: (id: string) => void;
   children: React.ReactNode;
 }
 
@@ -56,6 +65,8 @@ export function FloatingPanel({
   onToggleVisible,
   onDragStart,
   onPin,
+  onSendToCenter,
+  onPopOut,
   children,
 }: FloatingPanelProps) {
   const { x, y, width, height } = rect;
@@ -147,6 +158,31 @@ export function FloatingPanel({
       >
         <span className="fp-icon">{PANEL_ICONS[id]}</span>
         <span className="fp-title">{title}</span>
+        {onPopOut && (
+          <button
+            className="fp-popout-btn"
+            onClick={(e) => { e.stopPropagation(); onPopOut(id); }}
+            title="Pop out to window"
+          >
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+              <path d="M9 2H14V7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M14 2L8 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              <path d="M12 9V13H3V4H7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        )}
+        {onSendToCenter && (
+          <button
+            className="fp-center-btn"
+            onClick={(e) => { e.stopPropagation(); onSendToCenter(id); }}
+            title="Send to center"
+          >
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+              <rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
+              <rect x="5" y="5" width="6" height="6" rx="0.5" fill="currentColor" opacity="0.5"/>
+            </svg>
+          </button>
+        )}
         <button
           className="fp-pin-btn"
           onClick={(e) => { e.stopPropagation(); onPin(id); }}

@@ -125,7 +125,7 @@ export function ChatView({
       if (!isResizingArtifact.current) return;
       const containerWidth = document.querySelector(".chat-view")?.clientWidth || window.innerWidth;
       const pct = ((containerWidth - e.clientX + (document.querySelector(".chat-view")?.getBoundingClientRect().left || 0)) / containerWidth) * 100;
-      setArtifactWidth(Math.min(Math.max(pct, 20), 70));
+      setArtifactWidth(Math.min(Math.max(pct, 15), 85));
     };
 
     const onMouseUp = () => {

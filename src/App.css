@@ -124,6 +124,127 @@ body,
   overflow: hidden;
 }
 
+/* ── Center Panel ── */
+.fp-center-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.fp-center-header {
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border);
+  height: 30px;
+  padding: 0 6px 0 10px;
+  gap: 6px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.fp-center-header:hover {
+  opacity: 1;
+}
+
+.fp-center-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.fp-center-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+  opacity: 0.5;
+}
+
+/* ── Center-to Button ── */
+.fp-center-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.fp-center-btn:hover {
+  color: var(--accent);
+  background: var(--bg-hover);
+}
+
+/* ── Pop-out Button ── */
+.fp-popout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.fp-popout-btn:hover {
+  color: var(--accent);
+  background: var(--bg-hover);
+}
+
+/* ── Popout Toolbar Indicator ── */
+.fp-toolbar-btn-popout {
+  position: relative;
+}
+
+.fp-popout-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 4px var(--accent);
+}
+
+/* ── Popout Window Content ── */
+.popout-content {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Pinned Split Handle ── */
+.fp-pinned-split-handle {
+  height: 1px;
+  flex-shrink: 0;
+  background: var(--border);
+  cursor: row-resize;
+  position: relative;
+}
+
+.fp-pinned-split-handle::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  left: 0;
+  right: 0;
+}
+
 /* ── Pinned Slots ── */
 .fp-pinned-slot {
   display: flex;
@@ -564,6 +685,22 @@ body,
   height: 50px;
 }
 
+.fp-drop-center {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px;
+  height: 160px;
+  border-radius: 12px;
+  opacity: 0.08;
+}
+
+.fp-drop-center.active {
+  opacity: 0.22;
+  border-color: var(--accent);
+  box-shadow: 0 0 30px rgba(var(--accent-rgb, 99, 102, 241), 0.15);
+}
+
 /* ── Chats Panel ── */
 .chats-panel {
   display: flex;
@@ -998,7 +1135,7 @@ body,
   gap: 8px;
   justify-content: center;
   margin-top: 12px;
-  max-width: 500px;
+  max-width: min(500px, 100%);
 }
 
 .suggested-prompt-btn {
@@ -1384,8 +1521,6 @@ body,
 
 /* ── Artifact Panel ── */
 .artifact-panel {
-  flex: 0 0 45%;
-  max-width: 45%;
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
@@ -2240,7 +2375,7 @@ body,
 
 .empty-state-input {
   width: 100%;
-  max-width: 680px;
+  max-width: min(680px, 100%);
   margin-top: 20px;
 }
 
@@ -2972,8 +3107,8 @@ body,
   }
 
   .artifact-panel {
-    flex: 0 0 50%;
-    max-width: 100%;
+    flex: 0 0 50% !important;
+    max-width: 100% !important;
     border-left: none;
     border-top: 1px solid var(--border);
   }
@@ -3395,7 +3530,7 @@ body,
   align-items: center;
   gap: 10px;
   width: 100%;
-  max-width: 480px;
+  max-width: min(480px, 100%);
   padding: 12px 16px;
   background: var(--bg-surface);
   border: 1px solid var(--border);
