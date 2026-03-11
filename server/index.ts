@@ -325,16 +325,17 @@ const OWN_PORT = 3001;
 
 async function checkPortServesHtml(port: number): Promise<boolean> {
   if (port === OWN_PORT) return false;
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 800);
-    const resp = await fetch(`http://127.0.0.1:${port}`, { signal: controller.signal });
-    clearTimeout(timeout);
-    const ct = resp.headers.get("content-type") || "";
-    return ct.includes("text/html");
-  } catch {
-    return false;
+  for (const host of ["localhost", "127.0.0.1", "[::1]"]) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 800);
+      const resp = await fetch(`http://${host}:${port}`, { signal: controller.signal });
+      clearTimeout(timeout);
+      const ct = resp.headers.get("content-type") || "";
+      if (ct.includes("text/html")) return true;
+    } catch {}
   }
+  return false;
 }
 
 function detectProjectType(cwd: string): { framework: string; devScript: string | null } | null {
