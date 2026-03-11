@@ -3,7 +3,7 @@ import { useChat } from "../hooks/useChat";
 import { useToast } from "../hooks/useToast";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
-import { WorkspaceBar } from "./WorkspaceBar";
+
 import { CompactSuggestionBanner } from "./CompactSuggestionBanner";
 import { ArtifactPanel } from "./ArtifactPanel";
 import { FileEditorPanel } from "./FileEditorPanel";
@@ -21,10 +21,12 @@ interface ChatViewProps {
   onChangeModel: (id: string, model: string) => void;
   onTitleUpdate: (conversationId: string, title: string) => void;
   onFork?: (newConversationId: string) => void;
-  theme: "dark" | "light";
-  onToggleTheme: () => void;
+  theme?: "dark" | "light";
+  onToggleTheme?: () => void;
   openFilePath?: string | null;
   onCloseFile?: () => void;
+  initialPrompt?: string | null;
+  onConsumePrompt?: () => void;
 }
 
 export function ChatView({
@@ -37,6 +39,8 @@ export function ChatView({
   onToggleTheme,
   openFilePath,
   onCloseFile,
+  initialPrompt,
+  onConsumePrompt,
 }: ChatViewProps) {
   const { addToast } = useToast();
   const { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens } = useChat(
@@ -49,6 +53,13 @@ export function ChatView({
     conversation?.cwd,
     conversation?.model,
   );
+
+  useEffect(() => {
+    if (initialPrompt && sendMessage && !streaming.isStreaming) {
+      sendMessage(initialPrompt);
+      onConsumePrompt?.();
+    }
+  }, [initialPrompt]);
 
   const isEmpty = messages.length === 0 && !streaming.isStreaming;
   const [artifact, setArtifact] = useState<ArtifactState | null>(null);
@@ -124,11 +135,6 @@ export function ChatView({
   return (
     <div className={chatViewClass}>
       <div className="chat-main">
-        <WorkspaceBar
-          conversation={conversation}
-          theme={theme}
-          onToggleTheme={onToggleTheme}
-        />
         <MessageList
           messages={messages}
           streaming={streaming}

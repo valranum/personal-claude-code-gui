@@ -75,10 +75,21 @@ function AppContent() {
 
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [openFilePath, setOpenFilePath] = useState<string | null>(null);
+  const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
 
   const handleOpenFolder = useCallback(
     (cwd?: string) => {
       createConversation(cwd);
+    },
+    [createConversation],
+  );
+
+  const handleNewProject = useCallback(
+    async (cwd: string, initialPrompt: string) => {
+      const conv = await createConversation(cwd);
+      if (conv) {
+        setPendingPrompt(initialPrompt);
+      }
     },
     [createConversation],
   );
@@ -167,9 +178,15 @@ function AppContent() {
       onToggleTheme={toggleTheme}
       openFilePath={openFilePath}
       onCloseFile={() => setOpenFilePath(null)}
+      initialPrompt={pendingPrompt}
+      onConsumePrompt={() => setPendingPrompt(null)}
     />
   ) : (
-    <WelcomeScreen onOpenFolder={handleOpenFolder} />
+    <WelcomeScreen
+      onOpenFolder={handleOpenFolder}
+      onNewProject={handleNewProject}
+      conversations={conversations}
+    />
   );
 
   const previewContent = (
@@ -183,6 +200,9 @@ function AppContent() {
         filesContent={filesContent}
         mainContent={mainContent}
         previewContent={previewContent}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        conversation={activeConversation ?? null}
       />
       <CommandPalette
         open={commandPaletteOpen}
