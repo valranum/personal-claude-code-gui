@@ -74,6 +74,10 @@ function loadLayout(): LayoutState {
           parsed.preview = defaults.preview;
           if (!parsed.zOrder.includes("preview")) parsed.zOrder.push("preview");
         }
+        parsed.main.visible = true;
+        if (!ALL_PANEL_IDS.some((id) => parsed[id]?.isCenter && parsed[id]?.visible)) {
+          parsed.main.isCenter = true;
+        }
         return parsed;
       }
     }

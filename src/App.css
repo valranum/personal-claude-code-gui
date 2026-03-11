@@ -3772,6 +3772,10 @@ body,
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text-primary);
+  text-align: left;
   transition: all 0.12s;
   font-family: var(--font-sans);
   width: 100%;

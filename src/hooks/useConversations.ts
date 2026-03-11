@@ -34,9 +34,6 @@ export function useConversations(onError?: (message: string) => void) {
         if (!Array.isArray(data)) throw new Error("Invalid response");
         const convs: Conversation[] = data;
         setConversations(convs);
-        if (convs.length > 0) {
-          setActiveId(convs[0].id);
-        }
       })
       .catch(() => {
         setConversations([]);
