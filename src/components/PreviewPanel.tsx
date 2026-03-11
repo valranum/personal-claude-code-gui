@@ -184,25 +184,27 @@ export function PreviewPanel({ cwd }: PreviewPanelProps) {
             </button>
           )}
         </div>
-        <div className="preview-actions">
-          <button className="preview-action-btn" onClick={handleRefresh} title="Refresh">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <path d="M13.5 8C13.5 11.04 11.04 13.5 8 13.5C4.96 13.5 2.5 11.04 2.5 8C2.5 4.96 4.96 2.5 8 2.5C9.8 2.5 11.4 3.3 12.4 4.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-              <path d="M12 2V5H9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-          <button
-            className="preview-action-btn"
-            onClick={() => { if (url) window.open(url, "_blank"); }}
-            title="Open in browser"
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <path d="M6 3H3.5C2.67 3 2 3.67 2 4.5V12.5C2 13.33 2.67 14 3.5 14H11.5C12.33 14 13 13.33 13 12.5V10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-              <path d="M9 2H14V7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M14 2L7 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-            </svg>
-          </button>
-        </div>
+        {url && (
+          <div className="preview-actions">
+            <button className="preview-action-btn" onClick={handleRefresh} title="Refresh">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M13.5 8C13.5 11.04 11.04 13.5 8 13.5C4.96 13.5 2.5 11.04 2.5 8C2.5 4.96 4.96 2.5 8 2.5C9.8 2.5 11.4 3.3 12.4 4.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                <path d="M12 2V5H9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            <button
+              className="preview-action-btn"
+              onClick={() => window.open(url, "_blank")}
+              title="Open in browser"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M6 3H3.5C2.67 3 2 3.67 2 4.5V12.5C2 13.33 2.67 14 3.5 14H11.5C12.33 14 13 13.33 13 12.5V10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                <path d="M9 2H14V7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M14 2L7 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
       <div className="preview-body">
         {detecting || starting ? (

@@ -136,7 +136,7 @@ export function DockableLayout({
     { id: "chats", title: "Convos", content: chatsContent },
     { id: "files", title: "Files", content: filesContent },
     { id: "main", title: "Chat", content: mainContent },
-    { id: "preview", title: "Preview", content: previewContent },
+    { id: "preview", title: "Live Preview", content: previewContent },
   ];
 
   /* ── Unified drag handler ── */

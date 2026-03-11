@@ -24,9 +24,8 @@ const PANEL_ICONS: Record<string, ReactNode> = {
   ),
   preview: (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-      <rect x="1.5" y="2.5" width="13" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
-      <path d="M1.5 4.5H14.5" stroke="currentColor" strokeWidth="1.2"/>
-      <path d="M5 8L7 10L11 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.6"/>
+      <path d="M8 4C3.6 4 1 8 1 8s2.6 4 7 4 7-4 7-4-2.6-4-7-4Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+      <circle cx="8" cy="8" r="2.25" stroke="currentColor" strokeWidth="1.3"/>
     </svg>
   ),
 };
