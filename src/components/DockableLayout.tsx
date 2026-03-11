@@ -18,6 +18,7 @@ interface PanelConfig {
   pinned: boolean;
   pinnedPosition: DockPosition;
   pinnedSize: number;
+  pinnedHeight?: number | null;
   isCenter: boolean;
 }
 
@@ -433,13 +434,56 @@ export function DockableLayout({
   const pinnedAt = (pos: DockPosition) =>
     panelDefs.filter((p) => layout[p.id].pinned && layout[p.id].pinnedPosition === pos && layout[p.id].visible && !poppedOut.has(p.id));
 
+  const [resizingPinnedHeight, setResizingPinnedHeight] = useState<DockPosition | null>(null);
+
+  useEffect(() => {
+    if (!resizingPinnedHeight) return;
+    const pos = resizingPinnedHeight;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!layoutRef.current) return;
+      const rect = layoutRef.current.getBoundingClientRect();
+      const newHeight = e.clientY - rect.top;
+      const clamped = Math.max(MIN_PINNED, Math.min(newHeight, rect.height - 32));
+
+      setLayout((prev) => {
+        const next = { ...prev };
+        for (const pid of ALL_PANEL_IDS) {
+          if (prev[pid].pinned && prev[pid].pinnedPosition === pos && prev[pid].visible) {
+            next[pid] = { ...prev[pid], pinnedHeight: clamped };
+          }
+        }
+        return next;
+      });
+    };
+
+    const handleMouseUp = () => {
+      setResizingPinnedHeight(null);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [resizingPinnedHeight]);
+
   const renderPinnedSlot = (pos: DockPosition) => {
     const panels = pinnedAt(pos);
     if (panels.length === 0) return null;
 
     const isHoriz = pos === "left" || pos === "right";
     const totalSize = panels.reduce((sum, p) => Math.max(sum, layout[p.id].pinnedSize), 0);
-    const sizeStyle = isHoriz ? { width: totalSize } : { height: totalSize };
+    const pinnedHeight = isHoriz ? panels.reduce((h, p) => layout[p.id].pinnedHeight ?? h, null as number | null) : null;
+    const sizeStyle: React.CSSProperties = isHoriz
+      ? { width: totalSize, ...(pinnedHeight != null ? { height: pinnedHeight, alignSelf: "flex-start" } : {}) }
+      : { height: totalSize };
 
     return (
       <div className={`fp-pinned-slot fp-pinned-${pos}`} style={sizeStyle}>
@@ -484,6 +528,12 @@ export function DockableLayout({
             )}
           </div>
         ))}
+        {isHoriz && (
+          <div
+            className="fp-resize-handle fp-rh-bottom fp-pinned-height-handle"
+            onMouseDown={() => setResizingPinnedHeight(pos)}
+          />
+        )}
       </div>
     );
   };
@@ -504,7 +554,7 @@ export function DockableLayout({
   const poppedOutPanels = panelDefs.filter((p) => poppedOut.has(p.id) && layout[p.id].visible);
 
   return (
-    <div className={`fp-layout${resizingEdge ? " is-resizing" : ""}`} ref={layoutRef}>
+    <div className={`fp-layout${resizingEdge || resizingPinnedHeight ? " is-resizing" : ""}`} ref={layoutRef}>
       {renderPinnedSlot("left")}
       {renderResizeHandle("left")}
 
