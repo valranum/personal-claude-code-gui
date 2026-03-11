@@ -246,10 +246,18 @@ body,
 }
 
 .fp-pinned-left {
+  border-right: none;
+}
+
+.fp-pinned-left > .fp-pinned-panel {
   border-right: 1px solid var(--border);
 }
 
 .fp-pinned-right {
+  border-left: none;
+}
+
+.fp-pinned-right > .fp-pinned-panel {
   border-left: 1px solid var(--border);
 }
 

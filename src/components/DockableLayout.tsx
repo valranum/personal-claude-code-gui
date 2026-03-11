@@ -539,10 +539,15 @@ export function DockableLayout({
   };
 
   const renderResizeHandle = (pos: DockPosition) => {
-    if (pinnedAt(pos).length === 0) return null;
+    const panels = pinnedAt(pos);
+    if (panels.length === 0) return null;
+    const isHoriz = pos === "left" || pos === "right";
+    const pinnedHeight = isHoriz ? panels.reduce((h, p) => layout[p.id].pinnedHeight ?? h, null as number | null) : null;
+    const handleStyle: React.CSSProperties = pinnedHeight != null ? { height: pinnedHeight, alignSelf: "flex-start" } : {};
     return (
       <div
         className={`fp-resize-handle fp-rh-${pos}`}
+        style={handleStyle}
         onMouseDown={() => setResizingEdge(pos)}
       />
     );
