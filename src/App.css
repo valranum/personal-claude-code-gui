@@ -105,7 +105,6 @@ body,
   position: relative;
   height: 100vh;
   overflow: hidden;
-  padding-bottom: 4px;
 }
 
 .fp-center-column {
@@ -361,7 +360,15 @@ body,
   border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15), 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.fp > .fp-header {
   overflow: hidden;
+  border-radius: 8px 8px 0 0;
+}
+
+.fp > .fp-body {
+  border-radius: 0 0 8px 8px;
 }
 
 .fp:focus-within {
@@ -448,65 +455,65 @@ body,
 }
 
 .fp-edge-n {
-  top: -4px;
+  top: 0;
   left: 10px;
   right: 10px;
-  height: 8px;
+  height: 6px;
   cursor: ns-resize;
 }
 
 .fp-edge-n::after {
   left: 0;
   right: 0;
-  top: 3px;
+  top: 0;
   height: 2px;
   border-radius: 1px;
 }
 
 .fp-edge-s {
-  bottom: -4px;
+  bottom: 0;
   left: 10px;
   right: 10px;
-  height: 8px;
+  height: 6px;
   cursor: ns-resize;
 }
 
 .fp-edge-s::after {
   left: 0;
   right: 0;
-  bottom: 3px;
+  bottom: 0;
   height: 2px;
   border-radius: 1px;
 }
 
 .fp-edge-e {
-  right: -4px;
+  right: 0;
   top: 10px;
   bottom: 10px;
-  width: 8px;
+  width: 6px;
   cursor: ew-resize;
 }
 
 .fp-edge-e::after {
   top: 0;
   bottom: 0;
-  right: 3px;
+  right: 0;
   width: 2px;
   border-radius: 1px;
 }
 
 .fp-edge-w {
-  left: -4px;
+  left: 0;
   top: 10px;
   bottom: 10px;
-  width: 8px;
+  width: 6px;
   cursor: ew-resize;
 }
 
 .fp-edge-w::after {
   top: 0;
   bottom: 0;
-  left: 3px;
+  left: 0;
   width: 2px;
   border-radius: 1px;
 }
@@ -520,26 +527,26 @@ body,
 }
 
 .fp-corner-nw {
-  top: -4px;
-  left: -4px;
+  top: -2px;
+  left: -2px;
   cursor: nwse-resize;
 }
 
 .fp-corner-ne {
-  top: -4px;
-  right: -4px;
+  top: -2px;
+  right: -2px;
   cursor: nesw-resize;
 }
 
 .fp-corner-sw {
-  bottom: -4px;
-  left: -4px;
+  bottom: -2px;
+  left: -2px;
   cursor: nesw-resize;
 }
 
 .fp-corner-se {
-  bottom: -4px;
-  right: -4px;
+  bottom: -2px;
+  right: -2px;
   cursor: nwse-resize;
 }
 
@@ -2013,100 +2020,86 @@ body,
   align-items: center;
   justify-content: center;
   height: 100%;
-  padding: 32px;
+  padding: 40px 32px;
   text-align: center;
-  gap: 12px;
+  gap: 6px;
 }
 
 .preview-empty-icon {
   color: var(--text-muted);
-  opacity: 0.5;
+  margin-bottom: 10px;
+}
+
+.preview-empty-icon--error {
+  color: var(--error, #e55);
 }
 
 .preview-empty-title {
   font-size: 14px;
-  font-weight: 500;
-  color: var(--text-secondary);
+  font-weight: 550;
+  color: var(--text-primary);
   margin: 0;
   font-family: var(--font-sans);
+  letter-spacing: -0.1px;
 }
 
 .preview-empty-hint {
-  font-size: 12px;
+  font-size: 12.5px;
   color: var(--text-muted);
-  margin: 0;
-  max-width: 260px;
-  line-height: 1.5;
+  margin: 0 0 6px;
+  max-width: 280px;
+  line-height: 1.55;
   font-family: var(--font-sans);
-}
-
-.preview-empty-hint code {
-  background: var(--bg-hover);
-  padding: 1px 5px;
-  border-radius: 3px;
-  font-family: var(--font-mono);
-  font-size: 11px;
 }
 
 .preview-empty-actions {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .preview-action-pill {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 36px;
-  padding: 0 24px;
+  height: 34px;
+  padding: 0 20px;
   background: none;
-  color: var(--text-secondary);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 500;
   font-family: var(--font-sans);
   cursor: pointer;
   box-sizing: border-box;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 
 .preview-action-pill:hover {
-  background: var(--accent-subtle);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.preview-action-pill.primary {
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  border-color: var(--border);
-}
-
-.preview-action-pill.primary:hover {
-  background: var(--accent-subtle);
-  border-color: var(--accent);
-  color: var(--accent);
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+  background: var(--bg-hover);
 }
 
 .preview-start-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  height: 36px;
-  margin-top: 8px;
-  padding: 0 24px;
+  gap: 7px;
+  height: 34px;
+  padding: 0 20px;
   background: var(--accent-color);
   color: #fff;
   border: 1px solid var(--accent-color);
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 500;
   font-family: var(--font-sans);
   cursor: pointer;
   box-sizing: border-box;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .preview-start-btn:hover {

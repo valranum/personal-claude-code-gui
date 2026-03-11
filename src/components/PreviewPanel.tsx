@@ -88,29 +88,30 @@ export function PreviewPanel({ cwd }: PreviewPanelProps) {
 
   const hasDevScript = project?.devScript != null;
 
-  const previewIcon = (
-    <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-      <path d="M22 12C12 12 5 22 5 22C5 22 12 32 22 32C32 32 39 22 39 22C39 22 32 12 22 12Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" opacity="0.45"/>
-      <circle cx="22" cy="22" r="6" stroke="currentColor" strokeWidth="2" opacity="0.45"/>
-      <circle cx="22" cy="22" r="2.5" fill="currentColor" opacity="0.35"/>
-    </svg>
-  );
-
   function renderEmptyBody() {
     if (startError) {
       return (
         <div className="preview-empty">
-          <div className="preview-empty-icon">{previewIcon}</div>
-          <p className="preview-empty-title">Couldn't start the preview</p>
+          <div className="preview-empty-icon preview-empty-icon--error">
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+              <circle cx="18" cy="18" r="14" stroke="currentColor" strokeWidth="1.5" opacity="0.35"/>
+              <path d="M13 13L23 23M23 13L13 23" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <p className="preview-empty-title">Something went wrong</p>
           <p className="preview-empty-hint">
-            You can try again, or enter a URL directly in the bar above if your project is already running somewhere.
+            The dev server couldn't be started. You can retry or enter a URL manually if it's already running.
           </p>
           <div className="preview-empty-actions">
-            <button className="preview-action-pill primary" onClick={() => { setStartError(""); handleStartPreview(); }}>
-              Try Again
+            <button className="preview-start-btn" onClick={() => { setStartError(""); handleStartPreview(); }}>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M13.5 8C13.5 11.04 11.04 13.5 8 13.5C4.96 13.5 2.5 11.04 2.5 8C2.5 4.96 4.96 2.5 8 2.5C9.8 2.5 11.4 3.3 12.4 4.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                <path d="M12 2V5H9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Retry
             </button>
             <button className="preview-action-pill" onClick={() => { setStartError(""); setEditing(true); }}>
-              Enter URL
+              Enter URL instead
             </button>
           </div>
         </div>
@@ -120,18 +121,26 @@ export function PreviewPanel({ cwd }: PreviewPanelProps) {
     if (hasDevScript) {
       return (
         <div className="preview-empty">
-          <div className="preview-empty-icon">{previewIcon}</div>
-          <p className="preview-empty-title">
-            Preview your {project?.framework || "project"}
-          </p>
+          <div className="preview-empty-icon">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+              <rect x="4" y="6" width="32" height="24" rx="3" stroke="currentColor" strokeWidth="1.5" opacity="0.3"/>
+              <path d="M4 11H36" stroke="currentColor" strokeWidth="1.5" opacity="0.2"/>
+              <circle cx="8" cy="8.5" r="1" fill="currentColor" opacity="0.25"/>
+              <circle cx="11.5" cy="8.5" r="1" fill="currentColor" opacity="0.25"/>
+              <circle cx="15" cy="8.5" r="1" fill="currentColor" opacity="0.25"/>
+              <path d="M15 21L18 24L25 17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.4"/>
+              <path d="M16 33H24" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.2"/>
+            </svg>
+          </div>
+          <p className="preview-empty-title">Ready to preview</p>
           <p className="preview-empty-hint">
-            See your design changes live as you build
+            Launch a local dev server to see changes in real time
           </p>
           <button className="preview-start-btn" onClick={handleStartPreview}>
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <path d="M4 2.5L13 8L4 13.5V2.5Z" fill="currentColor"/>
             </svg>
-            Start Preview
+            Start Dev Server
           </button>
         </div>
       );
@@ -139,12 +148,23 @@ export function PreviewPanel({ cwd }: PreviewPanelProps) {
 
     return (
       <div className="preview-empty">
-        <div className="preview-empty-icon">{previewIcon}</div>
-        <p className="preview-empty-title">Preview your project</p>
+        <div className="preview-empty-icon">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <rect x="4" y="6" width="32" height="24" rx="3" stroke="currentColor" strokeWidth="1.5" opacity="0.3"/>
+            <path d="M4 11H36" stroke="currentColor" strokeWidth="1.5" opacity="0.2"/>
+            <circle cx="8" cy="8.5" r="1" fill="currentColor" opacity="0.25"/>
+            <circle cx="11.5" cy="8.5" r="1" fill="currentColor" opacity="0.25"/>
+            <circle cx="15" cy="8.5" r="1" fill="currentColor" opacity="0.25"/>
+            <path d="M17 22L20 19L23 22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.3"/>
+            <path d="M20 19V27" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.3"/>
+            <path d="M16 33H24" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.2"/>
+          </svg>
+        </div>
+        <p className="preview-empty-title">No preview running</p>
         <p className="preview-empty-hint">
-          Enter a URL in the bar above to preview any web page, or ask Claude to help set up your project.
+          Enter a URL above to preview a running app, or ask Claude to set up your project
         </p>
-        <button className="preview-secondary-btn" onClick={() => setEditing(true)}>
+        <button className="preview-action-pill" onClick={() => setEditing(true)}>
           Enter URL
         </button>
       </div>
