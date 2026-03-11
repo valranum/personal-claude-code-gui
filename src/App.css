@@ -165,25 +165,6 @@ body,
   opacity: 0.5;
 }
 
-/* ── Center-to Button ── */
-.fp-center-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 2px;
-  border-radius: 4px;
-  transition: color 0.15s, background 0.15s;
-}
-
-.fp-center-btn:hover {
-  color: var(--accent);
-  background: var(--bg-hover);
-}
-
 /* ── Pop-out Button ── */
 .fp-popout-btn {
   display: flex;
@@ -196,6 +177,7 @@ body,
   padding: 2px;
   border-radius: 4px;
   transition: color 0.15s, background 0.15s;
+  margin-left: auto;
 }
 
 .fp-popout-btn:hover {
@@ -429,12 +411,7 @@ body,
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
-  opacity: 0;
   transition: all 0.12s;
-}
-
-.fp-header:hover .fp-close {
-  opacity: 1;
 }
 
 .fp-close:hover {

@@ -25,6 +25,10 @@ export function PopoutWindow({ title, width, height, onClose, children }: Popout
       `top=${top}`,
       `resizable=yes`,
       `scrollbars=no`,
+      `location=no`,
+      `toolbar=no`,
+      `menubar=no`,
+      `status=no`,
     ].join(",");
 
     const newWindow = window.open("", "", features);

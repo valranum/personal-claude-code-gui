@@ -18,9 +18,7 @@ const PANEL_ICONS: Record<string, ReactNode> = {
   ),
   main: (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
-      <path d="M5 7L7.5 9.5L5 12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M9 12H12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+      <path d="M8 1L9.5 6.5L15 8L9.5 9.5L8 15L6.5 9.5L1 8L6.5 6.5Z" fill="currentColor"/>
     </svg>
   ),
 };
@@ -48,7 +46,6 @@ interface FloatingPanelProps {
   onToggleVisible: (id: string) => void;
   onDragStart: (id: string, e: React.PointerEvent) => void;
   onPin: (id: string) => void;
-  onSendToCenter?: (id: string) => void;
   onPopOut?: (id: string) => void;
   children: React.ReactNode;
 }
@@ -65,7 +62,6 @@ export function FloatingPanel({
   onToggleVisible,
   onDragStart,
   onPin,
-  onSendToCenter,
   onPopOut,
   children,
 }: FloatingPanelProps) {
@@ -171,28 +167,6 @@ export function FloatingPanel({
             </svg>
           </button>
         )}
-        {onSendToCenter && (
-          <button
-            className="fp-center-btn"
-            onClick={(e) => { e.stopPropagation(); onSendToCenter(id); }}
-            title="Send to center"
-          >
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-              <rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
-              <rect x="5" y="5" width="6" height="6" rx="0.5" fill="currentColor" opacity="0.5"/>
-            </svg>
-          </button>
-        )}
-        <button
-          className="fp-pin-btn"
-          onClick={(e) => { e.stopPropagation(); onPin(id); }}
-          title="Pin to nearest edge"
-        >
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-            <path d="M10.5 2L14 5.5L10 9.5L8 11.5L4.5 8L6.5 6L10.5 2Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-            <path d="M4.5 8L2 10.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-          </svg>
-        </button>
         <button
           className="fp-close"
           onClick={(e) => { e.stopPropagation(); onToggleVisible(id); }}

@@ -119,7 +119,7 @@ export function DockableLayout({
   }, []);
 
   const panelDefs: PanelDef[] = [
-    { id: "chats", title: "Chats", content: chatsContent },
+    { id: "chats", title: "Convos", content: chatsContent },
     { id: "files", title: "Files", content: filesContent },
     { id: "main", title: "Chat", content: mainContent },
   ];
@@ -310,22 +310,6 @@ export function DockableLayout({
     });
   }, []);
 
-  /* ── Send to center ── */
-  const handleSendToCenter = useCallback((panelId: string) => {
-    const pid = panelId as PanelId;
-    setLayout((prev) => {
-      const next = { ...prev };
-      for (const id of ALL_PANEL_IDS) {
-        if (id === pid) {
-          next[id] = { ...prev[id], pinned: false, isCenter: true, visible: true };
-        } else if (prev[id].isCenter) {
-          next[id] = { ...prev[id], isCenter: false };
-        }
-      }
-      return next;
-    });
-  }, []);
-
   /* ── Pop out to external window ── */
   const handlePopOut = useCallback((panelId: string) => {
     setPoppedOut((prev) => {
@@ -468,26 +452,6 @@ export function DockableLayout({
                 </svg>
               </button>
               <button
-                className="fp-center-btn"
-                onClick={(e) => { e.stopPropagation(); handleSendToCenter(p.id); }}
-                title="Send to center"
-              >
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                  <rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
-                  <rect x="5" y="5" width="6" height="6" rx="0.5" fill="currentColor" opacity="0.5"/>
-                </svg>
-              </button>
-              <button
-                className="fp-pin-btn active"
-                onClick={(e) => { e.stopPropagation(); handleUnpin(p.id); }}
-                title="Unpin"
-              >
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                  <path d="M10.5 2L14 5.5L10 9.5L8 11.5L4.5 8L6.5 6L10.5 2Z" fill="currentColor" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-                  <path d="M4.5 8L2 10.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                </svg>
-              </button>
-              <button
                 className="fp-close"
                 onClick={(e) => { e.stopPropagation(); handleToggleVisible(p.id); }}
                 title={`Hide ${p.title}`}
@@ -557,17 +521,6 @@ export function DockableLayout({
                     </svg>
                   </button>
                   <button
-                    className="fp-pin-btn"
-                    onClick={(e) => { e.stopPropagation(); handleUnpin(p.id); }}
-                    title="Float panel"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                      <rect x="2" y="3" width="10" height="8" rx="1" stroke="currentColor" strokeWidth="1.2"/>
-                      <path d="M5 3V1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                      <path d="M9 3V1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                    </svg>
-                  </button>
-                  <button
                     className="fp-close"
                     onClick={(e) => { e.stopPropagation(); handleToggleVisible(p.id); }}
                     title={`Hide ${p.title}`}
@@ -612,7 +565,6 @@ export function DockableLayout({
           onToggleVisible={handleToggleVisible}
           onDragStart={handleDragStart}
           onPin={handlePin}
-          onSendToCenter={handleSendToCenter}
           onPopOut={handlePopOut}
         >
           {p.content}
