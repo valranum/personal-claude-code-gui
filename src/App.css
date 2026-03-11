@@ -3748,7 +3748,7 @@ body,
 /* ── Recent Projects ── */
 .welcome-recents {
   width: 100%;
-  max-width: min(480px, 100%);
+  max-width: min(520px, 100%);
   margin-top: 16px;
   display: flex;
   flex-direction: column;
@@ -3760,26 +3760,24 @@ body,
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
-  padding: 0 4px 8px;
+  padding: 0 0 8px;
 }
 
 .welcome-recent-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 3px 10px;
   background: none;
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   cursor: pointer;
-  font-family: inherit;
   font-size: 13px;
   color: var(--text-primary);
   text-align: left;
   transition: all 0.12s;
   font-family: var(--font-sans);
   width: 100%;
-  text-align: left;
 }
 
 .welcome-recent-item:hover {
@@ -3795,8 +3793,9 @@ body,
 .welcome-recent-name {
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--text-secondary);
   white-space: nowrap;
+  min-width: 200px;
 }
 
 .welcome-recent-path {
@@ -3808,6 +3807,7 @@ body,
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+  transform: translateY(1.5px);
 }
 
 .welcome-recent-time {
