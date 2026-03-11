@@ -3646,17 +3646,14 @@ body,
 
 /* ── Welcome Paths ── */
 .welcome-paths {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
   width: 100%;
-  max-width: min(480px, 100%);
+  max-width: min(520px, 100%);
   margin-top: 4px;
 }
 
 .welcome-path-card {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   padding: 14px 16px;
   background: var(--bg-surface);
@@ -3709,30 +3706,10 @@ body,
   margin-top: 1px;
 }
 
-.welcome-path-arrow {
-  color: var(--text-muted);
-  flex-shrink: 0;
-  transition: color 0.15s, transform 0.15s;
-}
-
-.welcome-path-card:hover .welcome-path-arrow {
-  color: var(--accent);
-  transform: translateX(2px);
-}
-
 .welcome-path-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-}
-
-.welcome-path-secondary {
-  padding: 12px 14px;
-}
-
-.welcome-path-secondary .welcome-path-icon {
-  width: 32px;
-  height: 32px;
 }
 
 .welcome-skip-link {
@@ -3823,42 +3800,41 @@ body,
 .welcome-onboarding {
   width: 100%;
   max-width: min(480px, 100%);
+  min-height: 280px;
   display: flex;
   flex-direction: column;
   gap: 20px;
-  animation: msgFadeIn 0.2s ease;
 }
 
 .welcome-onboarding-header {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
 }
 
 .welcome-onboarding-back {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   font-size: 13px;
   font-family: var(--font-sans);
   cursor: pointer;
-  padding: 4px 8px 4px 4px;
-  border-radius: var(--radius-md);
-  transition: all 0.12s;
+  padding: 0;
+  margin-left: -4px;
+  transition: color 0.12s;
 }
 
 .welcome-onboarding-back:hover {
-  color: var(--text-primary);
-  background: var(--bg-hover);
+  color: var(--text-secondary);
 }
 
 .welcome-onboarding-step {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
 }
 
 .welcome-onboarding-title {

@@ -267,74 +267,61 @@ export function WelcomeScreen({
         <p className="welcome-subtitle">What would you like to do?</p>
 
         <div className="welcome-paths">
-          <button
-            className="welcome-path-card welcome-path-primary"
-            onClick={handlePickFolder}
-            disabled={picking}
-          >
-            <div className="welcome-path-icon">
-              <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-                <path
-                  d="M2 4.5C2 3.67 2.67 3 3.5 3H6.5L8 4.5H12.5C13.33 4.5 14 5.17 14 6V11.5C14 12.33 13.33 13 12.5 13H3.5C2.67 13 2 12.33 2 11.5V4.5Z"
-                  stroke="currentColor"
-                  strokeWidth="1.3"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
-            <div className="welcome-path-info">
-              <div className="welcome-path-label">
-                {picking ? "Opening..." : "Open an existing project"}
-              </div>
-              <div className="welcome-path-desc">
-                Browse your files and start coding
-              </div>
-            </div>
-            <svg
-              className="welcome-path-arrow"
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
+          <div className="welcome-path-row">
+            <button
+              className="welcome-path-card"
+              onClick={handlePickFolder}
+              disabled={picking}
             >
-              <path
-                d="M6 4L10 8L6 12"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-
-          <button
-            className="welcome-path-card welcome-path-secondary"
-            onClick={() => setShowOnboarding(true)}
-          >
-            <div className="welcome-path-icon">
-              <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-                <path
-                  d="M8 2L9.5 6.5L14 8L9.5 9.5L8 14L6.5 9.5L2 8L6.5 6.5L8 2Z"
-                  stroke="currentColor"
-                  strokeWidth="1.2"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
-            <div className="welcome-path-info">
-              <div className="welcome-path-label">Start a new project</div>
-              <div className="welcome-path-desc">
-                Get guided through setup
+              <div className="welcome-path-icon">
+                <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M2 4.5C2 3.67 2.67 3 3.5 3H6.5L8 4.5H12.5C13.33 4.5 14 5.17 14 6V11.5C14 12.33 13.33 13 12.5 13H3.5C2.67 13 2 12.33 2 11.5V4.5Z"
+                    stroke="currentColor"
+                    strokeWidth="1.3"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </div>
-            </div>
-          </button>
+              <div className="welcome-path-info">
+                <div className="welcome-path-label">
+                  {picking ? "Opening..." : "Open existing project"}
+                </div>
+                <div className="welcome-path-desc">
+                  Browse your files and start coding
+                </div>
+              </div>
+            </button>
+
+            <button
+              className="welcome-path-card"
+              onClick={() => setShowOnboarding(true)}
+            >
+              <div className="welcome-path-icon">
+                <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M8 3V13M3 8H13"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+              <div className="welcome-path-info">
+                <div className="welcome-path-label">Start a new project</div>
+                <div className="welcome-path-desc">
+                  Get guided through setup
+                </div>
+              </div>
+            </button>
+          </div>
         </div>
 
         <button
           className="welcome-skip-link"
           onClick={() => onOpenFolder(undefined)}
         >
-          or start without a folder
+          or just chat with Claude
         </button>
 
         {recentProjects.length > 0 && (
