@@ -62,7 +62,17 @@ export interface MCPServerConfig {
   url?: string;
 }
 
+export interface AgentConfig {
+  id: string;
+  name: string;
+  description: string;
+  prompt: string;
+  tools?: string[];
+  model?: "sonnet" | "opus" | "haiku" | "inherit";
+}
+
 export interface WorkspaceConfig {
   mcpServers: MCPServerConfig[];
+  customAgents?: AgentConfig[];
   defaultSystemPrompt?: string;
 }

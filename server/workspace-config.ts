@@ -15,6 +15,7 @@ function configPath(cwd: string): string {
 
 const DEFAULT_CONFIG: WorkspaceConfig = {
   mcpServers: [],
+  customAgents: [],
 };
 
 export function getConfig(cwd: string): WorkspaceConfig {

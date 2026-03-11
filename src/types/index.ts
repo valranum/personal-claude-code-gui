@@ -36,6 +36,24 @@ export interface ToolCallInfo {
   status: "running" | "done" | "error";
 }
 
+export interface SubagentInfo {
+  id: string;
+  agentName: string;
+  description: string;
+  status: "running" | "done";
+  output?: string;
+  toolActivity: { toolName: string; input: Record<string, unknown> }[];
+}
+
+export interface AgentConfig {
+  id: string;
+  name: string;
+  description: string;
+  prompt: string;
+  tools?: string[];
+  model?: "sonnet" | "opus" | "haiku" | "inherit";
+}
+
 export interface TokenUsage {
   inputTokens: number;
   outputTokens: number;
@@ -47,4 +65,5 @@ export interface StreamingState {
   text: string;
   thinking: string;
   toolCalls: ToolCallInfo[];
+  subagents: SubagentInfo[];
 }

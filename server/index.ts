@@ -10,7 +10,7 @@ import { randomUUID, randomBytes } from "crypto";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import * as store from "./conversation-store.js";
 import * as sessionManager from "./session-manager.js";
-import { ChatMessage, ImageAttachment, MCPServerConfig } from "./types.js";
+import { ChatMessage, ImageAttachment, MCPServerConfig, AgentConfig } from "./types.js";
 import * as workspaceConfig from "./workspace-config.js";
 
 const app = express();
@@ -478,6 +478,62 @@ app.delete("/api/mcp-servers/:serverId", (req, res) => {
   res.json(config.mcpServers);
 });
 
+// Custom agents management
+app.get("/api/agents", (req, res) => {
+  const cwd = req.query.cwd as string | undefined;
+  if (!cwd) {
+    res.json([]);
+    return;
+  }
+  const config = workspaceConfig.getConfig(cwd);
+  res.json(config.customAgents || []);
+});
+
+app.post("/api/agents", (req, res) => {
+  const { cwd, agent } = req.body as { cwd: string; agent: AgentConfig };
+  if (!cwd || !agent || !agent.name || !agent.description || !agent.prompt) {
+    res.status(400).json({ error: "cwd, agent name, description, and prompt are required" });
+    return;
+  }
+  const config = workspaceConfig.getConfig(cwd);
+  if (!config.customAgents) config.customAgents = [];
+  config.customAgents.push({ ...agent, id: agent.id || randomUUID() });
+  workspaceConfig.saveConfig(cwd, config);
+  res.json(config.customAgents);
+});
+
+app.put("/api/agents/:agentId", (req, res) => {
+  const cwd = req.query.cwd as string | undefined;
+  const { agent } = req.body as { agent: Partial<AgentConfig> };
+  if (!cwd) {
+    res.status(400).json({ error: "cwd is required" });
+    return;
+  }
+  const config = workspaceConfig.getConfig(cwd);
+  if (!config.customAgents) config.customAgents = [];
+  const idx = config.customAgents.findIndex((a) => a.id === req.params.agentId);
+  if (idx === -1) {
+    res.status(404).json({ error: "Agent not found" });
+    return;
+  }
+  config.customAgents[idx] = { ...config.customAgents[idx], ...agent };
+  workspaceConfig.saveConfig(cwd, config);
+  res.json(config.customAgents);
+});
+
+app.delete("/api/agents/:agentId", (req, res) => {
+  const cwd = req.query.cwd as string | undefined;
+  if (!cwd) {
+    res.status(400).json({ error: "cwd is required" });
+    return;
+  }
+  const config = workspaceConfig.getConfig(cwd);
+  if (!config.customAgents) config.customAgents = [];
+  config.customAgents = config.customAgents.filter((a) => a.id !== req.params.agentId);
+  workspaceConfig.saveConfig(cwd, config);
+  res.json(config.customAgents);
+});
+
 // Workspace config
 app.get("/api/workspace-config", (req, res) => {
   const cwd = req.query.cwd as string | undefined;
@@ -848,6 +904,7 @@ app.get("/api/conversations/:id/stream", (req, res) => {
     convFile.conversation.sdkSessionId,
     convFile.conversation.systemPrompt,
     wsConfig.mcpServers.length > 0 ? wsConfig.mcpServers : undefined,
+    wsConfig.customAgents && wsConfig.customAgents.length > 0 ? wsConfig.customAgents : undefined,
   );
 
   const onEvent = (event: { type: string; data: unknown }) => {
@@ -957,6 +1014,7 @@ app.post("/api/conversations/:id/messages", (req, res) => {
     convFile.conversation.sdkSessionId,
     convFile.conversation.systemPrompt,
     msgWsConfig.mcpServers.length > 0 ? msgWsConfig.mcpServers : undefined,
+    msgWsConfig.customAgents && msgWsConfig.customAgents.length > 0 ? msgWsConfig.customAgents : undefined,
   );
 
   const isFirstMessage =

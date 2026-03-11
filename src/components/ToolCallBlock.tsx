@@ -38,6 +38,13 @@ function ToolIcon({ name }: { name: string }) {
         <path d="M2 8H14M8 2C6 4.67 6 11.33 8 14M8 2C10 4.67 10 11.33 8 14" stroke="currentColor" strokeWidth="1.3"/>
       </svg>
     );
+  if (n === "agent" || n === "task")
+    return (
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.3"/>
+        <path d="M3 14C3 11.24 5.24 9 8 9C10.76 9 13 11.24 13 14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+      </svg>
+    );
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
       <path d="M6 2L10 8L6 14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
@@ -68,6 +75,10 @@ function getToolSummary(toolCall: ToolCallInfo): string | null {
   }
   if (n === "webfetch" && input.url) {
     return String(input.url);
+  }
+  if ((n === "agent" || n === "task") && (input.description || input.prompt)) {
+    const desc = String(input.description || input.prompt);
+    return desc.length > 80 ? desc.slice(0, 77) + "..." : desc;
   }
   return null;
 }

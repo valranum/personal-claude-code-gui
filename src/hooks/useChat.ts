@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ChatMessage, ImageAttachment, ToolCallInfo, StreamingState } from "../types";
+import { ChatMessage, ImageAttachment, ToolCallInfo, StreamingState, SubagentInfo } from "../types";
 import { connectSSE, SSEEvent } from "../utils/sse";
 import { apiFetch, getAuthToken, getAuthTokenSync } from "../utils/api";
 
@@ -8,6 +8,7 @@ const EMPTY_STREAMING: StreamingState = {
   text: "",
   thinking: "",
   toolCalls: [],
+  subagents: [],
 };
 
 function formatTokens(n: number): string {
@@ -117,6 +118,7 @@ export function useChat(
   const fetchAbortRef = useRef<AbortController | null>(null);
   const isStreamingRef = useRef(false);
   const resultHandledRef = useRef(false);
+  const subagentsRef = useRef<SubagentInfo[]>([]);
   const cwdRef = useRef(cwd);
   const modelRef = useRef(model || "");
   cwdRef.current = cwd;
@@ -176,8 +178,9 @@ export function useChat(
       if (currentEffectId !== effectIdRef.current) return;
       switch (event.type) {
         case "processing":
-          setStreaming({ isStreaming: true, text: "", thinking: "", toolCalls: [] });
+          setStreaming({ isStreaming: true, text: "", thinking: "", toolCalls: [], subagents: [] });
           toolCallsRef.current = [];
+          subagentsRef.current = [];
           resultHandledRef.current = false;
           break;
 
@@ -245,6 +248,7 @@ export function useChat(
               ]);
             }
             toolCallsRef.current = [];
+            subagentsRef.current = [];
             resultHandledRef.current = false;
             return EMPTY_STREAMING;
           });
@@ -282,6 +286,43 @@ export function useChat(
               text: prev.text + data.content,
             }));
           }
+          break;
+        }
+
+        case "subagent_start": {
+          const { id, agentName, description } = event.data as { id: string; agentName: string; description: string };
+          const sa: SubagentInfo = { id, agentName, description, status: "running", toolActivity: [] };
+          subagentsRef.current = [...subagentsRef.current, sa];
+          setStreaming((prev) => ({
+            ...prev,
+            subagents: [...subagentsRef.current],
+          }));
+          break;
+        }
+
+        case "subagent_tool": {
+          const { parentId, toolName, input } = event.data as { parentId: string; toolName: string; input: Record<string, unknown> };
+          subagentsRef.current = subagentsRef.current.map((sa) =>
+            sa.id === parentId
+              ? { ...sa, toolActivity: [...sa.toolActivity, { toolName, input }] }
+              : sa,
+          );
+          setStreaming((prev) => ({
+            ...prev,
+            subagents: [...subagentsRef.current],
+          }));
+          break;
+        }
+
+        case "subagent_end": {
+          const { id, output } = event.data as { id: string; output: string };
+          subagentsRef.current = subagentsRef.current.map((sa) =>
+            sa.id === id ? { ...sa, status: "done" as const, output } : sa,
+          );
+          setStreaming((prev) => ({
+            ...prev,
+            subagents: [...subagentsRef.current],
+          }));
           break;
         }
 
@@ -336,7 +377,7 @@ export function useChat(
         return;
       }
       if (content.trim() === "/compact") {
-        setStreaming({ isStreaming: true, text: "", thinking: "", toolCalls: [] });
+        setStreaming({ isStreaming: true, text: "", thinking: "", toolCalls: [], subagents: [] });
         try {
           const res = await apiFetch(`/api/conversations/${conversationId}/compact`, { method: "POST" });
           const data = await res.json();
@@ -373,6 +414,40 @@ export function useChat(
           setMessages((prev) => [...prev, systemMsg]);
         } catch {
           onErrorRef.current?.("Failed to fetch usage data");
+        }
+        return;
+      }
+
+      if (content.trim() === "/agents") {
+        try {
+          const lines: string[] = ["**Available Subagents**", ""];
+          lines.push("**Built-in:**");
+          lines.push("- `general-purpose` — Capable agent for complex, multi-step tasks");
+          lines.push("- `explore` — Fast, read-only agent for codebase search and analysis");
+          if (cwdRef.current) {
+            const res = await apiFetch(`/api/agents?cwd=${encodeURIComponent(cwdRef.current)}`);
+            const agents = await res.json();
+            if (agents.length > 0) {
+              lines.push("");
+              lines.push("**Custom:**");
+              for (const a of agents) {
+                const tools = a.tools ? ` (${a.tools.join(", ")})` : "";
+                const model = a.model && a.model !== "inherit" ? ` [${a.model}]` : "";
+                lines.push(`- \`${a.name}\` — ${a.description}${tools}${model}`);
+              }
+            }
+          }
+          lines.push("");
+          lines.push("Claude will automatically delegate to subagents when appropriate, or you can request one by name: *\"Use the code-reviewer agent to...\"*");
+          const systemMsg: ChatMessage = {
+            id: crypto.randomUUID(),
+            role: "system",
+            content: lines.join("\n"),
+            timestamp: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, systemMsg]);
+        } catch {
+          onErrorRef.current?.("Failed to fetch agents");
         }
         return;
       }
@@ -609,7 +684,7 @@ export function useChat(
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, userMsg]);
-      setStreaming({ isStreaming: true, text: "", thinking: "", toolCalls: [] });
+      setStreaming({ isStreaming: true, text: "", thinking: "", toolCalls: [], subagents: [] });
 
       try {
         await apiFetch(`/api/conversations/${conversationId}/messages`, {
@@ -647,7 +722,7 @@ export function useChat(
 
     if (!lastContent) return;
 
-    setStreaming({ isStreaming: true, text: "", thinking: "", toolCalls: [] });
+    setStreaming({ isStreaming: true, text: "", thinking: "", toolCalls: [], subagents: [] });
     toolCallsRef.current = [];
 
     try {

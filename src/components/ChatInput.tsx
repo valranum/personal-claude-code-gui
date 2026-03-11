@@ -42,6 +42,7 @@ function readFileAsBase64(file: File): Promise<ImageAttachment> {
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
 const SLASH_COMMANDS = [
+  { command: "/agents", description: "List available subagents for this workspace" },
   { command: "/clear", description: "Clear conversation history and reset context" },
   { command: "/compact", description: "Summarize and compact the conversation" },
   { command: "/context", description: "Show context window usage breakdown" },

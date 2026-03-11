@@ -10,6 +10,14 @@ const FAQ_ITEMS = [
     a: "You can ask Claude to build features, fix bugs, refactor code, explain how something works, create new files, run terminal commands, and search your codebase. Just describe what you want in plain language.",
   },
   {
+    q: "What are subagents?",
+    a: "Claude can spawn subagents — independent AI workers that handle focused subtasks in parallel. For example, Claude might delegate a code review to one subagent and test analysis to another, then combine their results. You'll see live activity indicators when subagents are running. Type /agents to see all available subagents.",
+  },
+  {
+    q: "Can I create custom subagents?",
+    a: "Yes! Custom agents are defined per workspace via the API. Each agent has a name, description, system prompt, optional tool restrictions (e.g., read-only), and an optional model override. Claude will automatically delegate to them when appropriate, or you can request one by name: \"Use the code-reviewer agent to check this file.\"",
+  },
+  {
     q: "What file types can I attach?",
     a: "You can attach images (JPG, PNG, GIF, WEBP) using the paperclip icon. Claude can analyze screenshots, mockups, and design references to help implement what you show it.",
   },
@@ -27,15 +35,27 @@ const FAQ_ITEMS = [
   },
   {
     q: "What do the slash commands do?",
-    a: "/clear — Clear conversation history\n/compact — Compress context to free up token space\n/usage — Show token usage and cost for this conversation\n/usage week — Show usage for the past 7 days",
+    a: "/agents — List available subagents for this workspace\n/clear — Clear conversation history\n/compact — Compress context to free up token space\n/context — Show context window usage with a visual breakdown\n/cost — Show session cost and token summary\n/diff — Show uncommitted git changes in your workspace\n/export — Download conversation as markdown (or /export json)\n/review — Ask Claude to review your uncommitted code changes\n/status — Show model, workspace, and session info\n/usage — Show token usage and cost (supports /usage week, month, or a number of days)",
+  },
+  {
+    q: "What does /review do?",
+    a: "The /review command fetches your uncommitted git changes (the full diff) and sends them to Claude for an AI-powered code review. Claude will look for bugs, security issues, code quality concerns, and suggest improvements.",
+  },
+  {
+    q: "How do I monitor my context usage?",
+    a: "The context ring in the bottom-right of the input area shows how full your context window is. Type /context for a detailed breakdown with a progress bar. When usage gets high, the app will suggest running /compact to free up space, and at 95% it auto-compacts before sending.",
   },
   {
     q: "Why is Claude taking a long time?",
-    a: "Complex tasks like full codebase reviews require reading many files. You'll see activity text (e.g., \"Reading App.tsx\") below the response showing what Claude is doing. Try more targeted prompts for faster results.",
+    a: "Complex tasks like full codebase reviews require reading many files. You'll see activity text (e.g., \"Reading App.tsx\") below the response showing what Claude is doing. When subagents are running, you'll see their names and current activity. Try more targeted prompts for faster results.",
   },
   {
     q: "What models are available?",
     a: "You can switch between Claude Opus, Sonnet, and Haiku models using the model selector at the bottom of the chat input. Opus is the most capable; Haiku is the fastest.",
+  },
+  {
+    q: "Can I export my conversations?",
+    a: "Yes! Type /export to download as markdown, or /export json for the raw JSON. You can also use the command palette (⌘K) to export or share conversations.",
   },
 ];
 

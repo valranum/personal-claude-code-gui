@@ -86,7 +86,7 @@ export function MessageList({ messages, streaming, conversationId, onRetry, onSe
                 </ReactMarkdown>
               </div>
             )}
-            <StreamingIndicator toolCalls={streaming.toolCalls} />
+            <StreamingIndicator toolCalls={streaming.toolCalls} subagents={streaming.subagents} />
           </div>
         </div>
       )}

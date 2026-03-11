@@ -1,6 +1,6 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { EventEmitter } from "events";
-import { ImageAttachment, ToolCallInfo, TokenUsage, MCPServerConfig } from "./types.js";
+import { ImageAttachment, ToolCallInfo, TokenUsage, MCPServerConfig, AgentConfig } from "./types.js";
 
 const COST_PER_MILLION: Record<string, { input: number; output: number }> = {
   "claude-opus-4-6": { input: 15, output: 75 },
@@ -16,17 +16,19 @@ export class AgentSession {
   systemPrompt?: string;
   sessionId?: string;
   mcpServers?: MCPServerConfig[];
+  customAgents?: AgentConfig[];
   events: EventEmitter;
   private isRunning = false;
   private abortController: AbortController | null = null;
 
-  constructor(conversationId: string, cwd: string, model: string, sessionId?: string, systemPrompt?: string, mcpServers?: MCPServerConfig[]) {
+  constructor(conversationId: string, cwd: string, model: string, sessionId?: string, systemPrompt?: string, mcpServers?: MCPServerConfig[], customAgents?: AgentConfig[]) {
     this.conversationId = conversationId;
     this.cwd = cwd;
     this.model = model;
     this.systemPrompt = systemPrompt;
     this.sessionId = sessionId;
     this.mcpServers = mcpServers;
+    this.customAgents = customAgents;
     this.events = new EventEmitter();
     this.events.setMaxListeners(20);
   }
@@ -98,6 +100,7 @@ export class AgentSession {
         "Grep",
         "WebSearch",
         "WebFetch",
+        "Agent",
       ],
       permissionMode: "acceptEdits",
       cwd: this.cwd,
@@ -107,6 +110,19 @@ export class AgentSession {
 
     if (this.systemPrompt) {
       options.systemPrompt = this.systemPrompt;
+    }
+
+    if (this.customAgents && this.customAgents.length > 0) {
+      const agentDefs: Record<string, Record<string, unknown>> = {};
+      for (const a of this.customAgents) {
+        agentDefs[a.name] = {
+          description: a.description,
+          prompt: a.prompt,
+          ...(a.tools && a.tools.length > 0 ? { tools: a.tools } : {}),
+          ...(a.model ? { model: a.model } : {}),
+        };
+      }
+      options.agents = agentDefs;
     }
 
     if (this.mcpServers && this.mcpServers.length > 0) {
@@ -163,13 +179,22 @@ export class AgentSession {
         }
 
         if (msg.type === "tool_use" || msg.tool_name) {
+          const toolName = (msg.tool_name as string) || (msg.name as string) || "unknown";
+          const toolInput = (msg.input as Record<string, unknown>) || {};
           const tc: ToolCallInfo = {
             id: (msg.id as string) || crypto.randomUUID(),
-            name: (msg.tool_name as string) || (msg.name as string) || "unknown",
-            input: (msg.input as Record<string, unknown>) || {},
+            name: toolName,
+            input: toolInput,
             status: "running",
           };
           toolCalls.push(tc);
+          if (toolName === "Agent" || toolName === "Task") {
+            this.emit("subagent_start", {
+              id: tc.id,
+              agentName: toolInput.subagent_type || toolInput.agent_name || "subagent",
+              description: toolInput.description || toolInput.prompt || "",
+            });
+          }
           this.emit("tool_use", tc);
           continue;
         }
@@ -183,9 +208,29 @@ export class AgentSession {
                 ? msg.content
                 : JSON.stringify(msg.content);
             tc.status = "done";
+            if (tc.name === "Agent" || tc.name === "Task") {
+              this.emit("subagent_end", {
+                id: tc.id,
+                output: tc.output,
+              });
+            }
             this.emit("tool_result", {
               id: tc.id,
               output: tc.output,
+            });
+          }
+          continue;
+        }
+
+        // Messages from inside a subagent's execution
+        if (msg.parent_tool_use_id) {
+          const parentId = msg.parent_tool_use_id as string;
+          if (msg.type === "tool_use" || msg.tool_name) {
+            const toolName = (msg.tool_name as string) || (msg.name as string) || "unknown";
+            this.emit("subagent_tool", {
+              parentId,
+              toolName,
+              input: (msg.input as Record<string, unknown>) || {},
             });
           }
           continue;
@@ -203,13 +248,22 @@ export class AgentSession {
               } else if (block.type === "text" && typeof block.text === "string") {
                 this.emit("message", { content: block.text });
               } else if (block.type === "tool_use") {
+                const blockName = (block.name as string) || "unknown";
+                const blockInput = (block.input as Record<string, unknown>) || {};
                 const tc: ToolCallInfo = {
                   id: (block.id as string) || crypto.randomUUID(),
-                  name: (block.name as string) || "unknown",
-                  input: (block.input as Record<string, unknown>) || {},
+                  name: blockName,
+                  input: blockInput,
                   status: "running",
                 };
                 toolCalls.push(tc);
+                if (blockName === "Agent" || blockName === "Task") {
+                  this.emit("subagent_start", {
+                    id: tc.id,
+                    agentName: blockInput.subagent_type || blockInput.agent_name || "subagent",
+                    description: blockInput.description || blockInput.prompt || "",
+                  });
+                }
                 this.emit("tool_use", tc);
               }
             }

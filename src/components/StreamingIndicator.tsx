@@ -1,4 +1,4 @@
-import { ToolCallInfo } from "../types";
+import { ToolCallInfo, SubagentInfo } from "../types";
 
 function getActivityText(toolCalls: ToolCallInfo[]): string | null {
   const running = toolCalls.filter((tc) => tc.status === "running");
@@ -38,6 +38,11 @@ function getActivityText(toolCalls: ToolCallInfo[]): string | null {
         : "Searching the web";
     case "WebFetch":
       return "Fetching page";
+    case "Agent":
+    case "Task":
+      return input.description
+        ? `Agent: ${truncate(String(input.description), 48)}`
+        : "Running subagent";
     default:
       return "Working";
   }
@@ -53,11 +58,32 @@ function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max) + "…" : s;
 }
 
-export function StreamingIndicator({ toolCalls = [] }: { toolCalls?: ToolCallInfo[] }) {
+export function StreamingIndicator({ toolCalls = [], subagents = [] }: { toolCalls?: ToolCallInfo[]; subagents?: SubagentInfo[] }) {
   const activity = getActivityText(toolCalls);
+  const runningAgents = subagents.filter((s) => s.status === "running");
 
   return (
     <div className="streaming-indicator">
+      {runningAgents.length > 0 && (
+        <div className="subagent-activity">
+          {runningAgents.map((sa) => (
+            <div key={sa.id} className="subagent-activity-item">
+              <span className="subagent-activity-icon">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                  <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.3"/>
+                  <circle cx="8" cy="8" r="2" fill="currentColor"/>
+                </svg>
+              </span>
+              <span className="subagent-activity-name">{sa.agentName}</span>
+              {sa.toolActivity.length > 0 && (
+                <span className="subagent-activity-tool">
+                  {sa.toolActivity[sa.toolActivity.length - 1].toolName}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
       {activity && <div className="activity-text">{activity}</div>}
       <div className="streaming-dots">
         <span className="dot" />
