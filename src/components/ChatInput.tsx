@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, KeyboardEvent, DragEvent } from "react";
-import { ImageAttachment, TokenUsage } from "../types";
+import { ImageAttachment, TokenUsage, SkillInfo } from "../types";
 import { Tooltip } from "./Tooltip";
 import { apiFetch } from "../utils/api";
 
@@ -20,6 +20,7 @@ interface ChatInputProps {
   tokenUsage?: TokenUsage;
   contextTokens?: number;
   cwd?: string;
+  skills?: SkillInfo[];
 }
 
 function readFileAsBase64(file: File): Promise<ImageAttachment> {
@@ -50,6 +51,7 @@ const SLASH_COMMANDS = [
   { command: "/diff", description: "Show uncommitted git changes" },
   { command: "/export", description: "Export conversation as markdown or /export json" },
   { command: "/review", description: "Ask Claude to review uncommitted changes" },
+  { command: "/skills", description: "List installed skills" },
   { command: "/status", description: "Show model, workspace, and session info" },
   { command: "/usage", description: "Usage for this chat, or /usage week · month · 14" },
 ];
@@ -129,6 +131,7 @@ export function ChatInput({
   tokenUsage,
   contextTokens = 0,
   cwd,
+  skills,
 }: ChatInputProps) {
   const [value, setValue] = useState("");
   const [images, setImages] = useState<ImageAttachment[]>([]);
@@ -245,8 +248,24 @@ export function ChatInput({
     [cwd],
   );
 
+  const allCommands = (() => {
+    const cmds = [...SLASH_COMMANDS];
+    if (skills && skills.length > 0) {
+      for (const s of skills) {
+        const cmd = `/${s.name}`;
+        if (!cmds.find((c) => c.command === cmd)) {
+          cmds.push({
+            command: cmd,
+            description: s.description || `Skill: ${s.name}`,
+          });
+        }
+      }
+    }
+    return cmds;
+  })();
+
   const filteredCommands = value.startsWith("/")
-    ? SLASH_COMMANDS.filter((c) =>
+    ? allCommands.filter((c) =>
         c.command.toLowerCase().startsWith(value.toLowerCase()),
       )
     : [];

@@ -10,7 +10,7 @@ import { randomUUID, randomBytes } from "crypto";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import * as store from "./conversation-store.js";
 import * as sessionManager from "./session-manager.js";
-import { ChatMessage, ImageAttachment, MCPServerConfig, AgentConfig } from "./types.js";
+import { ChatMessage, ImageAttachment, MCPServerConfig, AgentConfig, SkillInfo } from "./types.js";
 import * as workspaceConfig from "./workspace-config.js";
 
 const app = express();
@@ -535,6 +535,118 @@ app.delete("/api/agents/:agentId", (req, res) => {
   config.customAgents = config.customAgents.filter((a) => a.id !== req.params.agentId);
   workspaceConfig.saveConfig(cwd, config);
   res.json(config.customAgents);
+});
+
+// Skills management
+let sqCliAvailable: boolean | null = null;
+const EXTRA_PATH_DIRS = ["/opt/homebrew/bin", "/usr/local/bin", `${HOME_DIR}/.local/bin`, `${HOME_DIR}/bin`];
+const SQ_ENV = { ...process.env, PATH: [process.env.PATH, ...EXTRA_PATH_DIRS].filter(Boolean).join(":") };
+
+function checkSqCli(): boolean {
+  if (sqCliAvailable !== null) return sqCliAvailable;
+  try {
+    execFileSync("sq", ["version"], { encoding: "utf-8", timeout: 5000, stdio: "pipe", env: SQ_ENV });
+    sqCliAvailable = true;
+  } catch {
+    sqCliAvailable = false;
+  }
+  return sqCliAvailable;
+}
+
+app.get("/api/skills", (req, res) => {
+  const cwd = req.query.cwd as string | undefined;
+  const skills: SkillInfo[] = [];
+
+  if (checkSqCli()) {
+    try {
+      const output = execFileSync("sq", ["agents", "skills", "list"], {
+        encoding: "utf-8",
+        timeout: 10000,
+        stdio: ["pipe", "pipe", "pipe"],
+        env: SQ_ENV,
+        ...(cwd ? { cwd } : {}),
+      });
+      for (const line of output.split("\n")) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("─") || trimmed.startsWith("Name") || trimmed.startsWith("=")) continue;
+        const parts = trimmed.split(/\s{2,}/);
+        const name = parts[0]?.trim();
+        if (name && !name.startsWith("-")) {
+          skills.push({
+            name,
+            description: parts[1]?.trim() || undefined,
+            source: "installed",
+          });
+        }
+      }
+    } catch { /* sq skills list failed */ }
+  }
+
+  if (cwd) {
+    const convs = store.listConversations();
+    const cwdConvs = convs.filter((c) => c.cwd === cwd);
+    for (const conv of cwdConvs) {
+      const session = sessionManager.getSession(conv.id);
+      if (session && session.skills.length > 0) {
+        for (const s of session.skills) {
+          if (!skills.find((sk) => sk.name === s)) {
+            skills.push({ name: s, source: "session" });
+          }
+        }
+        break;
+      }
+    }
+  }
+
+  res.json({ skills, sqCliAvailable: checkSqCli() });
+});
+
+app.post("/api/skills/install", (req, res) => {
+  const { name } = req.body;
+  if (!name || typeof name !== "string") {
+    res.status(400).json({ error: "Skill name is required" });
+    return;
+  }
+  if (!checkSqCli()) {
+    res.status(400).json({ error: "sq CLI is not available. Install it to manage skills." });
+    return;
+  }
+  try {
+    const output = execFileSync("sq", ["agents", "skills", "add", name.trim()], {
+      encoding: "utf-8",
+      timeout: 30000,
+      stdio: ["pipe", "pipe", "pipe"],
+      env: SQ_ENV,
+    });
+    res.json({ ok: true, output: output.trim() });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "Failed to install skill";
+    res.status(500).json({ error: msg });
+  }
+});
+
+app.post("/api/skills/uninstall", (req, res) => {
+  const { name } = req.body;
+  if (!name || typeof name !== "string") {
+    res.status(400).json({ error: "Skill name is required" });
+    return;
+  }
+  if (!checkSqCli()) {
+    res.status(400).json({ error: "sq CLI is not available. Install it to manage skills." });
+    return;
+  }
+  try {
+    const output = execFileSync("sq", ["agents", "skills", "remove", name.trim()], {
+      encoding: "utf-8",
+      timeout: 15000,
+      stdio: ["pipe", "pipe", "pipe"],
+      env: SQ_ENV,
+    });
+    res.json({ ok: true, output: output.trim() });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "Failed to uninstall skill";
+    res.status(500).json({ error: msg });
+  }
 });
 
 // Workspace config

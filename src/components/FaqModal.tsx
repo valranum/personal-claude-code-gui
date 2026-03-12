@@ -18,6 +18,14 @@ const FAQ_ITEMS = [
     a: "Yes! Custom agents are defined per workspace via the API. Each agent has a name, description, system prompt, optional tool restrictions (e.g., read-only), and an optional model override. Claude will automatically delegate to them when appropriate, or you can request one by name: \"Use the code-reviewer agent to check this file.\"",
   },
   {
+    q: "What are skills?",
+    a: "Skills extend Claude with specialized knowledge and capabilities — like interacting with Slack, managing Linear issues, searching code across repositories, or working with Google Drive. They're loaded automatically from your Claude settings and can be invoked by typing /<skill-name> in the chat. Go to Settings → Skills to see what's installed, or type /skills in the chat.",
+  },
+  {
+    q: "How do I install or remove skills?",
+    a: "Open Settings → Skills to manage your skills. If the sq CLI is available, you can install skills by name directly from the panel (e.g., type \"slack\" and click Install). You can also install from the terminal with: sq agents skills add <name>. To remove a skill, click the X next to it in the Skills panel, or run: sq agents skills remove <name>.",
+  },
+  {
     q: "What file types can I attach?",
     a: "You can attach images (JPG, PNG, GIF, WEBP) using the paperclip icon. Claude can analyze screenshots, mockups, and design references to help implement what you show it.",
   },
@@ -35,7 +43,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "What do the slash commands do?",
-    a: "/agents — List available subagents for this workspace\n/clear — Clear conversation history\n/compact — Compress context to free up token space\n/context — Show context window usage with a visual breakdown\n/cost — Show session cost and token summary\n/diff — Show uncommitted git changes in your workspace\n/export — Download conversation as markdown (or /export json)\n/review — Ask Claude to review your uncommitted code changes\n/status — Show model, workspace, and session info\n/usage — Show token usage and cost (supports /usage week, month, or a number of days)",
+    a: "/agents — List available subagents for this workspace\n/clear — Clear conversation history\n/compact — Compress context to free up token space\n/context — Show context window usage with a visual breakdown\n/cost — Show session cost and token summary\n/diff — Show uncommitted git changes in your workspace\n/export — Download conversation as markdown (or /export json)\n/review — Ask Claude to review your uncommitted code changes\n/skills — List installed skills\n/status — Show model, workspace, and session info\n/usage — Show token usage and cost (supports /usage week, month, or a number of days)",
   },
   {
     q: "What does /review do?",

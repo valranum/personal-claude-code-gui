@@ -71,6 +71,12 @@ export interface AgentConfig {
   model?: "sonnet" | "opus" | "haiku" | "inherit";
 }
 
+export interface SkillInfo {
+  name: string;
+  description?: string;
+  source: "installed" | "session";
+}
+
 export interface WorkspaceConfig {
   mcpServers: MCPServerConfig[];
   customAgents?: AgentConfig[];

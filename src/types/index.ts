@@ -60,6 +60,12 @@ export interface TokenUsage {
   estimatedCost: number;
 }
 
+export interface SkillInfo {
+  name: string;
+  description?: string;
+  source: "installed" | "session";
+}
+
 export interface StreamingState {
   isStreaming: boolean;
   text: string;

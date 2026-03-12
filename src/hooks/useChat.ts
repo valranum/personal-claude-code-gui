@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ChatMessage, ImageAttachment, ToolCallInfo, StreamingState, SubagentInfo } from "../types";
+import { ChatMessage, ImageAttachment, ToolCallInfo, StreamingState, SubagentInfo, SkillInfo } from "../types";
 import { connectSSE, SSEEvent } from "../utils/sse";
 import { apiFetch, getAuthToken, getAuthTokenSync } from "../utils/api";
 
@@ -96,6 +96,7 @@ export function useChat(
   const [streaming, _setStreaming] = useState<StreamingState>(EMPTY_STREAMING);
   const [showCompactSuggestion, setShowCompactSuggestion] = useState(false);
   const [contextTokens, _setContextTokens] = useState(0);
+  const [skills, setSkills] = useState<SkillInfo[]>([]);
   const setContextTokens = useCallback((v: number) => {
     _setContextTokens(v);
     contextTokensRef.current = v;
@@ -167,6 +168,18 @@ export function useChat(
   }, [conversationId]);
 
   useEffect(() => {
+    if (!cwd) return;
+    apiFetch(`/api/skills?cwd=${encodeURIComponent(cwd)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data.skills) && data.skills.length > 0) {
+          setSkills(data.skills);
+        }
+      })
+      .catch(() => {});
+  }, [cwd]);
+
+  useEffect(() => {
     if (!conversationId) return;
 
     esRef.current?.close();
@@ -177,6 +190,23 @@ export function useChat(
     const handleEvent = (event: SSEEvent) => {
       if (currentEffectId !== effectIdRef.current) return;
       switch (event.type) {
+        case "init": {
+          const initData = event.data as { skills?: string[]; slashCommands?: string[] };
+          if (initData.skills && initData.skills.length > 0) {
+            setSkills((prev) => {
+              const existing = new Set(prev.map((s) => s.name));
+              const merged = [...prev];
+              for (const name of initData.skills!) {
+                if (!existing.has(name)) {
+                  merged.push({ name, source: "session" as const });
+                }
+              }
+              return merged;
+            });
+          }
+          break;
+        }
+
         case "processing":
           setStreaming({ isStreaming: true, text: "", thinking: "", toolCalls: [], subagents: [] });
           toolCallsRef.current = [];
@@ -448,6 +478,42 @@ export function useChat(
           setMessages((prev) => [...prev, systemMsg]);
         } catch {
           onErrorRef.current?.("Failed to fetch agents");
+        }
+        return;
+      }
+
+      if (content.trim() === "/skills") {
+        try {
+          const lines: string[] = ["**Installed Skills**", ""];
+          if (cwdRef.current) {
+            const res = await apiFetch(`/api/skills?cwd=${encodeURIComponent(cwdRef.current)}`);
+            const data = await res.json();
+            const skillsList: SkillInfo[] = data.skills || [];
+            if (skillsList.length > 0) {
+              for (const s of skillsList) {
+                lines.push(`- \`${s.name}\`${s.description ? ` — ${s.description}` : ""}`);
+              }
+            } else {
+              lines.push("No skills installed.");
+            }
+            if (!data.sqCliAvailable) {
+              lines.push("");
+              lines.push("*Note: `sq` CLI not found. Install it to manage skills via `sq agents skills add <name>`.*");
+            }
+          } else {
+            lines.push("No workspace selected.");
+          }
+          lines.push("");
+          lines.push("Skills extend Claude with specialized capabilities. Invoke a skill by typing `/<skill-name>` in your message.");
+          const systemMsg: ChatMessage = {
+            id: crypto.randomUUID(),
+            role: "system",
+            content: lines.join("\n"),
+            timestamp: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, systemMsg]);
+        } catch {
+          onErrorRef.current?.("Failed to fetch skills");
         }
         return;
       }
@@ -752,5 +818,5 @@ export function useChat(
     if (conversationId) dismissedRef.current.add(conversationId);
   }, [conversationId]);
 
-  return { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens };
+  return { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens, skills };
 }

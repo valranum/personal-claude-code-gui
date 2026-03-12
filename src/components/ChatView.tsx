@@ -43,7 +43,7 @@ export function ChatView({
   onConsumePrompt,
 }: ChatViewProps) {
   const { addToast } = useToast();
-  const { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens } = useChat(
+  const { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens, skills } = useChat(
     conversationId,
     (title) => {
       if (conversationId) onTitleUpdate(conversationId, title);
@@ -140,6 +140,7 @@ export function ChatView({
               tokenUsage={conversation?.tokenUsage}
               contextTokens={contextTokens}
               cwd={conversation?.cwd}
+              skills={skills}
             />
           ) : undefined}
         />
@@ -164,6 +165,7 @@ export function ChatView({
             tokenUsage={conversation?.tokenUsage}
             contextTokens={contextTokens}
             cwd={conversation?.cwd}
+            skills={skills}
           />
         )}
       </div>

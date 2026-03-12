@@ -5,6 +5,7 @@ import { Tooltip } from "./Tooltip";
 import { Conversation } from "../types";
 import { FaqModal } from "./FaqModal";
 import { MCPConfigPanel } from "./MCPConfigPanel";
+import { SkillsPanel } from "./SkillsPanel";
 import { SystemPromptModal } from "./SystemPromptModal";
 
 type DockPosition = "left" | "right" | "top" | "bottom";
@@ -139,6 +140,7 @@ export function DockableLayout({
   const [showSettings, setShowSettings] = useState(false);
   const [showFaq, setShowFaq] = useState(false);
   const [showMcp, setShowMcp] = useState(false);
+  const [showSkills, setShowSkills] = useState(false);
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
 
@@ -857,6 +859,16 @@ export function DockableLayout({
                 </button>
                 <button
                   className="settings-option"
+                  onClick={() => { setShowSkills(true); setShowSettings(false); }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                    <path d="M4.5 2L11.5 2C12.33 2 13 2.67 13 3.5L13 12.5C13 13.33 12.33 14 11.5 14L4.5 14C3.67 14 3 13.33 3 12.5L3 3.5C3 2.67 3.67 2 4.5 2Z" stroke="currentColor" strokeWidth="1.3"/>
+                    <path d="M6 5.5L10 5.5M6 8L10 8M6 10.5L8.5 10.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                  </svg>
+                  <span>Skills</span>
+                </button>
+                <button
+                  className="settings-option"
                   onClick={() => { setShowSystemPrompt(true); setShowSettings(false); }}
                 >
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -941,6 +953,9 @@ export function DockableLayout({
       <FaqModal open={showFaq} onClose={() => setShowFaq(false)} />
       {showMcp && conversation && (
         <MCPConfigPanel cwd={conversation.cwd} onClose={() => setShowMcp(false)} />
+      )}
+      {showSkills && conversation && (
+        <SkillsPanel cwd={conversation.cwd} onClose={() => setShowSkills(false)} />
       )}
       {showSystemPrompt && conversation && (
         <SystemPromptModal

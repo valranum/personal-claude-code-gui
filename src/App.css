@@ -5388,3 +5388,108 @@ body,
 .sysprompt-btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
 }
+
+/* Skills panel */
+.skills-toast {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.skills-toast-error {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.skills-toast-success {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.skills-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 16px;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.skills-empty p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.skills-empty-hint {
+  font-size: 12px !important;
+  color: var(--text-tertiary);
+  opacity: 0.7;
+}
+
+.skills-install-section {
+  margin-top: 16px;
+}
+
+.skills-install-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.skills-install-row .mcp-input {
+  flex: 1;
+}
+
+.skills-install-row .mcp-add-btn {
+  white-space: nowrap;
+}
+
+.skills-install-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+.skills-no-cli {
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.skills-no-cli p {
+  margin: 0 0 8px;
+}
+
+.skills-no-cli p:last-child {
+  margin-bottom: 0;
+}
+
+.skills-no-cli code {
+  background: var(--bg-hover);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.skills-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--text-tertiary);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

@@ -17,6 +17,8 @@ export class AgentSession {
   sessionId?: string;
   mcpServers?: MCPServerConfig[];
   customAgents?: AgentConfig[];
+  skills: string[] = [];
+  slashCommands: string[] = [];
   events: EventEmitter;
   private isRunning = false;
   private abortController: AbortController | null = null;
@@ -106,6 +108,7 @@ export class AgentSession {
       cwd: this.cwd,
       abortController: this.abortController,
       includePartialMessages: true,
+      settingSources: ["user", "project", "local"],
     };
 
     if (this.systemPrompt) {
@@ -168,7 +171,13 @@ export class AgentSession {
 
         if (msg.type === "system" && msg.subtype === "init") {
           this.sessionId = msg.session_id as string;
-          this.emit("init", { sessionId: this.sessionId });
+          this.skills = (msg.skills as string[]) || [];
+          this.slashCommands = (msg.slash_commands as string[]) || [];
+          this.emit("init", {
+            sessionId: this.sessionId,
+            skills: this.skills,
+            slashCommands: this.slashCommands,
+          });
           continue;
         }
 
