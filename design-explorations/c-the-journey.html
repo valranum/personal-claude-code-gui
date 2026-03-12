@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Direction C: The Journey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0f0f12;
+  --bg-card: #18181d;
+  --bg-surface: #1c1c22;
+  --bg-hover: #242430;
+  --text: #ebebf0;
+  --text-mid: #a0a0ab;
+  --text-dim: #6a6a75;
+  --text-ghost: #3d3d46;
+  --accent: #7b93ff;
+  --accent-soft: rgba(123, 147, 255, 0.07);
+  --accent-glow: rgba(123, 147, 255, 0.12);
+  --border: #252530;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+html, body {
+  height: 100%;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ═══════════════════════════════════════
+   FIRST-TIME USER EXPERIENCE
+   ═══════════════════════════════════════ */
+
+.journey-first-time {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  position: relative;
+}
+
+/* ── Step indicators ── */
+.journey-steps {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 48px;
+}
+
+.journey-step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.3s;
+}
+
+.journey-step-dot.active {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.journey-step-dot.completed {
+  background: var(--text-dim);
+}
+
+/* ── Panels ── */
+.journey-panel {
+  width: 100%;
+  max-width: 640px;
+  text-align: center;
+  display: none;
+}
+
+.journey-panel.active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: panelIn 0.4s ease-out;
+}
+
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Panel 1: What this is */
+.panel-visual {
+  width: 100%;
+  max-width: 480px;
+  aspect-ratio: 16 / 9;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  margin-bottom: 32px;
+  overflow: hidden;
+  position: relative;
+}
+
+.panel-visual-scene {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  padding: 20px;
+  gap: 12px;
+}
+
+/* Scene 1: Prompt → Website */
+.scene-prompt-side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+}
+
+.scene-prompt-bubble {
+  background: rgba(123, 147, 255, 0.1);
+  border: 1px solid rgba(123, 147, 255, 0.15);
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-align: left;
+}
+
+.scene-prompt-text {
+  font-size: 11px;
+  color: var(--text-mid);
+  line-height: 1.5;
+}
+
+.scene-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-ghost);
+}
+
+.scene-result-side {
+  flex: 1;
+  background: rgba(255,255,255,0.03);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+}
+
+.scene-result-nav {
+  height: 6px;
+  width: 100%;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+}
+
+.scene-result-hero {
+  height: 30%;
+  background: rgba(123, 147, 255, 0.06);
+  border-radius: 6px;
+}
+
+.scene-result-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.scene-result-block {
+  background: rgba(255,255,255,0.03);
+  border-radius: 4px;
+}
+
+/* Scene 2: Iterate */
+.scene-chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+  padding: 12px;
+}
+
+.scene-msg {
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 10px;
+  line-height: 1.4;
+  max-width: 85%;
+}
+
+.scene-msg-user {
+  background: rgba(123, 147, 255, 0.1);
+  color: var(--text-mid);
+  align-self: flex-end;
+  text-align: right;
+}
+
+.scene-msg-ai {
+  background: rgba(255,255,255,0.04);
+  color: var(--text-dim);
+  align-self: flex-start;
+}
+
+.scene-preview {
+  flex: 1;
+  background: rgba(255,255,255,0.02);
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  gap: 6px;
+}
+
+.scene-preview-change {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(123, 147, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scene-preview-change::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.5;
+}
+
+.panel-title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.8px;
+  margin-bottom: 10px;
+  line-height: 1.2;
+}
+
+.panel-desc {
+  font-size: 15px;
+  color: var(--text-dim);
+  line-height: 1.55;
+  max-width: 380px;
+  margin-bottom: 36px;
+}
+
+/* ── Navigation buttons ── */
+.journey-nav {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.journey-nav-btn {
+  padding: 10px 28px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.journey-nav-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.journey-nav-primary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.journey-nav-secondary {
+  background: none;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+
+.journey-nav-secondary:hover {
+  color: var(--text-mid);
+  border-color: var(--text-ghost);
+}
+
+.journey-skip {
+  position: absolute;
+  top: 32px;
+  right: 36px;
+  font-size: 13px;
+  color: var(--text-ghost);
+  background: none;
+  border: none;
+  font-family: var(--font);
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: color 0.2s;
+}
+
+.journey-skip:hover {
+  color: var(--text-dim);
+}
+
+/* ── Panel 3: Prompt (final step) ── */
+.journey-input-wrap {
+  width: 100%;
+  max-width: 540px;
+  position: relative;
+  margin-bottom: 24px;
+}
+
+.journey-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 20px 20px 52px;
+  font-size: 15px;
+  line-height: 1.55;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  outline: none;
+  resize: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.journey-textarea::placeholder {
+  color: var(--text-ghost);
+}
+
+.journey-textarea:focus {
+  border-color: rgba(123, 147, 255, 0.4);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.journey-input-footer {
+  position: absolute;
+  bottom: 12px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.journey-input-hint {
+  font-size: 12px;
+  color: var(--text-ghost);
+}
+
+.journey-send {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s;
+}
+
+.journey-send:hover {
+  transform: scale(1.08);
+}
+
+/* ═══════════════════════════════════════
+   RETURNING USER EXPERIENCE
+   (below the fold — scroll to see)
+   ═══════════════════════════════════════ */
+
+.divider-section {
+  width: 100%;
+  padding: 80px 24px 40px;
+  text-align: center;
+}
+
+.divider-line {
+  width: 100%;
+  max-width: 800px;
+  height: 1px;
+  background: var(--border);
+  margin: 0 auto 40px;
+}
+
+.divider-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-ghost);
+}
+
+.journey-returning {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 24px 120px;
+}
+
+/* ── Returning header ── */
+.returning-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 32px;
+}
+
+.returning-greeting {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.8px;
+  line-height: 1.2;
+}
+
+.returning-greeting-dim {
+  color: var(--text-dim);
+  font-weight: 400;
+}
+
+.returning-new-btn {
+  font-size: 13px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid rgba(123, 147, 255, 0.15);
+  border-radius: 10px;
+  padding: 8px 18px;
+  font-family: var(--font);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.returning-new-btn:hover {
+  background: var(--accent-glow);
+}
+
+/* ── Quick prompt ── */
+.returning-prompt-wrap {
+  position: relative;
+  margin-bottom: 48px;
+}
+
+.returning-prompt {
+  width: 100%;
+  padding: 16px 52px 16px 18px;
+  font-size: 14px;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.returning-prompt::placeholder {
+  color: var(--text-ghost);
+}
+
+.returning-prompt:focus {
+  border-color: rgba(123, 147, 255, 0.4);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.returning-prompt-send {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.85;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.returning-prompt-send:hover {
+  opacity: 1;
+}
+
+/* ── Recent projects as visual cards ── */
+.returning-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-ghost);
+  margin-bottom: 14px;
+}
+
+.returning-projects {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.returning-project-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.returning-project-card:hover {
+  border-color: rgba(123, 147, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.project-card-preview {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  position: relative;
+  overflow: hidden;
+}
+
+.project-card-thumb {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  gap: 4px;
+}
+
+.thumb-type-portfolio {
+  background: linear-gradient(135deg, #1a1520 0%, #221a2e 100%);
+}
+
+.thumb-type-landing {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+.thumb-type-dashboard {
+  background: linear-gradient(135deg, #111820 0%, #151a25 100%);
+}
+
+.thumb-row {
+  height: 4px;
+  width: 60%;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+}
+
+.thumb-row:first-child {
+  width: 40%;
+  height: 5px;
+  background: rgba(255,255,255,0.12);
+}
+
+.thumb-blocks {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.thumb-block {
+  background: rgba(255,255,255,0.04);
+  border-radius: 3px;
+}
+
+.project-card-info {
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.project-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.project-card-time {
+  font-size: 11px;
+  color: var(--text-ghost);
+}
+
+/* ── Open folder row ── */
+.returning-open-folder {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.open-folder-btn {
+  font-size: 13px;
+  color: var(--text-ghost);
+  background: none;
+  border: none;
+  font-family: var(--font);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  transition: color 0.2s, background 0.2s;
+}
+
+.open-folder-btn:hover {
+  color: var(--text-dim);
+  background: var(--bg-hover);
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════
+     FIRST-TIME USER EXPERIENCE
+     ═══════════════════════════════════════ -->
+
+<div class="journey-first-time" id="firstTime">
+  <button class="journey-skip" onclick="skipToReturning()">Skip intro</button>
+
+  <div class="journey-steps">
+    <div class="journey-step-dot active" id="dot1"></div>
+    <div class="journey-step-dot" id="dot2"></div>
+    <div class="journey-step-dot" id="dot3"></div>
+  </div>
+
+  <!-- Panel 1: Describe → Build -->
+  <div class="journey-panel active" id="panel1">
+    <div class="panel-visual">
+      <div class="panel-visual-scene">
+        <div class="scene-prompt-side">
+          <div class="scene-prompt-bubble">
+            <div class="scene-prompt-text">"A portfolio site with a dark theme and a grid of my projects"</div>
+          </div>
+        </div>
+        <div class="scene-arrow">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="scene-result-side">
+          <div class="scene-result-nav"></div>
+          <div class="scene-result-hero"></div>
+          <div class="scene-result-grid">
+            <div class="scene-result-block"></div>
+            <div class="scene-result-block"></div>
+            <div class="scene-result-block"></div>
+            <div class="scene-result-block"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <h2 class="panel-title">Describe it. Claude builds it.</h2>
+    <p class="panel-desc">Just say what you want in plain words. No code, no technical jargon. Claude handles the rest.</p>
+    <div class="journey-nav">
+      <button class="journey-nav-btn journey-nav-primary" onclick="goToPanel(2)">Next</button>
+    </div>
+  </div>
+
+  <!-- Panel 2: Iterate together -->
+  <div class="journey-panel" id="panel2">
+    <div class="panel-visual">
+      <div class="panel-visual-scene">
+        <div class="scene-chat">
+          <div class="scene-msg scene-msg-user">Make the header larger</div>
+          <div class="scene-msg scene-msg-ai">Done! I also adjusted the spacing to keep it balanced.</div>
+          <div class="scene-msg scene-msg-user">Add a contact form at the bottom</div>
+          <div class="scene-msg scene-msg-ai">Added. It has name, email, and message fields.</div>
+        </div>
+        <div class="scene-preview">
+          <div style="height:5px;width:100%;background:rgba(255,255,255,0.06);border-radius:3px"></div>
+          <div style="height:24px;background:rgba(255,255,255,0.04);border-radius:4px"></div>
+          <div style="flex:1;background:rgba(255,255,255,0.02);border-radius:4px"></div>
+          <div style="height:30px;background:rgba(123,147,255,0.06);border-radius:4px"></div>
+          <div class="scene-preview-change"></div>
+        </div>
+      </div>
+    </div>
+    <h2 class="panel-title">Refine it with conversation.</h2>
+    <p class="panel-desc">Ask for changes naturally. "Make the font bigger." "Add a dark mode." Claude updates your project in real time.</p>
+    <div class="journey-nav">
+      <button class="journey-nav-btn journey-nav-secondary" onclick="goToPanel(1)">Back</button>
+      <button class="journey-nav-btn journey-nav-primary" onclick="goToPanel(3)">Next</button>
+    </div>
+  </div>
+
+  <!-- Panel 3: Start building -->
+  <div class="journey-panel" id="panel3">
+    <h2 class="panel-title" style="margin-bottom: 8px;">Ready. What should we make?</h2>
+    <p class="panel-desc" style="margin-bottom: 32px;">Describe your first project below. Be as detailed or as vague as you'd like.</p>
+    <div class="journey-input-wrap">
+      <textarea class="journey-textarea" placeholder="A personal website for a photographer with a minimal, gallery-focused design..."></textarea>
+      <div class="journey-input-footer">
+        <span class="journey-input-hint">Press Enter to start</span>
+        <button class="journey-send" aria-label="Send">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="journey-nav">
+      <button class="journey-nav-btn journey-nav-secondary" onclick="goToPanel(2)">Back</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════
+     DIVIDER
+     ═══════════════════════════════════════ -->
+
+<div class="divider-section">
+  <div class="divider-line"></div>
+  <div class="divider-label">Returning user experience (below)</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════
+     RETURNING USER EXPERIENCE
+     ═══════════════════════════════════════ -->
+
+<div class="journey-returning" id="returning">
+
+  <div class="returning-header">
+    <h1 class="returning-greeting">
+      Welcome back. <span class="returning-greeting-dim">What's next?</span>
+    </h1>
+    <button class="returning-new-btn">+ New project</button>
+  </div>
+
+  <div class="returning-prompt-wrap">
+    <input class="returning-prompt" placeholder="Start something new — describe what you'd like to build..." />
+    <button class="returning-prompt-send" aria-label="Send">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+        <polyline points="12 5 19 12 12 19"></polyline>
+      </svg>
+    </button>
+  </div>
+
+  <div class="returning-section-label">Pick up where you left off</div>
+  <div class="returning-projects">
+
+    <div class="returning-project-card">
+      <div class="project-card-preview">
+        <div class="project-card-thumb thumb-type-portfolio">
+          <div class="thumb-row"></div>
+          <div class="thumb-row"></div>
+          <div class="thumb-blocks">
+            <div class="thumb-block"></div>
+            <div class="thumb-block"></div>
+            <div class="thumb-block"></div>
+            <div class="thumb-block"></div>
+          </div>
+        </div>
+      </div>
+      <div class="project-card-info">
+        <span class="project-card-name">my-portfolio</span>
+        <span class="project-card-time">2h ago</span>
+      </div>
+    </div>
+
+    <div class="returning-project-card">
+      <div class="project-card-preview">
+        <div class="project-card-thumb thumb-type-landing">
+          <div class="thumb-row"></div>
+          <div class="thumb-row"></div>
+          <div class="thumb-blocks">
+            <div class="thumb-block" style="grid-column:1/-1;min-height:20px"></div>
+            <div class="thumb-block"></div>
+            <div class="thumb-block"></div>
+          </div>
+        </div>
+      </div>
+      <div class="project-card-info">
+        <span class="project-card-name">client-landing</span>
+        <span class="project-card-time">1d ago</span>
+      </div>
+    </div>
+
+    <div class="returning-project-card">
+      <div class="project-card-preview">
+        <div class="project-card-thumb thumb-type-dashboard">
+          <div class="thumb-row" style="width:30%"></div>
+          <div class="thumb-row" style="width:50%"></div>
+          <div class="thumb-blocks" style="grid-template-columns:1fr 1fr 1fr">
+            <div class="thumb-block"></div>
+            <div class="thumb-block"></div>
+            <div class="thumb-block"></div>
+            <div class="thumb-block" style="grid-column:1/-1;min-height:24px"></div>
+          </div>
+        </div>
+      </div>
+      <div class="project-card-info">
+        <span class="project-card-name">analytics-dash</span>
+        <span class="project-card-time">3d ago</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="returning-open-folder">
+    <button class="open-folder-btn">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4.5C2 3.67 2.67 3 3.5 3H6.5L8 4.5H12.5C13.33 4.5 14 5.17 14 6V11.5C14 12.33 13.33 13 12.5 13H3.5C2.67 13 2 12.33 2 11.5V4.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      Open a different folder
+    </button>
+  </div>
+
+</div>
+
+<script>
+function goToPanel(n) {
+  document.querySelectorAll('.journey-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.journey-step-dot').forEach((d, i) => {
+    d.classList.remove('active', 'completed');
+    if (i < n - 1) d.classList.add('completed');
+    if (i === n - 1) d.classList.add('active');
+  });
+  document.getElementById('panel' + n).classList.add('active');
+}
+
+function skipToReturning() {
+  document.getElementById('returning').scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+
+</body>
+</html>
