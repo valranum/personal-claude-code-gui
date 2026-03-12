@@ -106,6 +106,7 @@ interface DockableLayoutProps {
   onToggleTheme: () => void;
   conversation: Conversation | null;
   onGoHome?: () => void;
+  isWelcome?: boolean;
 }
 
 export function DockableLayout({
@@ -117,6 +118,7 @@ export function DockableLayout({
   onToggleTheme,
   conversation,
   onGoHome,
+  isWelcome,
 }: DockableLayoutProps) {
   const [layout, setLayout] = useState<LayoutState>(loadLayout);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -615,16 +617,20 @@ export function DockableLayout({
   const poppedOutPanels = panelDefs.filter((p) => poppedOut.has(p.id) && layout[p.id].visible);
 
   return (
-    <div className={`fp-layout${resizingEdge || resizingPinnedHeight ? " is-resizing" : ""}`} ref={layoutRef}>
-      {renderPinnedSlot("left")}
-      {renderResizeHandle("left")}
+    <div className={`fp-layout${resizingEdge || resizingPinnedHeight ? " is-resizing" : ""}${isWelcome ? " fp-welcome" : ""}`} ref={layoutRef}>
+      {!isWelcome && renderPinnedSlot("left")}
+      {!isWelcome && renderResizeHandle("left")}
 
       <div className="fp-center-column">
-        {renderPinnedSlot("top")}
-        {renderResizeHandle("top")}
+        {!isWelcome && renderPinnedSlot("top")}
+        {!isWelcome && renderResizeHandle("top")}
 
         <div className="fp-center">
-          {centerPanels.length > 0 ? (
+          {isWelcome ? (
+            <div className="fp-center-panel fp-center-panel-welcome">
+              <div className="fp-body fp-center-body">{mainContent}</div>
+            </div>
+          ) : centerPanels.length > 0 ? (
             centerPanels.map((p) => (
               <div key={p.id} className="fp-center-panel">
                 <div
@@ -666,14 +672,14 @@ export function DockableLayout({
           ) : null}
         </div>
 
-        {renderResizeHandle("bottom")}
-        {renderPinnedSlot("bottom")}
+        {!isWelcome && renderResizeHandle("bottom")}
+        {!isWelcome && renderPinnedSlot("bottom")}
       </div>
 
-      {renderResizeHandle("right")}
-      {renderPinnedSlot("right")}
+      {!isWelcome && renderResizeHandle("right")}
+      {!isWelcome && renderPinnedSlot("right")}
 
-      {floatingPanels.map((p) => (
+      {!isWelcome && floatingPanels.map((p) => (
         <FloatingPanel
           key={p.id}
           id={p.id}
@@ -693,7 +699,7 @@ export function DockableLayout({
         </FloatingPanel>
       ))}
 
-      {poppedOutPanels.map((p) => {
+      {!isWelcome && poppedOutPanels.map((p) => {
         const cfg = layout[p.id];
         const isHoriz = cfg.pinnedPosition === "left" || cfg.pinnedPosition === "right";
         const w = cfg.pinned ? (isHoriz ? cfg.pinnedSize : 600) : cfg.isCenter ? 800 : cfg.width || 600;

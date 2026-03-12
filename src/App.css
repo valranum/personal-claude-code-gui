@@ -3729,20 +3729,62 @@ body,
   gap: 8px;
 }
 
-.welcome-skip-link {
+/* ── Welcome Secondary Row ── */
+.welcome-secondary-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.welcome-secondary-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: none;
   border: none;
   color: var(--text-muted);
   font-size: 13px;
   font-family: var(--font-sans);
   cursor: pointer;
-  padding: 4px 8px;
-  margin-top: -4px;
+  padding: 4px 4px;
   transition: color 0.15s;
 }
 
-.welcome-skip-link:hover {
+.welcome-secondary-link svg {
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.welcome-secondary-link:hover {
   color: var(--text-secondary);
+}
+
+.welcome-secondary-link:hover svg {
+  opacity: 1;
+}
+
+.welcome-secondary-sep {
+  color: var(--text-muted);
+  opacity: 0.4;
+  font-size: 13px;
+  user-select: none;
+}
+
+/* ── Welcome full-width layout ── */
+.fp-layout.fp-welcome .fp-center-column {
+  flex: 1;
+}
+
+.fp-center-panel-welcome {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.fp-center-panel-welcome .fp-center-body {
+  flex: 1;
 }
 
 /* ── Recent Projects ── */
