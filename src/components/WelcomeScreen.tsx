@@ -296,9 +296,6 @@ export function WelcomeScreen({
                 <span className="welcome-recent-name">
                   {project.cwd.split("/").pop()}
                 </span>
-                <span className="welcome-recent-path">
-                  {shortenPath(project.cwd)}
-                </span>
                 <span className="welcome-recent-time">
                   {timeAgo(project.updatedAt)}
                 </span>

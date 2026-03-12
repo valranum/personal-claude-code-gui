@@ -23,6 +23,7 @@ interface PanelConfig {
   pinnedPosition: DockPosition;
   pinnedSize: number;
   pinnedHeight?: number | null;
+  splitRatio?: number;
   isCenter: boolean;
 }
 
@@ -38,15 +39,17 @@ const STORAGE_KEY = "dock-layout";
 
 function getDefaults(): LayoutState {
   const h = window.innerHeight;
+  const w = window.innerWidth;
+  const filesWidth = Math.round(w * 0.2);
   return {
     chats: {
       x: 16, y: 16, width: 280, height: Math.max(300, h - 80),
-      visible: true, pinned: true, pinnedPosition: "left", pinnedSize: 280,
+      visible: false, pinned: true, pinnedPosition: "right", pinnedSize: 280,
       isCenter: false,
     },
     files: {
-      x: 16, y: 16, width: 280, height: Math.max(300, h - 80),
-      visible: true, pinned: true, pinnedPosition: "right", pinnedSize: 280,
+      x: 16, y: 16, width: filesWidth, height: Math.max(300, h - 80),
+      visible: true, pinned: true, pinnedPosition: "left", pinnedSize: filesWidth,
       isCenter: false,
     },
     main: {
@@ -75,9 +78,16 @@ function loadLayout(): LayoutState {
           if (!parsed.zOrder.includes("preview")) parsed.zOrder.push("preview");
         }
         parsed.main.visible = true;
-        if (!ALL_PANEL_IDS.some((id) => parsed[id]?.isCenter && parsed[id]?.visible)) {
-          parsed.main.isCenter = true;
+        parsed.main.isCenter = true;
+        parsed.files.visible = true;
+        parsed.files.pinned = true;
+        parsed.files.isCenter = false;
+        parsed.files.pinnedPosition = "left";
+        if (!parsed.files.pinnedSize || parsed.files.pinnedSize < 200) {
+          parsed.files.pinnedSize = defaults.files.pinnedSize;
         }
+        parsed.chats.visible = false;
+        parsed.chats.isCenter = false;
         return parsed;
       }
     }
@@ -262,9 +272,17 @@ export function DockableLayout({
         const x = ev.clientX - containerRect.left;
         const y = ev.clientY - containerRect.top;
         const edgePx = 60;
+        const cur = layoutStateRef.current;
 
-        if (x < edgePx) setActiveZone("left");
-        else if (x > containerRect.width - edgePx) setActiveZone("right");
+        const leftWidth = Math.max(edgePx, ...ALL_PANEL_IDS
+          .filter((id) => id !== pid && cur[id].pinned && cur[id].pinnedPosition === "left" && cur[id].visible)
+          .map((id) => cur[id].pinnedSize + 8));
+        const rightWidth = Math.max(edgePx, ...ALL_PANEL_IDS
+          .filter((id) => id !== pid && cur[id].pinned && cur[id].pinnedPosition === "right" && cur[id].visible)
+          .map((id) => cur[id].pinnedSize + 8));
+
+        if (x < leftWidth) setActiveZone("left");
+        else if (x > containerRect.width - rightWidth) setActiveZone("right");
         else if (y < edgePx) setActiveZone("top");
         else if (y > containerRect.height - edgePx) setActiveZone("bottom");
         else {
@@ -304,6 +322,7 @@ export function DockableLayout({
               isCenter: false,
               pinnedPosition: zone,
               pinnedSize: isHoriz ? prev[pid].width : Math.min(prev[pid].height, 350),
+              splitRatio: 1,
             },
           }));
         }
@@ -524,6 +543,65 @@ export function DockableLayout({
     };
   }, [resizingPinnedHeight]);
 
+  const [resizingSplit, setResizingSplit] = useState<{ pos: DockPosition; index: number } | null>(null);
+
+  useEffect(() => {
+    if (!resizingSplit) return;
+    const { pos, index } = resizingSplit;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!layoutRef.current) return;
+      const slotEl = layoutRef.current.querySelector(`.fp-pinned-${pos}`);
+      if (!slotEl) return;
+      const slotRect = slotEl.getBoundingClientRect();
+
+      const panels = ALL_PANEL_IDS.filter((id) => {
+        const p = layoutStateRef.current[id];
+        return p.pinned && p.pinnedPosition === pos && p.visible;
+      });
+      if (panels.length < 2 || index >= panels.length - 1) return;
+
+      const aboveId = panels[index];
+      const belowId = panels[index + 1];
+      const totalRatio = panels.reduce((sum, id) => sum + (layoutStateRef.current[id].splitRatio || 1), 0);
+      const totalHeight = slotRect.height;
+
+      let heightBefore = 0;
+      for (let i = 0; i < index; i++) {
+        heightBefore += ((layoutStateRef.current[panels[i]].splitRatio || 1) / totalRatio) * totalHeight;
+      }
+
+      const combinedRatio = (layoutStateRef.current[aboveId].splitRatio || 1) + (layoutStateRef.current[belowId].splitRatio || 1);
+      const combinedHeight = (combinedRatio / totalRatio) * totalHeight;
+      const mouseY = e.clientY - slotRect.top;
+      const newAboveHeight = Math.max(60, Math.min(mouseY - heightBefore, combinedHeight - 60));
+      const newAboveRatio = (newAboveHeight / combinedHeight) * combinedRatio;
+      const newBelowRatio = combinedRatio - newAboveRatio;
+
+      setLayout((prev) => ({
+        ...prev,
+        [aboveId]: { ...prev[aboveId], splitRatio: newAboveRatio },
+        [belowId]: { ...prev[belowId], splitRatio: newBelowRatio },
+      }));
+    };
+
+    const handleMouseUp = () => {
+      setResizingSplit(null);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [resizingSplit]);
+
   const renderPinnedSlot = (pos: DockPosition) => {
     const panels = pinnedAt(pos);
     if (panels.length === 0) return null;
@@ -546,7 +624,7 @@ export function DockableLayout({
           onMouseDown={() => setResizingEdge(pos)}
         />
         {panels.map((p, i) => (
-          <div key={p.id} className="fp-pinned-panel">
+          <div key={p.id} className="fp-pinned-panel" style={{ flex: layout[p.id].splitRatio || 1 }}>
             <div
               className="fp-header"
               onPointerDown={(e) => {
@@ -582,7 +660,13 @@ export function DockableLayout({
             </div>
             <div className="fp-body">{p.content}</div>
             {i < panels.length - 1 && (
-              <div className="fp-pinned-split-handle" />
+              <div
+                className="fp-pinned-split-handle"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setResizingSplit({ pos, index: i });
+                }}
+              />
             )}
           </div>
         ))}
@@ -613,11 +697,18 @@ export function DockableLayout({
 
   const centerPanels = panelDefs.filter((p) => layout[p.id].isCenter && layout[p.id].visible && !poppedOut.has(p.id));
   const floatingPanels = panelDefs.filter((p) => !layout[p.id].pinned && !layout[p.id].isCenter && layout[p.id].visible && !poppedOut.has(p.id));
+
+  const dropZoneLeft = dragging ? Math.max(60, ...ALL_PANEL_IDS
+    .filter((id) => id !== dragging && layout[id].pinned && layout[id].pinnedPosition === "left" && layout[id].visible)
+    .map((id) => layout[id].pinnedSize + 8)) : 60;
+  const dropZoneRight = dragging ? Math.max(60, ...ALL_PANEL_IDS
+    .filter((id) => id !== dragging && layout[id].pinned && layout[id].pinnedPosition === "right" && layout[id].visible)
+    .map((id) => layout[id].pinnedSize + 8)) : 60;
   const hiddenPanels = panelDefs.filter((p) => !layout[p.id].visible);
   const poppedOutPanels = panelDefs.filter((p) => poppedOut.has(p.id) && layout[p.id].visible);
 
   return (
-    <div className={`fp-layout${resizingEdge || resizingPinnedHeight ? " is-resizing" : ""}${isWelcome ? " fp-welcome" : ""}`} ref={layoutRef}>
+    <div className={`fp-layout${resizingEdge || resizingPinnedHeight || resizingSplit ? " is-resizing" : ""}${isWelcome ? " fp-welcome" : ""}`} ref={layoutRef}>
       {!isWelcome && renderPinnedSlot("left")}
       {!isWelcome && renderResizeHandle("left")}
 
@@ -670,6 +761,126 @@ export function DockableLayout({
               </div>
             ))
           ) : null}
+
+          <div className="fp-toolbar">
+            <div className="fp-toolbar-group fp-toolbar-center">
+              {hiddenPanels.map((p) => (
+                <Tooltip key={p.id} text={`Show ${p.title}`} side="top">
+                  <button
+                    className="fp-toolbar-btn"
+                    onClick={() => handleToggleVisible(p.id)}
+                  >
+                    {getPanelIcon(p.id)}
+                  </button>
+                </Tooltip>
+              ))}
+              {poppedOutPanels.map((p) => (
+                <Tooltip key={p.id} text={`Bring ${p.title} back`} side="top">
+                  <button
+                    className="fp-toolbar-btn fp-toolbar-btn-popout"
+                    onClick={() => handlePopIn(p.id)}
+                  >
+                    {getPanelIcon(p.id)}
+                    <span className="fp-popout-dot" />
+                  </button>
+                </Tooltip>
+              ))}
+            </div>
+            <div className="fp-toolbar-group fp-toolbar-right" ref={settingsRef}>
+              {conversation && onGoHome && (
+                <Tooltip text="Home" side="top">
+                  <button
+                    className="fp-toolbar-btn"
+                    onClick={onGoHome}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M3 8L8 3L13 8M4.5 9.5V13H6.5V10.5H9.5V13H11.5V9.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                </Tooltip>
+              )}
+              <Tooltip text="Settings" side="top">
+                <button
+                  className="fp-toolbar-btn"
+                  onClick={() => setShowSettings((s) => !s)}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M6.86 1.5H9.14L9.6 3.42L11.18 4.15L13.02 3.24L14.76 5.26L13.52 6.92L13.68 8.7L15.36 9.62L14.64 11.86L12.72 11.82L11.58 13.14L11.88 15.08L9.64 15.58L8.6 13.92H7.4L6.36 15.58L4.12 15.08L4.42 13.14L3.28 11.82L1.36 11.86L0.64 9.62L2.32 8.7L2.48 6.92L1.24 5.26L2.98 3.24L4.82 4.15L6.4 3.42L6.86 1.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" transform="scale(0.88) translate(1.1, 0.8)"/>
+                    <circle cx="8" cy="8.5" r="2.2" stroke="currentColor" strokeWidth="1.2"/>
+                  </svg>
+                </button>
+              </Tooltip>
+              {showSettings && (
+                <div className="settings-dropdown settings-dropdown-bottom">
+                  <button
+                    className="settings-option"
+                    onClick={() => { onToggleTheme(); setShowSettings(false); }}
+                  >
+                    {theme === "dark" ? (
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.3"/>
+                        <path d="M8 2V3.5M8 12.5V14M2 8H3.5M12.5 8H14M3.76 3.76L4.82 4.82M11.18 11.18L12.24 12.24M12.24 3.76L11.18 4.82M4.82 11.18L3.76 12.24" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                      </svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <path d="M13.5 9.5a5.5 5.5 0 1 1-7-7 4.5 4.5 0 0 0 7 7Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                    <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+                  </button>
+                  <button
+                    className="settings-option"
+                    onClick={() => { setShowFaq(true); setShowSettings(false); }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.3"/>
+                      <path d="M6 6.5C6 5.4 6.9 4.5 8 4.5C9.1 4.5 10 5.4 10 6.5C10 7.3 9.5 8 8.8 8.3C8.3 8.5 8 8.9 8 9.4V9.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                      <circle cx="8" cy="11.5" r="0.7" fill="currentColor"/>
+                    </svg>
+                    <span>FAQ</span>
+                  </button>
+                  <button
+                    className="settings-option"
+                    onClick={() => { setShowMcp(true); setShowSettings(false); }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                      <rect x="1" y="4" width="14" height="8" rx="2" stroke="currentColor" strokeWidth="1.3"/>
+                      <circle cx="5" cy="8" r="1.5" fill="currentColor"/>
+                      <circle cx="11" cy="8" r="1.5" fill="currentColor"/>
+                      <path d="M5 8H11" stroke="currentColor" strokeWidth="1.3"/>
+                    </svg>
+                    <span>MCP Servers</span>
+                  </button>
+                  <button
+                    className="settings-option"
+                    onClick={() => { setShowSystemPrompt(true); setShowSettings(false); }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                      <path d="M2 3.5C2 2.67 2.67 2 3.5 2H12.5C13.33 2 14 2.67 14 3.5V10.5C14 11.33 13.33 12 12.5 12H5L2 15V3.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+                      <path d="M5 6H11M5 9H9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                    </svg>
+                    <span>System Prompt</span>
+                  </button>
+                  <div className="settings-divider" />
+                  <a
+                    className="settings-option"
+                    href="https://github.com/valranum/personal-claude-code-gui"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowSettings(false)}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                      <path d="M8 1C4.13 1 1 4.13 1 8c0 3.1 2 5.7 4.8 6.6.35.07.48-.15.48-.34V13c-1.95.42-2.36-.94-2.36-.94-.32-.81-.78-1.03-.78-1.03-.64-.44.05-.43.05-.43.7.05 1.07.72 1.07.72.63 1.07 1.65.76 2.05.58.06-.45.24-.76.44-.94-1.56-.18-3.2-.78-3.2-3.47 0-.77.28-1.4.72-1.89-.07-.18-.31-.9.07-1.87 0 0 .59-.19 1.93.72a6.7 6.7 0 0 1 3.5 0c1.34-.91 1.93-.72 1.93-.72.38.97.14 1.69.07 1.87.45.49.72 1.12.72 1.89 0 2.7-1.65 3.29-3.22 3.46.25.22.48.65.48 1.31v1.94c0 .19.13.41.48.34C13 13.7 15 11.1 15 8c0-3.87-3.13-7-7-7Z" fill="currentColor"/>
+                    </svg>
+                    <span>GitHub</span>
+                    <svg width="10" height="10" viewBox="0 0 16 16" fill="none" style={{ marginLeft: "auto" }}>
+                      <path d="M5 3H13V11M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {!isWelcome && renderResizeHandle("bottom")}
@@ -719,133 +930,13 @@ export function DockableLayout({
 
       {dragging && (
         <>
-          <div className={`fp-drop-zone fp-drop-left${activeZone === "left" ? " active" : ""}`} />
-          <div className={`fp-drop-zone fp-drop-right${activeZone === "right" ? " active" : ""}`} />
+          <div className={`fp-drop-zone fp-drop-left${activeZone === "left" ? " active" : ""}`} style={{ width: dropZoneLeft }} />
+          <div className={`fp-drop-zone fp-drop-right${activeZone === "right" ? " active" : ""}`} style={{ width: dropZoneRight }} />
           <div className={`fp-drop-zone fp-drop-top${activeZone === "top" ? " active" : ""}`} />
           <div className={`fp-drop-zone fp-drop-bottom${activeZone === "bottom" ? " active" : ""}`} />
           <div className={`fp-drop-zone fp-drop-center${activeZone === "center" ? " active" : ""}`} />
         </>
       )}
-
-      <div className="fp-toolbar">
-        <div className="fp-toolbar-group fp-toolbar-center">
-          {hiddenPanels.map((p) => (
-            <Tooltip key={p.id} text={`Show ${p.title}`} side="top">
-              <button
-                className="fp-toolbar-btn"
-                onClick={() => handleToggleVisible(p.id)}
-              >
-                {getPanelIcon(p.id)}
-              </button>
-            </Tooltip>
-          ))}
-          {poppedOutPanels.map((p) => (
-            <Tooltip key={p.id} text={`Bring ${p.title} back`} side="top">
-              <button
-                className="fp-toolbar-btn fp-toolbar-btn-popout"
-                onClick={() => handlePopIn(p.id)}
-              >
-                {getPanelIcon(p.id)}
-                <span className="fp-popout-dot" />
-              </button>
-            </Tooltip>
-          ))}
-        </div>
-        <div className="fp-toolbar-group fp-toolbar-right" ref={settingsRef}>
-          {conversation && onGoHome && (
-            <Tooltip text="Home" side="top">
-              <button
-                className="fp-toolbar-btn"
-                onClick={onGoHome}
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M3 8L8 3L13 8M4.5 9.5V13H6.5V10.5H9.5V13H11.5V9.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-            </Tooltip>
-          )}
-          <Tooltip text="Settings" side="top">
-            <button
-              className="fp-toolbar-btn"
-              onClick={() => setShowSettings((s) => !s)}
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M6.86 1.5H9.14L9.6 3.42L11.18 4.15L13.02 3.24L14.76 5.26L13.52 6.92L13.68 8.7L15.36 9.62L14.64 11.86L12.72 11.82L11.58 13.14L11.88 15.08L9.64 15.58L8.6 13.92H7.4L6.36 15.58L4.12 15.08L4.42 13.14L3.28 11.82L1.36 11.86L0.64 9.62L2.32 8.7L2.48 6.92L1.24 5.26L2.98 3.24L4.82 4.15L6.4 3.42L6.86 1.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" transform="scale(0.88) translate(1.1, 0.8)"/>
-                <circle cx="8" cy="8.5" r="2.2" stroke="currentColor" strokeWidth="1.2"/>
-              </svg>
-            </button>
-          </Tooltip>
-          {showSettings && (
-            <div className="settings-dropdown settings-dropdown-bottom">
-              <button
-                className="settings-option"
-                onClick={() => { onToggleTheme(); setShowSettings(false); }}
-              >
-                {theme === "dark" ? (
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                    <circle cx="8" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.3"/>
-                    <path d="M8 2V3.5M8 12.5V14M2 8H3.5M12.5 8H14M3.76 3.76L4.82 4.82M11.18 11.18L12.24 12.24M12.24 3.76L11.18 4.82M4.82 11.18L3.76 12.24" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-                  </svg>
-                ) : (
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                    <path d="M13.5 9.5a5.5 5.5 0 1 1-7-7 4.5 4.5 0 0 0 7 7Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
-                  </svg>
-                )}
-                <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
-              </button>
-              <button
-                className="settings-option"
-                onClick={() => { setShowFaq(true); setShowSettings(false); }}
-              >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.3"/>
-                  <path d="M6 6.5C6 5.4 6.9 4.5 8 4.5C9.1 4.5 10 5.4 10 6.5C10 7.3 9.5 8 8.8 8.3C8.3 8.5 8 8.9 8 9.4V9.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-                  <circle cx="8" cy="11.5" r="0.7" fill="currentColor"/>
-                </svg>
-                <span>FAQ</span>
-              </button>
-              <button
-                className="settings-option"
-                onClick={() => { setShowMcp(true); setShowSettings(false); }}
-              >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <rect x="1" y="4" width="14" height="8" rx="2" stroke="currentColor" strokeWidth="1.3"/>
-                  <circle cx="5" cy="8" r="1.5" fill="currentColor"/>
-                  <circle cx="11" cy="8" r="1.5" fill="currentColor"/>
-                  <path d="M5 8H11" stroke="currentColor" strokeWidth="1.3"/>
-                </svg>
-                <span>MCP Servers</span>
-              </button>
-              <button
-                className="settings-option"
-                onClick={() => { setShowSystemPrompt(true); setShowSettings(false); }}
-              >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <path d="M2 3.5C2 2.67 2.67 2 3.5 2H12.5C13.33 2 14 2.67 14 3.5V10.5C14 11.33 13.33 12 12.5 12H5L2 15V3.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
-                  <path d="M5 6H11M5 9H9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-                </svg>
-                <span>System Prompt</span>
-              </button>
-              <div className="settings-divider" />
-              <a
-                className="settings-option"
-                href="https://github.com/valranum/personal-claude-code-gui"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setShowSettings(false)}
-              >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <path d="M8 1C4.13 1 1 4.13 1 8c0 3.1 2 5.7 4.8 6.6.35.07.48-.15.48-.34V13c-1.95.42-2.36-.94-2.36-.94-.32-.81-.78-1.03-.78-1.03-.64-.44.05-.43.05-.43.7.05 1.07.72 1.07.72.63 1.07 1.65.76 2.05.58.06-.45.24-.76.44-.94-1.56-.18-3.2-.78-3.2-3.47 0-.77.28-1.4.72-1.89-.07-.18-.31-.9.07-1.87 0 0 .59-.19 1.93.72a6.7 6.7 0 0 1 3.5 0c1.34-.91 1.93-.72 1.93-.72.38.97.14 1.69.07 1.87.45.49.72 1.12.72 1.89 0 2.7-1.65 3.29-3.22 3.46.25.22.48.65.48 1.31v1.94c0 .19.13.41.48.34C13 13.7 15 11.1 15 8c0-3.87-3.13-7-7-7Z" fill="currentColor"/>
-                </svg>
-                <span>GitHub</span>
-                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" style={{ marginLeft: "auto" }}>
-                  <path d="M5 3H13V11M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </a>
-            </div>
-          )}
-        </div>
-      </div>
 
       <FaqModal open={showFaq} onClose={() => setShowFaq(false)} />
       {showMcp && conversation && (
