@@ -260,7 +260,7 @@ body,
 }
 
 .fp-pinned-left > .fp-pinned-panel {
-  border-right: 1px solid var(--border);
+  border-right: none;
 }
 
 .fp-pinned-right {
@@ -268,7 +268,7 @@ body,
 }
 
 .fp-pinned-right > .fp-pinned-panel {
-  border-left: 1px solid var(--border);
+  border-left: none;
 }
 
 .fp-pinned-top {
