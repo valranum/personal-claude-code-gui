@@ -19,7 +19,6 @@ const FRAMEWORKS = [
   { id: "vue", label: "Vue" },
   { id: "html", label: "HTML / CSS" },
   { id: "astro", label: "Astro" },
-  { id: "auto", label: "Let Claude decide" },
 ];
 
 function timeAgo(dateStr: string): string {
@@ -133,7 +132,22 @@ export function WelcomeScreen({
 
             {onboardingStep === "framework" && (
               <>
-                <h2 className="welcome-onboarding-title">Pick a framework</h2>
+                <h2 className="welcome-onboarding-title">
+                  Do you have a framework in mind?
+                </h2>
+                <p className="welcome-onboarding-subtitle">
+                  Don't worry if you're not sure — Claude will pick the best option for your project.
+                </p>
+                <button
+                  className={`welcome-framework-default ${framework === "auto" ? "active" : ""}`}
+                  onClick={() => { setFramework("auto"); setOnboardingStep("location"); }}
+                >
+                  <span className="welcome-framework-default-label">No, just help me build something</span>
+                  <span className="welcome-framework-default-hint">Recommended</span>
+                </button>
+                <div className="welcome-framework-divider">
+                  <span>or choose a specific framework</span>
+                </div>
                 <div className="welcome-onboarding-grid">
                   {FRAMEWORKS.map((fw) => (
                     <button
@@ -145,13 +159,14 @@ export function WelcomeScreen({
                     </button>
                   ))}
                 </div>
-                <button
-                  className="welcome-onboarding-next"
-                  disabled={!framework}
-                  onClick={() => setOnboardingStep("location")}
-                >
-                  Next
-                </button>
+                {framework && framework !== "auto" && (
+                  <button
+                    className="welcome-onboarding-next"
+                    onClick={() => setOnboardingStep("location")}
+                  >
+                    Next
+                  </button>
+                )}
               </>
             )}
 

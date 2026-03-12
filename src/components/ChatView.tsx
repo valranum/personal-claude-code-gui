@@ -78,22 +78,6 @@ export function ChatView({
       .catch(() => {});
   }, []);
 
-  const handleEditMessage = useCallback(async (messageId: string) => {
-    if (!conversationId || !onFork) return;
-    try {
-      const res = await apiFetch(`/api/conversations/${conversationId}/fork`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messageId }),
-      });
-      if (!res.ok) throw new Error("Fork failed");
-      const newConv = await res.json();
-      onFork(newConv.id);
-    } catch {
-      addToast("Failed to branch conversation", "error");
-    }
-  }, [conversationId, onFork, addToast]);
-
   const handleOpenArtifact = useCallback((language: string, code: string) => {
     setArtifact({ language, code });
   }, []);
@@ -143,7 +127,6 @@ export function ChatView({
           onSendPrompt={sendMessage}
           onToast={(msg, type) => addToast(msg, type || "info")}
           onOpenArtifact={handleOpenArtifact}
-          onEditMessage={onFork ? handleEditMessage : undefined}
           renderInput={isEmpty ? () => (
             <ChatInput
               onSend={sendMessage}

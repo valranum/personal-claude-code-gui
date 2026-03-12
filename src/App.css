@@ -1396,7 +1396,16 @@ body,
 
 .copy-msg-btn:hover {
   color: var(--text-primary);
-  background: var(--bg-hover);
+  background: none;
+}
+
+.message-bubble.user .copy-msg-btn {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.message-bubble.user .copy-msg-btn:hover {
+  color: rgba(255, 255, 255, 0.9);
+  background: none;
 }
 
 /* ── Message Content ── */
@@ -3901,6 +3910,76 @@ body,
   color: var(--text-primary);
   letter-spacing: -0.3px;
   margin: 0;
+}
+
+.welcome-onboarding-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: -4px 0 8px;
+  line-height: 1.4;
+}
+
+.welcome-framework-default {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 16px 20px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+  text-align: left;
+}
+
+.welcome-framework-default:hover {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.welcome-framework-default.active {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.welcome-framework-default-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.welcome-framework-default-hint {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  opacity: 0.8;
+}
+
+.welcome-framework-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0;
+}
+
+.welcome-framework-divider::before,
+.welcome-framework-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.welcome-framework-divider span {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .welcome-onboarding-grid {
