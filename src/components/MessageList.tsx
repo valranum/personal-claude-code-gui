@@ -18,16 +18,24 @@ interface MessageListProps {
   onOpenArtifact?: (language: string, code: string) => void;
   onEditMessage?: (messageId: string) => void;
   renderInput?: () => React.ReactNode;
+  chatOnly?: boolean;
 }
 
-const SUGGESTED_PROMPTS = [
+const CODE_PROMPTS = [
   { label: "Summarize this project", prompt: "Read the project structure and give me a concise summary of what this codebase does." },
   { label: "Find TODOs", prompt: "Search the codebase for all TODO and FIXME comments and list them." },
   { label: "Explain a file", prompt: "What are the main files in this project? Give me a brief overview of each." },
   { label: "Suggest a new feature", prompt: "Analyze this project and suggest useful features or improvements that could be added." },
 ];
 
-export function MessageList({ messages, streaming, conversationId, onRetry, onSendPrompt, onToast, onOpenArtifact, onEditMessage, renderInput }: MessageListProps) {
+const CHAT_PROMPTS = [
+  { label: "Explain something", prompt: "Can you explain a concept to me in simple terms? I'll tell you what I'm curious about." },
+  { label: "Help me write", prompt: "I need help writing something. Can you help me draft, edit, or brainstorm ideas?" },
+  { label: "Pros and cons", prompt: "I'm trying to make a decision. Can you help me think through the pros and cons?" },
+  { label: "Learn something new", prompt: "Teach me something interesting I probably don't know. Surprise me!" },
+];
+
+export function MessageList({ messages, streaming, conversationId, onRetry, onSendPrompt, onToast, onOpenArtifact, onEditMessage, renderInput, chatOnly }: MessageListProps) {
   const scrollRef = useAutoScroll([messages, streaming]);
   const [sharing, setSharing] = useState(false);
 
@@ -61,7 +69,7 @@ export function MessageList({ messages, streaming, conversationId, onRetry, onSe
           <p style={{ color: 'var(--text-muted)', marginTop: -10, fontSize: 14 }}>(for designers)</p>
           {renderInput && <div className="empty-state-input">{renderInput()}</div>}
           <div className="empty-state-prompts">
-            {SUGGESTED_PROMPTS.map((sp) => (
+            {(chatOnly ? CHAT_PROMPTS : CODE_PROMPTS).map((sp) => (
               <button
                 key={sp.label}
                 className="suggested-prompt-btn"

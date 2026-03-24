@@ -151,6 +151,7 @@ export function ChatView({
           onToast={(msg, type) => addToast(msg, type || "info")}
           onOpenArtifact={handleOpenArtifact}
           onEditMessage={onFork ? handleEditMessage : undefined}
+          chatOnly={!!conversation?.chatOnly}
           renderInput={isEmpty ? () => (
             <ChatInput
               onSend={sendMessage}

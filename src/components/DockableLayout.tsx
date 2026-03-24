@@ -107,6 +107,7 @@ interface DockableLayoutProps {
   conversation: Conversation | null;
   onGoHome?: () => void;
   isWelcome?: boolean;
+  chatOnly?: boolean;
 }
 
 export function DockableLayout({
@@ -119,6 +120,7 @@ export function DockableLayout({
   conversation,
   onGoHome,
   isWelcome,
+  chatOnly,
 }: DockableLayoutProps) {
   const [layout, setLayout] = useState<LayoutState>(loadLayout);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -183,12 +185,15 @@ export function DockableLayout({
     return () => observer.disconnect();
   }, []);
 
-  const panelDefs: PanelDef[] = [
+  const allPanelDefs: PanelDef[] = [
     { id: "chats", title: "Convos", content: chatsContent },
     { id: "files", title: "Files", content: filesContent },
     { id: "main", title: "Chat", content: mainContent },
     { id: "preview", title: "Live Preview", content: previewContent },
   ];
+
+  const hiddenByMode = chatOnly ? new Set<PanelId>(["files", "preview"]) : new Set<PanelId>();
+  const panelDefs = allPanelDefs.filter((p) => !hiddenByMode.has(p.id));
 
   /* ── Unified drag handler ── */
   const handleDragStart = useCallback((panelId: string, e: React.PointerEvent) => {

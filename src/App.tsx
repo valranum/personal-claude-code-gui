@@ -219,6 +219,7 @@ function AppContent() {
         conversation={activeConversation ?? null}
         onGoHome={handleGoHome}
         isWelcome={!activeConversation}
+        chatOnly={!!activeConversation?.chatOnly}
       />
       <CommandPalette
         open={commandPaletteOpen}

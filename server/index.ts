@@ -693,6 +693,7 @@ app.get("/api/conversations", (_req, res) => {
 app.post("/api/conversations", (req, res) => {
   const { title, cwd, model } = req.body;
 
+  const isChatOnly = !cwd;
   const resolvedCwd = cwd ? path.resolve(cwd) : HOME_DIR;
   if (!fs.existsSync(resolvedCwd) || !fs.statSync(resolvedCwd).isDirectory()) {
     res.status(400).json({ error: "Invalid workspace path" });
@@ -706,6 +707,11 @@ app.post("/api/conversations", (req, res) => {
     resolvedCwd,
     model || DEFAULT_MODEL,
   );
+
+  if (isChatOnly) {
+    store.updateConversation(id, { chatOnly: true });
+    file.conversation.chatOnly = true;
+  }
 
   // Apply system prompt: workspace config overrides the default
   const wsConfig = workspaceConfig.getConfig(resolvedCwd);
