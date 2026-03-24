@@ -54,8 +54,15 @@ export function ChatView({
     conversation?.model,
   );
 
+  const promptSentRef = useRef(false);
+
   useEffect(() => {
-    if (initialPrompt && sendMessage && !streaming.isStreaming) {
+    if (!initialPrompt) {
+      promptSentRef.current = false;
+      return;
+    }
+    if (!promptSentRef.current && sendMessage && !streaming.isStreaming) {
+      promptSentRef.current = true;
       sendMessage(initialPrompt);
       onConsumePrompt?.();
     }
