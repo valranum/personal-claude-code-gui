@@ -5485,3 +5485,374 @@ body,
 .sysprompt-btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
 }
+
+/* ── Schedule Modal ── */
+.schedule-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.schedule-modal {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: 520px;
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.schedule-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.schedule-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.schedule-header h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.schedule-back-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.schedule-back-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.schedule-close {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.schedule-close:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.schedule-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.schedule-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.schedule-empty-sub {
+  color: var(--text-tertiary);
+  font-size: 0.82rem;
+  margin-top: 8px;
+}
+
+.schedule-task-list {
+  padding: 8px 0;
+}
+
+.schedule-task-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+
+.schedule-task-item:last-child {
+  border-bottom: none;
+}
+
+.schedule-task-item:hover {
+  background: var(--bg-hover);
+}
+
+.schedule-task-disabled {
+  opacity: 0.5;
+}
+
+.schedule-task-main {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.schedule-task-name {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.schedule-task-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.schedule-task-next {
+  color: var(--accent);
+}
+
+.schedule-task-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.schedule-icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.schedule-icon-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.schedule-enabled {
+  color: var(--accent);
+}
+
+.schedule-disabled-icon {
+  color: var(--text-tertiary);
+}
+
+.schedule-delete-btn:hover {
+  color: #f85149;
+  background: rgba(248, 81, 73, 0.1);
+}
+
+.schedule-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.schedule-create-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.schedule-create-btn:hover {
+  background: var(--accent-hover);
+}
+
+/* Schedule Form */
+.schedule-form {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.schedule-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.schedule-input,
+.schedule-select {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.schedule-input:focus,
+.schedule-select:focus {
+  border-color: var(--accent);
+}
+
+.schedule-textarea {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.15s;
+}
+
+.schedule-textarea:focus {
+  border-color: var(--accent);
+}
+
+.schedule-form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 8px;
+}
+
+.schedule-cancel-btn,
+.schedule-save-btn {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.schedule-cancel-btn {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.schedule-cancel-btn:hover {
+  background: var(--bg-hover);
+}
+
+.schedule-save-btn {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.schedule-save-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.schedule-save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Schedule Run History */
+.schedule-runs {
+  padding: 8px 0;
+}
+
+.schedule-run-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.schedule-run-item:last-child {
+  border-bottom: none;
+}
+
+.schedule-run-status {
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.schedule-run-completed .schedule-run-status {
+  color: #3fb950;
+}
+
+.schedule-run-failed .schedule-run-status {
+  color: #f85149;
+}
+
+.schedule-run-running .schedule-run-status {
+  color: var(--accent);
+}
+
+.schedule-run-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.schedule-run-time {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.schedule-run-duration {
+  color: var(--text-tertiary);
+}
+
+.schedule-run-summary {
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes scheduleSpinner {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.schedule-run-spinner {
+  animation: scheduleSpinner 1s linear infinite;
+}

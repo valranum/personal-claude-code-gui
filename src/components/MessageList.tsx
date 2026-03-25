@@ -26,6 +26,8 @@ const CODE_PROMPTS = [
   { label: "Find TODOs", prompt: "Search the codebase for all TODO and FIXME comments and list them." },
   { label: "Explain a file", prompt: "What are the main files in this project? Give me a brief overview of each." },
   { label: "Suggest a new feature", prompt: "Analyze this project and suggest useful features or improvements that could be added." },
+  { label: "Create a design brief", prompt: "Help me create a structured design brief for a new feature. Ask me about the goal, audience, constraints, and deliverables, then generate a formatted brief document." },
+  { label: "Audit accessibility", prompt: "Scan this project for accessibility issues — missing alt text, color contrast problems, keyboard navigation gaps, and ARIA attributes. Give me a prioritized list of fixes." },
 ];
 
 const CHAT_PROMPTS = [
@@ -33,6 +35,8 @@ const CHAT_PROMPTS = [
   { label: "Help me write", prompt: "I need help writing something. Can you help me draft, edit, or brainstorm ideas?" },
   { label: "Pros and cons", prompt: "I'm trying to make a decision. Can you help me think through the pros and cons?" },
   { label: "Learn something new", prompt: "Teach me something interesting I probably don't know. Surprise me!" },
+  { label: "Draft an email", prompt: "Help me write a professional email. I'll give you the context and who it's for, and you draft it for me." },
+  { label: "Summarize a document", prompt: "I have a long document I need summarized. I'll paste or describe the content, and you condense it into the key points." },
 ];
 
 export function MessageList({ messages, streaming, conversationId, onRetry, onSendPrompt, onToast, onOpenArtifact, onEditMessage, renderInput, chatOnly }: MessageListProps) {

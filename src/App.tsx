@@ -220,6 +220,7 @@ function AppContent() {
         onGoHome={handleGoHome}
         isWelcome={!activeConversation}
         chatOnly={!!activeConversation?.chatOnly}
+        onToast={(msg) => addToast(msg, "info")}
       />
       <CommandPalette
         open={commandPaletteOpen}

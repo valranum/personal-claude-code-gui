@@ -6,6 +6,7 @@ import { Conversation } from "../types";
 import { FaqModal } from "./FaqModal";
 import { MCPConfigPanel } from "./MCPConfigPanel";
 import { SystemPromptModal } from "./SystemPromptModal";
+import { ScheduleModal } from "./ScheduleModal";
 
 type DockPosition = "left" | "right" | "top" | "bottom";
 type DropZone = DockPosition | "center";
@@ -108,6 +109,7 @@ interface DockableLayoutProps {
   onGoHome?: () => void;
   isWelcome?: boolean;
   chatOnly?: boolean;
+  onToast?: (msg: string) => void;
 }
 
 export function DockableLayout({
@@ -121,6 +123,7 @@ export function DockableLayout({
   onGoHome,
   isWelcome,
   chatOnly,
+  onToast,
 }: DockableLayoutProps) {
   const [layout, setLayout] = useState<LayoutState>(loadLayout);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -132,6 +135,7 @@ export function DockableLayout({
   const [showFaq, setShowFaq] = useState(false);
   const [showMcp, setShowMcp] = useState(false);
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -831,6 +835,16 @@ export function DockableLayout({
                 </svg>
                 <span>System Prompt</span>
               </button>
+              <button
+                className="settings-option"
+                onClick={() => { setShowSchedule(true); setShowSettings(false); }}
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.3"/>
+                  <path d="M8 4.5V8L10.5 10.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                </svg>
+                <span>Scheduled Tasks</span>
+              </button>
               <div className="settings-divider" />
               <a
                 className="settings-option"
@@ -862,6 +876,11 @@ export function DockableLayout({
           onClose={() => setShowSystemPrompt(false)}
         />
       )}
+      <ScheduleModal
+        open={showSchedule}
+        onClose={() => setShowSchedule(false)}
+        onToast={onToast}
+      />
     </div>
   );
 }

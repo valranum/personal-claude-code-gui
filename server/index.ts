@@ -10,8 +10,10 @@ import { randomUUID, randomBytes } from "crypto";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import * as store from "./conversation-store.js";
 import * as sessionManager from "./session-manager.js";
-import { ChatMessage, ImageAttachment, MCPServerConfig, AgentConfig } from "./types.js";
+import { ChatMessage, ImageAttachment, MCPServerConfig, AgentConfig, ScheduledTask } from "./types.js";
 import * as workspaceConfig from "./workspace-config.js";
+import * as scheduleStore from "./schedule-store.js";
+import { startScheduler, computeNextRun, onSchedulerEvent, offSchedulerEvent } from "./scheduler.js";
 
 const app = express();
 
@@ -1378,10 +1380,104 @@ app.get("/api/usage", (req, res) => {
   res.json(totals);
 });
 
+// --- Scheduled Tasks API ---
+
+app.get("/api/schedules", (_req, res) => {
+  res.json(scheduleStore.listTasks());
+});
+
+app.post("/api/schedules", (req, res) => {
+  const { name, prompt, frequency, timeOfDay, dayOfWeek, cwd, model } = req.body;
+  if (!name || !prompt || !frequency) {
+    res.status(400).json({ error: "name, prompt, and frequency are required" });
+    return;
+  }
+
+  const task: ScheduledTask = {
+    id: randomUUID(),
+    name,
+    prompt,
+    frequency,
+    timeOfDay: timeOfDay || "09:00",
+    dayOfWeek: dayOfWeek !== undefined ? dayOfWeek : undefined,
+    cwd: cwd || undefined,
+    model: model || undefined,
+    enabled: true,
+    nextRunAt: computeNextRun({ frequency, timeOfDay: timeOfDay || "09:00", dayOfWeek }),
+    createdAt: new Date().toISOString(),
+  };
+
+  scheduleStore.createTask(task);
+  res.json(task);
+});
+
+app.get("/api/schedules/events/stream", (req, res) => {
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+
+  const handler = (event: { type: string; data: unknown }) => {
+    res.write(`data: ${JSON.stringify(event)}\n\n`);
+  };
+
+  onSchedulerEvent(handler);
+  res.write(`data: ${JSON.stringify({ type: "connected", data: {} })}\n\n`);
+
+  const heartbeat = setInterval(() => {
+    res.write(": heartbeat\n\n");
+  }, 15000);
+
+  req.on("close", () => {
+    offSchedulerEvent(handler);
+    clearInterval(heartbeat);
+  });
+});
+
+app.get("/api/schedules/:taskId", (req, res) => {
+  const file = scheduleStore.getTask(req.params.taskId);
+  if (!file) {
+    res.status(404).json({ error: "Task not found" });
+    return;
+  }
+  res.json(file);
+});
+
+app.patch("/api/schedules/:taskId", (req, res) => {
+  const updates = req.body;
+  if (updates.frequency || updates.timeOfDay !== undefined || updates.dayOfWeek !== undefined) {
+    const existing = scheduleStore.getTask(req.params.taskId);
+    if (existing) {
+      const freq = updates.frequency || existing.task.frequency;
+      const tod = updates.timeOfDay !== undefined ? updates.timeOfDay : existing.task.timeOfDay;
+      const dow = updates.dayOfWeek !== undefined ? updates.dayOfWeek : existing.task.dayOfWeek;
+      updates.nextRunAt = computeNextRun({ frequency: freq, timeOfDay: tod, dayOfWeek: dow });
+    }
+  }
+  const updated = scheduleStore.updateTask(req.params.taskId, updates);
+  if (!updated) {
+    res.status(404).json({ error: "Task not found" });
+    return;
+  }
+  res.json(updated);
+});
+
+app.delete("/api/schedules/:taskId", (req, res) => {
+  scheduleStore.deleteTask(req.params.taskId);
+  res.json({ ok: true });
+});
+
+app.get("/api/schedules/:taskId/runs", (req, res) => {
+  const limit = parseInt((req.query.limit as string) || "20", 10);
+  res.json(scheduleStore.getTaskRuns(req.params.taskId, limit));
+});
+
 const PORT = 3001;
 app.listen(PORT, "127.0.0.1", () => {
   console.log(`Claude Code GUI server running on http://localhost:${PORT}`);
   console.log(`Auth token: ${AUTH_TOKEN}`);
+  startScheduler();
 });
 
 // Graceful shutdown
