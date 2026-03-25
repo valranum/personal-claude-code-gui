@@ -141,12 +141,14 @@ export function ChatInput({
   const [atActiveIdx, setAtActiveIdx] = useState(0);
   const [atResults, setAtResults] = useState<string[]>([]);
   const [atStartPos, setAtStartPos] = useState(0);
+  const [listening, setListening] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const slashMenuRef = useRef<HTMLDivElement>(null);
   const modelMenuRef = useRef<HTMLDivElement>(null);
   const atMenuRef = useRef<HTMLDivElement>(null);
   const atDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -370,6 +372,58 @@ export function ChatInput({
     setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const hasSpeech = typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
+  const voiceBaseRef = useRef("");
+
+  const toggleVoice = useCallback(() => {
+    if (listening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setListening(false);
+      return;
+    }
+
+    const SpeechRecognitionAPI = (window as unknown as { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition }).SpeechRecognition
+      || (window as unknown as { webkitSpeechRecognition?: typeof SpeechRecognition }).webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI) return;
+
+    voiceBaseRef.current = value;
+    const recognition = new SpeechRecognitionAPI();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let finalText = "";
+      let interimText = "";
+      for (let i = 0; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalText += transcript;
+        } else {
+          interimText += transcript;
+        }
+      }
+      const base = voiceBaseRef.current;
+      const sep = base && !base.endsWith(" ") ? " " : "";
+      setValue(base + sep + finalText + interimText);
+    };
+
+    recognition.onend = () => {
+      setListening(false);
+      recognitionRef.current = null;
+      textareaRef.current?.focus();
+    };
+
+    recognition.onerror = () => {
+      setListening(false);
+      recognitionRef.current = null;
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setListening(true);
+  }, [listening, value]);
+
   const handlePaste = useCallback(
     async (e: React.ClipboardEvent) => {
       const items = e.clipboardData.items;
@@ -520,6 +574,21 @@ export function ChatInput({
                 </svg>
               </button>
             </Tooltip>
+            {hasSpeech && (
+              <Tooltip text={listening ? "Stop listening" : "Voice input"}>
+                <button
+                  className={`chat-btn voice-btn ${listening ? "voice-active" : ""}`}
+                  onClick={toggleVoice}
+                  disabled={disabled || isStreaming}
+                >
+                  <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+                    <rect x="5.5" y="1.5" width="5" height="8" rx="2.5" stroke="currentColor" strokeWidth="1.3"/>
+                    <path d="M3 7.5C3 10.26 5.24 12.5 8 12.5C10.76 12.5 13 10.26 13 7.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                    <path d="M8 12.5V14.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </Tooltip>
+            )}
           </div>
           <div className="chat-input-bottom-right">
             {contextTokens > 0 && <ContextRing tokens={contextTokens} />}
