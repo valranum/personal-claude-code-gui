@@ -69,8 +69,8 @@ export function MessageList({ messages, streaming, conversationId, onRetry, onSe
       {messages.length === 0 && !streaming.isStreaming && (
         <div className="empty-state">
           <img src={littleDude} alt="Claude" className="empty-logo-img" />
-          <h2>Claude Code</h2>
-          <p style={{ color: 'var(--text-muted)', marginTop: -10, fontSize: 14 }}>(for designers)</p>
+          <h2>Claude for Designers</h2>
+          <p style={{ color: 'var(--text-muted)', marginTop: -10, fontSize: 14 }}>Chat and code with Claude</p>
           {renderInput && <div className="empty-state-input">{renderInput()}</div>}
           <div className="empty-state-prompts">
             {(chatOnly ? CHAT_PROMPTS : CODE_PROMPTS).map((sp) => (

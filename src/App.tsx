@@ -98,7 +98,7 @@ function AppContent() {
     const conv = await createConversation();
     if (conv) {
       setPendingPrompt(
-        "I'm brand new to Claude Code for designers and I have no idea where to start. Can you walk me through what this tool does, what I can build with it, and guide me step by step through my first project? Keep it simple and friendly — assume I have zero coding experience."
+        "I'm brand new to Claude for Designers and I have no idea where to start. Can you walk me through what this tool does, what I can build with it, and guide me step by step through my first project? Keep it simple and friendly — assume I have zero coding experience."
       );
     }
   }, [createConversation]);

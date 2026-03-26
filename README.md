@@ -1,6 +1,6 @@
-# Claude Code (for designers)
+# Claude for Designers
 
-A browser-based coding assistant powered by Claude. Point it at any project folder and chat with Claude to read files, write code, run commands, search the web, and more — all through a clean UI instead of a terminal.
+Chat and code with Claude. Point it at any project folder and use Claude to read files, write code, run commands, search the web, and more — all through a clean UI instead of a terminal.
 
 ## Get Started
 
@@ -158,7 +158,7 @@ Claude runs with full permissions in whatever folder you point it at. It can rea
 ## Project Structure
 
 ```
-claude-code-gui/
+claude-for-designers/
 ├── server/                  # Backend (Express + Claude Agent SDK)
 │   ├── index.ts             # API routes, SSE streaming, share/export/search endpoints
 │   ├── agent-session.ts     # Claude Agent SDK wrapper with abort support

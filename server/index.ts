@@ -1827,7 +1827,7 @@ app.get("/api/schedules/:taskId/runs", (req, res) => {
 
 const PORT = 3001;
 app.listen(PORT, "127.0.0.1", () => {
-  console.log(`Claude Code GUI server running on http://localhost:${PORT}`);
+  console.log(`Claude for Designers server running on http://localhost:${PORT}`);
   console.log(`Auth token: ${AUTH_TOKEN}`);
   startScheduler();
 });

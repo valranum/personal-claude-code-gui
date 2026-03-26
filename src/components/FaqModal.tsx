@@ -2,8 +2,8 @@ import { useEffect, useRef } from "react";
 
 const FAQ_ITEMS = [
   {
-    q: "What is Claude Code for Designers?",
-    a: "It's a visual interface for Claude Code — Anthropic's AI coding agent. You can ask Claude to read, write, and edit code in your project folder, run commands, search the web, and more.",
+    q: "What is Claude for Designers?",
+    a: "It's a visual interface for chatting and coding with Claude — Anthropic's AI. You can ask Claude to read, write, and edit code in your project folder, run commands, search the web, and more.",
   },
   {
     q: "What can I ask Claude to do?",

@@ -728,7 +728,7 @@ export function DockableLayout({
         return (
           <PopoutWindow
             key={p.id}
-            title={`${p.title} — Claude Code`}
+            title={`${p.title} — Claude for Designers`}
             width={Math.max(w, 400)}
             height={Math.max(h, 300)}
             onClose={() => handlePopIn(p.id)}
