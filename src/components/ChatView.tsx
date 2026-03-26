@@ -176,6 +176,19 @@ export function ChatView({
               sendMessage("/compact");
             }}
             onDismiss={dismissCompactSuggestion}
+            onForkWithSummary={conversationId ? async () => {
+              dismissCompactSuggestion();
+              try {
+                const res = await apiFetch(`/api/conversations/${conversationId}/fork-with-summary`, { method: "POST" });
+                if (!res.ok) throw new Error("Fork failed");
+                const newConv = await res.json();
+                onFork?.(newConv.id);
+                addToast("Started fresh session with context summary", "info");
+              } catch {
+                addToast("Failed to start fresh session", "error");
+              }
+            } : undefined}
+            contextPercent={contextTokens / 200_000 * 100}
           />
         )}
         {!isEmpty && conversation && (

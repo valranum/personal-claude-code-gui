@@ -875,6 +875,56 @@ app.post("/api/conversations/:id/fork", (req, res) => {
   res.json(file.conversation);
 });
 
+// Fork conversation with AI-generated summary (fresh context)
+app.post("/api/conversations/:id/fork-with-summary", async (req, res) => {
+  const convFile = store.getConversation(req.params.id);
+  if (!convFile) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  const session = sessionManager.getOrCreateSession(
+    req.params.id,
+    convFile.conversation.cwd,
+    convFile.conversation.model || DEFAULT_MODEL,
+    convFile.conversation.sdkSessionId,
+  );
+
+  try {
+    const { text } = await session.sendMessage(
+      "Summarize the key context from this conversation: what we're building, decisions made, current state of the codebase, and any pending tasks. Be concise but comprehensive — this summary will seed a new conversation.",
+    );
+
+    const newId = randomUUID();
+    const now = new Date().toISOString();
+    store.createConversation(
+      newId,
+      convFile.conversation.title + " (continued)",
+      convFile.conversation.cwd,
+      convFile.conversation.model,
+    );
+    const file = store.getConversation(newId)!;
+    file.messages = [
+      {
+        id: randomUUID(),
+        role: "assistant",
+        content: `**Continuing from previous session:**\n\n${text}`,
+        timestamp: now,
+      },
+    ];
+    file.conversation.forkedFrom = { conversationId: req.params.id, messageId: "" };
+    file.conversation.systemPrompt = convFile.conversation.systemPrompt;
+    file.conversation.updatedAt = now;
+    const fp = path.join(process.cwd(), "data", "conversations", `${newId}.json`);
+    fs.writeFileSync(fp, JSON.stringify(file, null, 2));
+
+    res.json(file.conversation);
+  } catch (err) {
+    console.error("Fork with summary failed:", err);
+    res.status(500).json({ error: "Failed to create summary for new session" });
+  }
+});
+
 // Get messages
 app.get("/api/conversations/:id/messages", (req, res) => {
   const file = store.getConversation(req.params.id);
@@ -1014,6 +1064,14 @@ app.post("/api/conversations/:id/messages", (req, res) => {
     timestamp: new Date().toISOString(),
   };
   store.addMessage(req.params.id, userMsg);
+
+  const lastTurnTokens = convFile.conversation.lastTurnInputTokens || 0;
+  if (lastTurnTokens >= 100_000) {
+    const hint = "\n\nIMPORTANT: Context usage is high. For any complex or multi-step task, prefer delegating to sub-agents (using the Agent tool) so work happens in a fresh context window. Keep your direct responses concise and focused.";
+    if (convFile.conversation.systemPrompt && !convFile.conversation.systemPrompt.includes("Context usage is high")) {
+      convFile.conversation.systemPrompt += hint;
+    }
+  }
 
   const msgWsConfig = workspaceConfig.getConfig(convFile.conversation.cwd);
   const session = sessionManager.getOrCreateSession(
