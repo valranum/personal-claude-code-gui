@@ -1,3 +1,21 @@
+export type WorkflowPhase = "brainstorming" | "spec-review" | "planning" | "ready" | "executing" | "completed";
+
+export interface WorkflowTask {
+  id: string;
+  title: string;
+  status: "pending" | "in_progress" | "completed" | "failed";
+}
+
+export interface WorkflowState {
+  phase: WorkflowPhase;
+  description: string;
+  planId: string;
+  specPath?: string;
+  planPath?: string;
+  tasks?: WorkflowTask[];
+  startedAt: string;
+}
+
 export interface Conversation {
   id: string;
   title: string;
@@ -10,6 +28,7 @@ export interface Conversation {
   lastTurnInputTokens?: number;
   pinned?: boolean;
   forkedFrom?: { conversationId: string; messageId: string };
+  workflow?: WorkflowState;
   createdAt: string;
   updatedAt: string;
 }

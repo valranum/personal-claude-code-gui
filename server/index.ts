@@ -10,7 +10,7 @@ import { randomUUID, randomBytes } from "crypto";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import * as store from "./conversation-store.js";
 import * as sessionManager from "./session-manager.js";
-import { ChatMessage, ImageAttachment, MCPServerConfig, AgentConfig, ScheduledTask } from "./types.js";
+import { ChatMessage, ImageAttachment, MCPServerConfig, AgentConfig, ScheduledTask, WorkflowState, WorkflowPhase } from "./types.js";
 import * as workspaceConfig from "./workspace-config.js";
 import * as scheduleStore from "./schedule-store.js";
 import { startScheduler, computeNextRun, onSchedulerEvent, offSchedulerEvent } from "./scheduler.js";
@@ -828,6 +828,74 @@ app.patch("/api/conversations/:id", (req, res) => {
   res.json(updated!.conversation);
 });
 
+// Workflow: get state
+app.get("/api/conversations/:id/workflow", (req, res) => {
+  const convFile = store.getConversation(req.params.id);
+  if (!convFile) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  res.json(convFile.conversation.workflow || null);
+});
+
+// Workflow: start or update
+app.patch("/api/conversations/:id/workflow", (req, res) => {
+  const convFile = store.getConversation(req.params.id);
+  if (!convFile) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  const updates = req.body as Partial<WorkflowState>;
+  const current = convFile.conversation.workflow;
+
+  if (!current && !updates.phase) {
+    res.status(400).json({ error: "phase is required to start a workflow" });
+    return;
+  }
+
+  const workflow: WorkflowState = current
+    ? { ...current, ...updates }
+    : {
+        phase: updates.phase || "brainstorming",
+        description: updates.description || "",
+        planId: updates.planId || randomUUID().slice(0, 8),
+        startedAt: new Date().toISOString(),
+        ...updates,
+      };
+
+  store.updateConversation(req.params.id, { workflow });
+  res.json(workflow);
+});
+
+// Workflow: read plan file from workspace
+app.get("/api/conversations/:id/workflow/plan-file", (req, res) => {
+  const convFile = store.getConversation(req.params.id);
+  if (!convFile) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  const workflow = convFile.conversation.workflow;
+  if (!workflow?.planPath) {
+    res.status(404).json({ error: "No plan file path set" });
+    return;
+  }
+
+  const planFullPath = path.resolve(convFile.conversation.cwd, workflow.planPath);
+  if (!isPathWithinHome(planFullPath)) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+
+  try {
+    const content = fs.readFileSync(planFullPath, "utf-8");
+    res.json({ path: workflow.planPath, content });
+  } catch {
+    res.status(404).json({ error: "Plan file not found" });
+  }
+});
+
 // Delete conversation
 app.delete("/api/conversations/:id", (req, res) => {
   sessionManager.removeSession(req.params.id);
@@ -999,6 +1067,71 @@ app.get("/api/conversations/:id/stream", (req, res) => {
   });
 });
 
+function getWorkflowSystemPromptHint(workflow: WorkflowState): string | null {
+  const plansDir = "docs/plans";
+  const specFile = `${plansDir}/${workflow.planId}-spec.md`;
+  const planFile = `${plansDir}/${workflow.planId}-plan.md`;
+
+  switch (workflow.phase) {
+    case "brainstorming":
+      return `\n\n--- WORKFLOW MODE: BRAINSTORMING ---
+You are in a structured development workflow. The user wants to build: "${workflow.description}"
+
+Your job in this phase:
+1. Ask 3-5 targeted clarifying questions to understand scope, constraints, and preferences
+2. Once the user answers, propose 2-3 distinct implementation approaches with trade-offs
+3. When the user approves an approach, write a design spec document to \`${specFile}\`
+
+The spec document should include:
+- **Overview**: What we're building and why
+- **Requirements**: Functional and non-functional requirements
+- **Architecture**: Chosen approach with rationale
+- **Data Model**: Key data structures (if applicable)
+- **Components/Modules**: High-level breakdown
+- **Open Questions**: Anything still to be decided
+
+After writing the spec, tell the user: "Spec saved. When you're ready, run \`/execute\` to generate an implementation plan and start building."
+Do NOT start coding yet. This phase is about understanding and documenting.`;
+
+    case "planning":
+      return `\n\n--- WORKFLOW MODE: PLANNING ---
+You are creating an implementation plan from the spec at \`${workflow.specPath || specFile}\`.
+
+Read the spec document, then write an implementation plan to \`${planFile}\`.
+
+The plan should contain numbered tasks, each with:
+- **Task title**: Clear, action-oriented name
+- **Description**: What needs to be done
+- **Files**: Which files to create or modify
+- **Acceptance criteria**: How to verify it's done
+
+Design each task to be independently executable by a sub-agent. Tasks should be ordered by dependency (foundational first).
+Keep tasks focused — each should be completable in one sub-agent session.
+
+After writing the plan, tell the user it's ready and they can run \`/execute\` to start building.`;
+
+    case "executing":
+      return `\n\n--- WORKFLOW MODE: EXECUTING ---
+You are executing an implementation plan. Use the Agent tool to dispatch sub-agents for each task.
+
+For each task:
+1. Dispatch a sub-agent with the task description, relevant file paths, and acceptance criteria
+2. Wait for the sub-agent to complete before moving to the next task
+3. Report progress after each task completes
+
+If a sub-agent fails or produces incomplete work, retry once with more specific instructions before flagging it to the user.
+Keep the user informed of progress: which task is running, what was completed, and what's next.`;
+
+    case "completed":
+    case "ready":
+    case "spec-review":
+      return null;
+
+    default:
+      return null;
+  }
+}
+
 // Send message
 app.post("/api/conversations/:id/messages", (req, res) => {
   const { content, images } = req.body as {
@@ -1073,13 +1206,23 @@ app.post("/api/conversations/:id/messages", (req, res) => {
     }
   }
 
+  // Augment system prompt based on active workflow phase
+  let sessionSystemPrompt = convFile.conversation.systemPrompt;
+  const workflow = convFile.conversation.workflow;
+  if (workflow && sessionSystemPrompt) {
+    const workflowHint = getWorkflowSystemPromptHint(workflow);
+    if (workflowHint && !sessionSystemPrompt.includes("WORKFLOW MODE")) {
+      sessionSystemPrompt += workflowHint;
+    }
+  }
+
   const msgWsConfig = workspaceConfig.getConfig(convFile.conversation.cwd);
   const session = sessionManager.getOrCreateSession(
     req.params.id,
     convFile.conversation.cwd,
     convFile.conversation.model || DEFAULT_MODEL,
     convFile.conversation.sdkSessionId,
-    convFile.conversation.systemPrompt,
+    sessionSystemPrompt,
     msgWsConfig.mcpServers.length > 0 ? msgWsConfig.mcpServers : undefined,
     msgWsConfig.customAgents && msgWsConfig.customAgents.length > 0 ? msgWsConfig.customAgents : undefined,
   );
@@ -1098,6 +1241,40 @@ app.post("/api/conversations/:id/messages", (req, res) => {
         timestamp: new Date().toISOString(),
       };
       store.addMessage(req.params.id, assistantMsg);
+
+      // Auto-detect workflow phase transitions from tool calls
+      const currentConv = store.getConversation(req.params.id);
+      const activeWorkflow = currentConv?.conversation.workflow;
+      if (activeWorkflow && toolCalls.length > 0) {
+        const getWritePath = (tc: { name: string; input: Record<string, unknown> }): string | null => {
+          if (tc.name !== "Write" && tc.name !== "Edit" && tc.name !== "write" && tc.name !== "edit") return null;
+          const p = tc.input.file_path || tc.input.path || tc.input.file;
+          return typeof p === "string" ? p : null;
+        };
+
+        for (const tc of toolCalls) {
+          const writtenPath = getWritePath(tc);
+          if (!writtenPath) continue;
+
+          if (activeWorkflow.phase === "brainstorming" && writtenPath.includes(`${activeWorkflow.planId}-spec`)) {
+            store.updateConversation(req.params.id, {
+              workflow: { ...activeWorkflow, phase: "ready" as WorkflowPhase, specPath: writtenPath },
+            });
+            session.events.emit("event", {
+              type: "workflow_update",
+              data: { phase: "ready", specPath: writtenPath },
+            });
+          } else if (activeWorkflow.phase === "planning" && writtenPath.includes(`${activeWorkflow.planId}-plan`)) {
+            store.updateConversation(req.params.id, {
+              workflow: { ...activeWorkflow, phase: "ready" as WorkflowPhase, planPath: writtenPath },
+            });
+            session.events.emit("event", {
+              type: "workflow_update",
+              data: { phase: "ready", planPath: writtenPath },
+            });
+          }
+        }
+      }
 
       if (isFirstMessage) {
         const title = await generateTitle(content, text);

@@ -48,7 +48,9 @@ const SLASH_COMMANDS = [
   { command: "/context", description: "Show context window usage breakdown" },
   { command: "/cost", description: "Show session cost and token summary" },
   { command: "/diff", description: "Show uncommitted git changes" },
+  { command: "/execute", description: "Execute the current implementation plan with sub-agents" },
   { command: "/export", description: "Export conversation as markdown or /export json" },
+  { command: "/plan", description: "Start spec-driven development: brainstorm → plan → execute" },
   { command: "/review", description: "Ask Claude to review uncommitted changes" },
   { command: "/status", description: "Show model, workspace, and session info" },
   { command: "/usage", description: "Usage for this chat, or /usage week · month · 14" },
@@ -259,8 +261,16 @@ export function ChatInput({
     if (shouldShow) setSlashActiveIdx(0);
   }, [value, filteredCommands.length]);
 
+  const COMMANDS_WITH_ARGS = new Set(["/plan"]);
+
   const selectSlashCommand = useCallback(
     (cmd: string) => {
+      if (COMMANDS_WITH_ARGS.has(cmd)) {
+        setValue(cmd + " ");
+        setShowSlashMenu(false);
+        setTimeout(() => textareaRef.current?.focus(), 0);
+        return;
+      }
       onSend(cmd);
       setValue("");
       setShowSlashMenu(false);

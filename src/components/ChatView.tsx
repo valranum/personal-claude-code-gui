@@ -6,6 +6,7 @@ import { ChatInput } from "./ChatInput";
 
 import { CompactSuggestionBanner } from "./CompactSuggestionBanner";
 import { ContextStatusBar } from "./ContextStatusBar";
+import { WorkflowBanner } from "./WorkflowBanner";
 import { ArtifactPanel } from "./ArtifactPanel";
 import { FileEditorPanel } from "./FileEditorPanel";
 import { Conversation } from "../types";
@@ -44,7 +45,7 @@ export function ChatView({
   onConsumePrompt,
 }: ChatViewProps) {
   const { addToast } = useToast();
-  const { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens, sessionCost } = useChat(
+  const { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens, sessionCost, workflowState } = useChat(
     conversationId,
     (title) => {
       if (conversationId) onTitleUpdate(conversationId, title);
@@ -143,6 +144,13 @@ export function ChatView({
   return (
     <div className={chatViewClass}>
       <div className="chat-main">
+        {workflowState && (
+          <WorkflowBanner
+            workflow={workflowState}
+            onExecute={() => sendMessage("/execute")}
+            isStreaming={streaming.isStreaming}
+          />
+        )}
         <MessageList
           messages={messages}
           streaming={streaming}
