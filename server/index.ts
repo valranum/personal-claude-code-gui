@@ -1067,6 +1067,11 @@ app.post("/api/conversations/:id/messages", (req, res) => {
         type: "context_usage",
         data: { inputTokens: tokenUsage.inputTokens },
       });
+
+      session.events.emit("event", {
+        type: "usage",
+        data: { estimatedCost: tokenUsage.estimatedCost },
+      });
     }
   }).catch((err) => {
     console.error("Message processing failed:", err);

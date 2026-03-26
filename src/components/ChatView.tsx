@@ -5,6 +5,7 @@ import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
 
 import { CompactSuggestionBanner } from "./CompactSuggestionBanner";
+import { ContextStatusBar } from "./ContextStatusBar";
 import { ArtifactPanel } from "./ArtifactPanel";
 import { FileEditorPanel } from "./FileEditorPanel";
 import { Conversation } from "../types";
@@ -43,7 +44,7 @@ export function ChatView({
   onConsumePrompt,
 }: ChatViewProps) {
   const { addToast } = useToast();
-  const { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens } = useChat(
+  const { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens, sessionCost } = useChat(
     conversationId,
     (title) => {
       if (conversationId) onTitleUpdate(conversationId, title);
@@ -175,6 +176,16 @@ export function ChatView({
               sendMessage("/compact");
             }}
             onDismiss={dismissCompactSuggestion}
+          />
+        )}
+        {!isEmpty && conversation && (
+          <ContextStatusBar
+            model={conversation.model || ""}
+            contextTokens={contextTokens}
+            contextWindow={200_000}
+            sessionCost={sessionCost}
+            sessionStart={conversation.createdAt}
+            isStreaming={streaming.isStreaming}
           />
         )}
         {!isEmpty && (

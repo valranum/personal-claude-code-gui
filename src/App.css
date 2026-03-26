@@ -2546,6 +2546,70 @@ body,
   line-height: 1.5;
 }
 
+/* ── Context Status Bar ── */
+.status-bar {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 16px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.status-bar-section {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.status-bar-dot {
+  margin: 0 10px;
+  opacity: 0.35;
+}
+
+.status-bar-track {
+  width: 60px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--border);
+  overflow: hidden;
+  margin-right: 6px;
+}
+
+.status-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease, background-color 0.3s ease;
+}
+
+.status-bar-fill--healthy { background: var(--success); }
+.status-bar-fill--warning { background: var(--warning); }
+.status-bar-fill--critical { background: var(--error); }
+
+.status-bar-pct { transition: color 0.3s ease; }
+.status-bar-pct--healthy { color: var(--text-muted); }
+.status-bar-pct--warning { color: var(--warning); }
+.status-bar-pct--critical { color: var(--error); }
+
+.status-bar-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-right: 8px;
+  animation: status-bar-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes status-bar-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
 /* ── Compact Suggestion Banner ── */
 .compact-suggestion-banner {
   display: flex;
