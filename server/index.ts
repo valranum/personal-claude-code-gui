@@ -1380,6 +1380,118 @@ app.get("/api/usage", (req, res) => {
   res.json(totals);
 });
 
+// --- Claude Code Stats (reads ~/.claude/) ---
+
+const CLAUDE_DIR = process.env.CLAUDE_CONFIG_DIR || path.join(HOME_DIR, ".claude");
+
+function readClaudeStats() {
+  const result: {
+    dailyActivity: { date: string; messageCount: number; sessionCount: number; toolCallCount: number }[];
+    activeSessions: { pid: number; sessionId: string; cwd: string; startedAt: number }[];
+    blockElapsedMs: number | null;
+    todayTokens: { input: number; output: number; cached: number };
+  } = {
+    dailyActivity: [],
+    activeSessions: [],
+    blockElapsedMs: null,
+    todayTokens: { input: 0, output: 0, cached: 0 },
+  };
+
+  // 1. Daily activity from stats-cache.json
+  try {
+    const statsPath = path.join(CLAUDE_DIR, "stats-cache.json");
+    if (fs.existsSync(statsPath)) {
+      const stats = JSON.parse(fs.readFileSync(statsPath, "utf-8"));
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const cutoff = thirtyDaysAgo.toISOString().slice(0, 10);
+      result.dailyActivity = (stats.dailyActivity || []).filter(
+        (d: { date: string }) => d.date >= cutoff,
+      );
+    }
+  } catch { /* ignore corrupt stats */ }
+
+  // 2. Active sessions
+  try {
+    const sessDir = path.join(CLAUDE_DIR, "sessions");
+    if (fs.existsSync(sessDir)) {
+      const files = fs.readdirSync(sessDir).filter((f) => f.endsWith(".json"));
+      for (const f of files) {
+        try {
+          const sess = JSON.parse(fs.readFileSync(path.join(sessDir, f), "utf-8"));
+          if (sess.pid && sess.sessionId && sess.startedAt) {
+            let alive = false;
+            try { process.kill(sess.pid, 0); alive = true; } catch { /* not running */ }
+            if (alive) {
+              result.activeSessions.push({
+                pid: sess.pid,
+                sessionId: sess.sessionId,
+                cwd: sess.cwd || "",
+                startedAt: sess.startedAt,
+              });
+            }
+          }
+        } catch { /* skip bad session files */ }
+      }
+    }
+  } catch { /* ignore */ }
+
+  // 3. Block timer — earliest active session determines block start
+  if (result.activeSessions.length > 0) {
+    const earliest = Math.min(...result.activeSessions.map((s) => s.startedAt));
+    const BLOCK_MS = 5 * 60 * 60 * 1000;
+    const elapsed = Date.now() - earliest;
+    result.blockElapsedMs = elapsed % BLOCK_MS;
+  }
+
+  // 4. Today's token totals from transcript JSONL files
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const projectsDir = path.join(CLAUDE_DIR, "projects");
+    if (fs.existsSync(projectsDir)) {
+      const projFolders = fs.readdirSync(projectsDir);
+      for (const folder of projFolders) {
+        const projPath = path.join(projectsDir, folder);
+        try {
+          if (!fs.statSync(projPath).isDirectory()) continue;
+          const jsonlFiles = fs.readdirSync(projPath).filter((f) => f.endsWith(".jsonl") && !f.startsWith("agent-"));
+          for (const jf of jsonlFiles) {
+            try {
+              const fp = path.join(projPath, jf);
+              const stat = fs.statSync(fp);
+              if (stat.mtime.toISOString().slice(0, 10) < today) continue;
+              const content = fs.readFileSync(fp, "utf-8");
+              const lines = content.split("\n").filter(Boolean);
+              for (const line of lines) {
+                try {
+                  const entry = JSON.parse(line);
+                  if (entry.timestamp && entry.timestamp.startsWith(today) && entry.message?.usage) {
+                    const u = entry.message.usage;
+                    result.todayTokens.input += u.input_tokens || 0;
+                    result.todayTokens.output += u.output_tokens || 0;
+                    result.todayTokens.cached += (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
+                  }
+                } catch { /* skip bad lines */ }
+              }
+            } catch { /* skip unreadable files */ }
+          }
+        } catch { /* skip bad folders */ }
+      }
+    }
+  } catch { /* ignore */ }
+
+  return result;
+}
+
+app.get("/api/claude-stats", (_req, res) => {
+  try {
+    res.json(readClaudeStats());
+  } catch (err) {
+    console.error("Failed to read Claude stats:", err);
+    res.status(500).json({ error: "Failed to read Claude stats" });
+  }
+});
+
 // --- Scheduled Tasks API ---
 
 app.get("/api/schedules", (_req, res) => {

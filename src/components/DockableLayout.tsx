@@ -7,6 +7,7 @@ import { FaqModal } from "./FaqModal";
 import { MCPConfigPanel } from "./MCPConfigPanel";
 import { SystemPromptModal } from "./SystemPromptModal";
 import { ScheduleModal } from "./ScheduleModal";
+import { UsageStatsBar } from "./UsageStatsBar";
 
 type DockPosition = "left" | "right" | "top" | "bottom";
 type DropZone = DockPosition | "center";
@@ -136,6 +137,9 @@ export function DockableLayout({
   const [showMcp, setShowMcp] = useState(false);
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
+  const [showUsageStats, setShowUsageStats] = useState(() => {
+    try { return localStorage.getItem("show-usage-stats") === "true"; } catch { return false; }
+  });
   const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -158,6 +162,14 @@ export function DockableLayout({
   useEffect(() => { activeZoneRef.current = activeZone; }, [activeZone]);
   useEffect(() => { containerSizeRef.current = containerSize; }, [containerSize]);
   useEffect(() => { saveLayout(layout); }, [layout]);
+
+  const toggleUsageStats = useCallback(() => {
+    setShowUsageStats((prev) => {
+      const next = !prev;
+      try { localStorage.setItem("show-usage-stats", String(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
 
   // Auto-promote a panel to center if center is empty
   useEffect(() => {
@@ -736,6 +748,8 @@ export function DockableLayout({
         </>
       )}
 
+      {showUsageStats && <UsageStatsBar />}
+
       <div className="fp-toolbar">
         <div className="fp-toolbar-group fp-toolbar-center">
           {hiddenPanels.map((p) => (
@@ -844,6 +858,15 @@ export function DockableLayout({
                   <path d="M8 4.5V8L10.5 10.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
                 </svg>
                 <span>Scheduled Tasks</span>
+              </button>
+              <button
+                className="settings-option"
+                onClick={() => { toggleUsageStats(); setShowSettings(false); }}
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <path d="M4 2V14M8 4V14M12 6V14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                <span>{showUsageStats ? "Hide Usage Stats" : "Show Usage Stats"}</span>
               </button>
               <div className="settings-divider" />
               <a

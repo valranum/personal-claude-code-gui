@@ -5856,3 +5856,84 @@ body,
 .schedule-run-spinner {
   animation: scheduleSpinner 1s linear infinite;
 }
+
+/* ── Usage Stats Bar ── */
+.usage-stats-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 4px 16px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.usage-stats-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.usage-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.usage-stat-item svg {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.usage-stat-label {
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.usage-stat-value {
+  color: var(--text-primary);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-stat-secondary {
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-stat-block .usage-block-ring {
+  flex-shrink: 0;
+}
+
+.usage-stat-sparkline {
+  margin-left: auto;
+}
+
+.usage-sparkline {
+  display: block;
+}
+
+.usage-sparkline-bar {
+  fill: var(--accent);
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.usage-sparkline-bar:last-child {
+  opacity: 1;
+}
+
+@media (max-width: 700px) {
+  .usage-stats-bar {
+    gap: 10px;
+    padding: 4px 10px;
+  }
+
+  .usage-stat-sparkline {
+    display: none;
+  }
+}
