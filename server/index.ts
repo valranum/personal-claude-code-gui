@@ -10,8 +10,10 @@ import { randomUUID, randomBytes } from "crypto";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import * as store from "./conversation-store.js";
 import * as sessionManager from "./session-manager.js";
-import { ChatMessage, ImageAttachment, MCPServerConfig, AgentConfig, SkillInfo } from "./types.js";
+import { ChatMessage, ImageAttachment, MCPServerConfig, AgentConfig, SkillInfo, ScheduledTask } from "./types.js";
 import * as workspaceConfig from "./workspace-config.js";
+import * as scheduleStore from "./schedule-store.js";
+import { startScheduler, computeNextRun, onSchedulerEvent, offSchedulerEvent } from "./scheduler.js";
 
 const app = express();
 
@@ -807,6 +809,7 @@ app.get("/api/conversations", (_req, res) => {
 app.post("/api/conversations", (req, res) => {
   const { title, cwd, model } = req.body;
 
+  const isChatOnly = !cwd;
   const resolvedCwd = cwd ? path.resolve(cwd) : HOME_DIR;
   if (!fs.existsSync(resolvedCwd) || !fs.statSync(resolvedCwd).isDirectory()) {
     res.status(400).json({ error: "Invalid workspace path" });
@@ -820,6 +823,11 @@ app.post("/api/conversations", (req, res) => {
     resolvedCwd,
     model || DEFAULT_MODEL,
   );
+
+  if (isChatOnly) {
+    store.updateConversation(id, { chatOnly: true });
+    file.conversation.chatOnly = true;
+  }
 
   // Apply system prompt: workspace config overrides the default
   const wsConfig = workspaceConfig.getConfig(resolvedCwd);
@@ -981,6 +989,56 @@ app.post("/api/conversations/:id/fork", (req, res) => {
   res.json(file.conversation);
 });
 
+// Fork conversation with AI-generated summary (fresh context)
+app.post("/api/conversations/:id/fork-with-summary", async (req, res) => {
+  const convFile = store.getConversation(req.params.id);
+  if (!convFile) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  const session = sessionManager.getOrCreateSession(
+    req.params.id,
+    convFile.conversation.cwd,
+    convFile.conversation.model || DEFAULT_MODEL,
+    convFile.conversation.sdkSessionId,
+  );
+
+  try {
+    const { text } = await session.sendMessage(
+      "Summarize the key context from this conversation: what we're building, decisions made, current state of the codebase, and any pending tasks. Be concise but comprehensive — this summary will seed a new conversation.",
+    );
+
+    const newId = randomUUID();
+    const now = new Date().toISOString();
+    store.createConversation(
+      newId,
+      convFile.conversation.title + " (continued)",
+      convFile.conversation.cwd,
+      convFile.conversation.model,
+    );
+    const file = store.getConversation(newId)!;
+    file.messages = [
+      {
+        id: randomUUID(),
+        role: "assistant",
+        content: `**Continuing from previous session:**\n\n${text}`,
+        timestamp: now,
+      },
+    ];
+    file.conversation.forkedFrom = { conversationId: req.params.id, messageId: "" };
+    file.conversation.systemPrompt = convFile.conversation.systemPrompt;
+    file.conversation.updatedAt = now;
+    const fp = path.join(process.cwd(), "data", "conversations", `${newId}.json`);
+    fs.writeFileSync(fp, JSON.stringify(file, null, 2));
+
+    res.json(file.conversation);
+  } catch (err) {
+    console.error("Fork with summary failed:", err);
+    res.status(500).json({ error: "Failed to create summary for new session" });
+  }
+});
+
 // Get messages
 app.get("/api/conversations/:id/messages", (req, res) => {
   const file = store.getConversation(req.params.id);
@@ -1121,6 +1179,14 @@ app.post("/api/conversations/:id/messages", (req, res) => {
   };
   store.addMessage(req.params.id, userMsg);
 
+  const lastTurnTokens = convFile.conversation.lastTurnInputTokens || 0;
+  if (lastTurnTokens >= 100_000) {
+    const hint = "\n\nIMPORTANT: Context usage is high. For any complex or multi-step task, prefer delegating to sub-agents (using the Agent tool) so work happens in a fresh context window. Keep your direct responses concise and focused.";
+    if (convFile.conversation.systemPrompt && !convFile.conversation.systemPrompt.includes("Context usage is high")) {
+      convFile.conversation.systemPrompt += hint;
+    }
+  }
+
   const msgWsConfig = workspaceConfig.getConfig(convFile.conversation.cwd);
   const session = sessionManager.getOrCreateSession(
     req.params.id,
@@ -1172,6 +1238,11 @@ app.post("/api/conversations/:id/messages", (req, res) => {
       session.events.emit("event", {
         type: "context_usage",
         data: { inputTokens: tokenUsage.inputTokens },
+      });
+
+      session.events.emit("event", {
+        type: "usage",
+        data: { estimatedCost: tokenUsage.estimatedCost },
       });
     }
   }).catch((err) => {
@@ -1486,10 +1557,216 @@ app.get("/api/usage", (req, res) => {
   res.json(totals);
 });
 
+// --- Claude Code Stats (reads ~/.claude/) ---
+
+const CLAUDE_DIR = process.env.CLAUDE_CONFIG_DIR || path.join(HOME_DIR, ".claude");
+
+function readClaudeStats() {
+  const result: {
+    dailyActivity: { date: string; messageCount: number; sessionCount: number; toolCallCount: number }[];
+    activeSessions: { pid: number; sessionId: string; cwd: string; startedAt: number }[];
+    blockElapsedMs: number | null;
+    todayTokens: { input: number; output: number; cached: number };
+  } = {
+    dailyActivity: [],
+    activeSessions: [],
+    blockElapsedMs: null,
+    todayTokens: { input: 0, output: 0, cached: 0 },
+  };
+
+  // 1. Daily activity from stats-cache.json
+  try {
+    const statsPath = path.join(CLAUDE_DIR, "stats-cache.json");
+    if (fs.existsSync(statsPath)) {
+      const stats = JSON.parse(fs.readFileSync(statsPath, "utf-8"));
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const cutoff = thirtyDaysAgo.toISOString().slice(0, 10);
+      result.dailyActivity = (stats.dailyActivity || []).filter(
+        (d: { date: string }) => d.date >= cutoff,
+      );
+    }
+  } catch { /* ignore corrupt stats */ }
+
+  // 2. Active sessions
+  try {
+    const sessDir = path.join(CLAUDE_DIR, "sessions");
+    if (fs.existsSync(sessDir)) {
+      const files = fs.readdirSync(sessDir).filter((f) => f.endsWith(".json"));
+      for (const f of files) {
+        try {
+          const sess = JSON.parse(fs.readFileSync(path.join(sessDir, f), "utf-8"));
+          if (sess.pid && sess.sessionId && sess.startedAt) {
+            let alive = false;
+            try { process.kill(sess.pid, 0); alive = true; } catch { /* not running */ }
+            if (alive) {
+              result.activeSessions.push({
+                pid: sess.pid,
+                sessionId: sess.sessionId,
+                cwd: sess.cwd || "",
+                startedAt: sess.startedAt,
+              });
+            }
+          }
+        } catch { /* skip bad session files */ }
+      }
+    }
+  } catch { /* ignore */ }
+
+  // 3. Block timer — earliest active session determines block start
+  if (result.activeSessions.length > 0) {
+    const earliest = Math.min(...result.activeSessions.map((s) => s.startedAt));
+    const BLOCK_MS = 5 * 60 * 60 * 1000;
+    const elapsed = Date.now() - earliest;
+    result.blockElapsedMs = elapsed % BLOCK_MS;
+  }
+
+  // 4. Today's token totals from transcript JSONL files
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const projectsDir = path.join(CLAUDE_DIR, "projects");
+    if (fs.existsSync(projectsDir)) {
+      const projFolders = fs.readdirSync(projectsDir);
+      for (const folder of projFolders) {
+        const projPath = path.join(projectsDir, folder);
+        try {
+          if (!fs.statSync(projPath).isDirectory()) continue;
+          const jsonlFiles = fs.readdirSync(projPath).filter((f) => f.endsWith(".jsonl") && !f.startsWith("agent-"));
+          for (const jf of jsonlFiles) {
+            try {
+              const fp = path.join(projPath, jf);
+              const stat = fs.statSync(fp);
+              if (stat.mtime.toISOString().slice(0, 10) < today) continue;
+              const content = fs.readFileSync(fp, "utf-8");
+              const lines = content.split("\n").filter(Boolean);
+              for (const line of lines) {
+                try {
+                  const entry = JSON.parse(line);
+                  if (entry.timestamp && entry.timestamp.startsWith(today) && entry.message?.usage) {
+                    const u = entry.message.usage;
+                    result.todayTokens.input += u.input_tokens || 0;
+                    result.todayTokens.output += u.output_tokens || 0;
+                    result.todayTokens.cached += (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
+                  }
+                } catch { /* skip bad lines */ }
+              }
+            } catch { /* skip unreadable files */ }
+          }
+        } catch { /* skip bad folders */ }
+      }
+    }
+  } catch { /* ignore */ }
+
+  return result;
+}
+
+app.get("/api/claude-stats", (_req, res) => {
+  try {
+    res.json(readClaudeStats());
+  } catch (err) {
+    console.error("Failed to read Claude stats:", err);
+    res.status(500).json({ error: "Failed to read Claude stats" });
+  }
+});
+
+// --- Scheduled Tasks API ---
+
+app.get("/api/schedules", (_req, res) => {
+  res.json(scheduleStore.listTasks());
+});
+
+app.post("/api/schedules", (req, res) => {
+  const { name, prompt, frequency, timeOfDay, dayOfWeek, cwd, model } = req.body;
+  if (!name || !prompt || !frequency) {
+    res.status(400).json({ error: "name, prompt, and frequency are required" });
+    return;
+  }
+
+  const task: ScheduledTask = {
+    id: randomUUID(),
+    name,
+    prompt,
+    frequency,
+    timeOfDay: timeOfDay || "09:00",
+    dayOfWeek: dayOfWeek !== undefined ? dayOfWeek : undefined,
+    cwd: cwd || undefined,
+    model: model || undefined,
+    enabled: true,
+    nextRunAt: computeNextRun({ frequency, timeOfDay: timeOfDay || "09:00", dayOfWeek }),
+    createdAt: new Date().toISOString(),
+  };
+
+  scheduleStore.createTask(task);
+  res.json(task);
+});
+
+app.get("/api/schedules/events/stream", (req, res) => {
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+
+  const handler = (event: { type: string; data: unknown }) => {
+    res.write(`data: ${JSON.stringify(event)}\n\n`);
+  };
+
+  onSchedulerEvent(handler);
+  res.write(`data: ${JSON.stringify({ type: "connected", data: {} })}\n\n`);
+
+  const heartbeat = setInterval(() => {
+    res.write(": heartbeat\n\n");
+  }, 15000);
+
+  req.on("close", () => {
+    offSchedulerEvent(handler);
+    clearInterval(heartbeat);
+  });
+});
+
+app.get("/api/schedules/:taskId", (req, res) => {
+  const file = scheduleStore.getTask(req.params.taskId);
+  if (!file) {
+    res.status(404).json({ error: "Task not found" });
+    return;
+  }
+  res.json(file);
+});
+
+app.patch("/api/schedules/:taskId", (req, res) => {
+  const updates = req.body;
+  if (updates.frequency || updates.timeOfDay !== undefined || updates.dayOfWeek !== undefined) {
+    const existing = scheduleStore.getTask(req.params.taskId);
+    if (existing) {
+      const freq = updates.frequency || existing.task.frequency;
+      const tod = updates.timeOfDay !== undefined ? updates.timeOfDay : existing.task.timeOfDay;
+      const dow = updates.dayOfWeek !== undefined ? updates.dayOfWeek : existing.task.dayOfWeek;
+      updates.nextRunAt = computeNextRun({ frequency: freq, timeOfDay: tod, dayOfWeek: dow });
+    }
+  }
+  const updated = scheduleStore.updateTask(req.params.taskId, updates);
+  if (!updated) {
+    res.status(404).json({ error: "Task not found" });
+    return;
+  }
+  res.json(updated);
+});
+
+app.delete("/api/schedules/:taskId", (req, res) => {
+  scheduleStore.deleteTask(req.params.taskId);
+  res.json({ ok: true });
+});
+
+app.get("/api/schedules/:taskId/runs", (req, res) => {
+  const limit = parseInt((req.query.limit as string) || "20", 10);
+  res.json(scheduleStore.getTaskRuns(req.params.taskId, limit));
+});
+
 const PORT = 3001;
 app.listen(PORT, "127.0.0.1", () => {
   console.log(`Claude Code GUI server running on http://localhost:${PORT}`);
   console.log(`Auth token: ${AUTH_TOKEN}`);
+  startScheduler();
 });
 
 // Graceful shutdown

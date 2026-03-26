@@ -3,6 +3,7 @@ export interface Conversation {
   title: string;
   cwd: string;
   model: string;
+  chatOnly?: boolean;
   systemPrompt?: string;
   sdkSessionId?: string;
   pinned?: boolean;
@@ -72,4 +73,31 @@ export interface StreamingState {
   thinking: string;
   toolCalls: ToolCallInfo[];
   subagents: SubagentInfo[];
+}
+
+export type TaskFrequency = "hourly" | "daily" | "weekly" | "weekdays";
+
+export interface ScheduledTask {
+  id: string;
+  name: string;
+  prompt: string;
+  frequency: TaskFrequency;
+  timeOfDay?: string;
+  dayOfWeek?: number;
+  cwd?: string;
+  model?: string;
+  enabled: boolean;
+  lastRunAt?: string;
+  nextRunAt: string;
+  createdAt: string;
+}
+
+export interface TaskRun {
+  id: string;
+  taskId: string;
+  conversationId: string;
+  status: "running" | "completed" | "failed";
+  summary?: string;
+  startedAt: string;
+  completedAt?: string;
 }

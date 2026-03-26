@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Direction A: The Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-primary: #111113;
+  --bg-secondary: #1a1a1f;
+  --bg-surface: #1e1e24;
+  --bg-card: #222229;
+  --bg-hover: #2a2a32;
+  --text-primary: #ebebf0;
+  --text-secondary: #8e8e96;
+  --text-muted: #55555e;
+  --accent: #7b93ff;
+  --accent-soft: rgba(123, 147, 255, 0.08);
+  --accent-glow: rgba(123, 147, 255, 0.15);
+  --border: #2a2a32;
+  --border-light: #232329;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+html, body {
+  height: 100%;
+  font-family: var(--font);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.studio {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 24px;
+}
+
+/* ── Header ── */
+.studio-header {
+  width: 100%;
+  max-width: 800px;
+  padding: 40px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wordmark {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: -0.3px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wordmark-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.7;
+}
+
+.header-links {
+  display: flex;
+  gap: 6px;
+}
+
+.header-link {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: color 0.2s, background 0.2s;
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: var(--font);
+}
+
+.header-link:hover {
+  color: var(--text-secondary);
+  background: var(--bg-hover);
+}
+
+/* ── Hero ── */
+.studio-hero {
+  width: 100%;
+  max-width: 680px;
+  text-align: center;
+  padding: 100px 0 0;
+}
+
+.hero-greeting {
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: -1.5px;
+  line-height: 1.15;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.hero-sub {
+  font-size: 16px;
+  color: var(--text-secondary);
+  font-weight: 400;
+  line-height: 1.5;
+  max-width: 420px;
+  margin: 0 auto 36px;
+}
+
+/* ── Input ── */
+.studio-input-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.studio-input {
+  width: 100%;
+  padding: 18px 56px 18px 22px;
+  font-size: 15px;
+  font-family: var(--font);
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  resize: none;
+  line-height: 1.5;
+  min-height: 58px;
+}
+
+.studio-input::placeholder {
+  color: var(--text-muted);
+}
+
+.studio-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.studio-input-btn {
+  position: absolute;
+  right: 10px;
+  bottom: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s, opacity 0.15s;
+  opacity: 0.9;
+}
+
+.studio-input-btn:hover {
+  transform: scale(1.05);
+  opacity: 1;
+}
+
+.studio-input-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── Inspiration Section ── */
+.studio-inspiration {
+  width: 100%;
+  max-width: 800px;
+  margin-top: 72px;
+  padding-bottom: 80px;
+}
+
+.inspiration-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.inspiration-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.inspiration-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.inspiration-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.card-preview {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  position: relative;
+}
+
+.card-preview-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 8px;
+}
+
+/* Stylized mini-previews */
+.preview-landing .card-preview-inner {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.preview-landing .p-headline {
+  width: 65%;
+  height: 10px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 5px;
+}
+
+.preview-landing .p-subline {
+  width: 40%;
+  height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+}
+
+.preview-landing .p-btn {
+  width: 60px;
+  height: 20px;
+  background: var(--accent);
+  border-radius: 10px;
+  margin-top: 6px;
+  opacity: 0.7;
+}
+
+.preview-portfolio .card-preview-inner {
+  background: linear-gradient(135deg, #1a1520 0%, #221a2e 100%);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 6px;
+  padding: 14px;
+}
+
+.preview-portfolio .p-img {
+  background: rgba(255,255,255,0.06);
+  border-radius: 6px;
+}
+
+.preview-portfolio .p-img:nth-child(1) {
+  background: rgba(180, 130, 255, 0.12);
+}
+
+.preview-portfolio .p-img:nth-child(3) {
+  background: rgba(130, 200, 255, 0.1);
+}
+
+.preview-dashboard .card-preview-inner {
+  background: linear-gradient(135deg, #111820 0%, #151a25 100%);
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 6px;
+  padding: 14px;
+}
+
+.preview-dashboard .p-stat {
+  background: rgba(255,255,255,0.05);
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.preview-dashboard .p-stat-num {
+  width: 50%;
+  height: 8px;
+  background: rgba(123, 147, 255, 0.25);
+  border-radius: 4px;
+}
+
+.preview-dashboard .p-stat-label {
+  width: 70%;
+  height: 5px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+}
+
+.preview-dashboard .p-chart {
+  grid-column: 1 / -1;
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+.preview-dashboard .p-chart::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60%;
+  background: linear-gradient(180deg, transparent, rgba(123, 147, 255, 0.08));
+  border-radius: 0 0 6px 6px;
+}
+
+.preview-marketing .card-preview-inner {
+  background: linear-gradient(135deg, #1a1915 0%, #1f1e18 100%);
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.preview-marketing .p-hero-img {
+  width: 80%;
+  height: 40%;
+  background: rgba(255, 200, 100, 0.08);
+  border-radius: 8px;
+}
+
+.preview-marketing .p-text-block {
+  width: 55%;
+  height: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+}
+
+.preview-marketing .p-text-sm {
+  width: 35%;
+  height: 5px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 3px;
+}
+
+.preview-blog .card-preview-inner {
+  background: linear-gradient(135deg, #151a15 0%, #1a2018 100%);
+  gap: 6px;
+  padding: 14px;
+}
+
+.preview-blog .p-post {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.preview-blog .p-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(100, 200, 130, 0.1);
+  flex-shrink: 0;
+}
+
+.preview-blog .p-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.preview-blog .p-line {
+  height: 5px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 3px;
+}
+
+.preview-blog .p-line:first-child {
+  width: 80%;
+  height: 6px;
+  background: rgba(255,255,255,0.12);
+}
+
+.preview-ecommerce .card-preview-inner {
+  background: linear-gradient(135deg, #1a1518 0%, #201a1e 100%);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 14px;
+}
+
+.preview-ecommerce .p-product {
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  gap: 6px;
+}
+
+.preview-ecommerce .p-product-img {
+  flex: 1;
+  background: rgba(255, 140, 180, 0.08);
+  border-radius: 4px;
+  min-height: 20px;
+}
+
+.preview-ecommerce .p-product-name {
+  width: 70%;
+  height: 5px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+}
+
+.preview-ecommerce .p-product-price {
+  width: 35%;
+  height: 5px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+}
+
+.card-info {
+  padding: 12px 16px 14px;
+}
+
+.card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.card-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ── Recent Projects ── */
+.studio-recents {
+  width: 100%;
+  max-width: 800px;
+  margin-top: 48px;
+  padding-bottom: 80px;
+}
+
+.recents-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.recent-item:hover {
+  background: var(--bg-hover);
+}
+
+.recent-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.recent-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.recent-time {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ── Subtle helper text ── */
+.studio-helper {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.helper-link {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: var(--font);
+  transition: color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.helper-link:hover {
+  color: var(--text-secondary);
+}
+
+.helper-sep {
+  color: var(--text-muted);
+  opacity: 0.3;
+  font-size: 13px;
+}
+</style>
+</head>
+<body>
+<div class="studio">
+
+  <!-- Header -->
+  <header class="studio-header">
+    <div class="wordmark">
+      <span class="wordmark-dot"></span>
+      Claude Code
+    </div>
+    <div class="header-links">
+      <button class="header-link">Open folder</button>
+      <button class="header-link">What is this?</button>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="studio-hero">
+    <h1 class="hero-greeting">What do you want to make?</h1>
+    <p class="hero-sub">Describe your idea and Claude will build it. No coding knowledge needed.</p>
+    <div class="studio-input-wrap">
+      <textarea class="studio-input" placeholder="A portfolio site with a dark theme and smooth animations..." rows="1"></textarea>
+      <button class="studio-input-btn" aria-label="Send">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      </button>
+    </div>
+
+    <div class="studio-helper">
+      <button class="helper-link">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4.5C2 3.67 2.67 3 3.5 3H6.5L8 4.5H12.5C13.33 4.5 14 5.17 14 6V11.5C14 12.33 13.33 13 12.5 13H3.5C2.67 13 2 12.33 2 11.5V4.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+        I already have a project
+      </button>
+      <span class="helper-sep">&middot;</span>
+      <button class="helper-link">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3.5C2 2.67 2.67 2 3.5 2H12.5C13.33 2 14 2.67 14 3.5V10.5C14 11.33 13.33 12 12.5 12H5L2 15V3.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+        Just chat, no project
+      </button>
+    </div>
+  </section>
+
+  <!-- Inspiration Grid -->
+  <section class="studio-inspiration">
+    <div class="inspiration-label">Or start from an idea</div>
+    <div class="inspiration-grid">
+
+      <div class="inspiration-card">
+        <div class="card-preview preview-landing">
+          <div class="card-preview-inner">
+            <div class="p-headline"></div>
+            <div class="p-subline"></div>
+            <div class="p-btn"></div>
+          </div>
+        </div>
+        <div class="card-info">
+          <div class="card-title">Landing Page</div>
+          <div class="card-desc">Hero, features, pricing</div>
+        </div>
+      </div>
+
+      <div class="inspiration-card">
+        <div class="card-preview preview-portfolio">
+          <div class="card-preview-inner">
+            <div class="p-img"></div>
+            <div class="p-img"></div>
+            <div class="p-img"></div>
+            <div class="p-img"></div>
+          </div>
+        </div>
+        <div class="card-info">
+          <div class="card-title">Portfolio</div>
+          <div class="card-desc">Showcase your work beautifully</div>
+        </div>
+      </div>
+
+      <div class="inspiration-card">
+        <div class="card-preview preview-dashboard">
+          <div class="card-preview-inner">
+            <div class="p-stat"><div class="p-stat-num"></div><div class="p-stat-label"></div></div>
+            <div class="p-stat"><div class="p-stat-num"></div><div class="p-stat-label"></div></div>
+            <div class="p-stat"><div class="p-stat-num"></div><div class="p-stat-label"></div></div>
+            <div class="p-chart"></div>
+          </div>
+        </div>
+        <div class="card-info">
+          <div class="card-title">Dashboard</div>
+          <div class="card-desc">Stats, charts, data at a glance</div>
+        </div>
+      </div>
+
+      <div class="inspiration-card">
+        <div class="card-preview preview-marketing">
+          <div class="card-preview-inner">
+            <div class="p-hero-img"></div>
+            <div class="p-text-block"></div>
+            <div class="p-text-sm"></div>
+          </div>
+        </div>
+        <div class="card-info">
+          <div class="card-title">Marketing Site</div>
+          <div class="card-desc">Tell your brand's story</div>
+        </div>
+      </div>
+
+      <div class="inspiration-card">
+        <div class="card-preview preview-blog">
+          <div class="card-preview-inner">
+            <div class="p-post"><div class="p-thumb"></div><div class="p-lines"><div class="p-line"></div><div class="p-line" style="width:60%"></div></div></div>
+            <div class="p-post"><div class="p-thumb"></div><div class="p-lines"><div class="p-line"></div><div class="p-line" style="width:50%"></div></div></div>
+            <div class="p-post"><div class="p-thumb"></div><div class="p-lines"><div class="p-line"></div><div class="p-line" style="width:70%"></div></div></div>
+          </div>
+        </div>
+        <div class="card-info">
+          <div class="card-title">Blog</div>
+          <div class="card-desc">Articles, posts, content</div>
+        </div>
+      </div>
+
+      <div class="inspiration-card">
+        <div class="card-preview preview-ecommerce">
+          <div class="card-preview-inner">
+            <div class="p-product"><div class="p-product-img"></div><div class="p-product-name"></div><div class="p-product-price"></div></div>
+            <div class="p-product"><div class="p-product-img"></div><div class="p-product-name"></div><div class="p-product-price"></div></div>
+            <div class="p-product"><div class="p-product-img"></div><div class="p-product-name"></div><div class="p-product-price"></div></div>
+            <div class="p-product"><div class="p-product-img"></div><div class="p-product-name"></div><div class="p-product-price"></div></div>
+          </div>
+        </div>
+        <div class="card-info">
+          <div class="card-title">Online Store</div>
+          <div class="card-desc">Products, cart, checkout</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Recent Projects -->
+  <section class="studio-recents">
+    <div class="recents-label">Recent projects</div>
+    <div class="recent-item">
+      <svg class="recent-icon" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4.5C2 3.67 2.67 3 3.5 3H6.5L8 4.5H12.5C13.33 4.5 14 5.17 14 6V11.5C14 12.33 13.33 13 12.5 13H3.5C2.67 13 2 12.33 2 11.5V4.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      <span class="recent-name">my-portfolio</span>
+      <span class="recent-time">2h ago</span>
+    </div>
+    <div class="recent-item">
+      <svg class="recent-icon" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4.5C2 3.67 2.67 3 3.5 3H6.5L8 4.5H12.5C13.33 4.5 14 5.17 14 6V11.5C14 12.33 13.33 13 12.5 13H3.5C2.67 13 2 12.33 2 11.5V4.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      <span class="recent-name">client-landing-page</span>
+      <span class="recent-time">1d ago</span>
+    </div>
+    <div class="recent-item">
+      <svg class="recent-icon" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4.5C2 3.67 2.67 3 3.5 3H6.5L8 4.5H12.5C13.33 4.5 14 5.17 14 6V11.5C14 12.33 13.33 13 12.5 13H3.5C2.67 13 2 12.33 2 11.5V4.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      <span class="recent-name">brand-refresh-2026</span>
+      <span class="recent-time">3d ago</span>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

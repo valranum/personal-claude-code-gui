@@ -23,8 +23,8 @@ function formatCost(cost: number): string {
 }
 
 const CONTEXT_WINDOW = 200_000;
-// ~75% of 200k context window — trigger compact suggestion
-const CONTEXT_TOKEN_THRESHOLD = 150_000;
+// ~50% of 200k context window — trigger compact suggestion (degradation begins around 50%)
+const CONTEXT_TOKEN_THRESHOLD = 100_000;
 
 const WORD_TO_NUM: Record<string, number> = {
   one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7,
@@ -97,6 +97,7 @@ export function useChat(
   const [showCompactSuggestion, setShowCompactSuggestion] = useState(false);
   const [contextTokens, _setContextTokens] = useState(0);
   const [skills, setSkills] = useState<SkillInfo[]>([]);
+  const [sessionCost, setSessionCost] = useState(0);
   const setContextTokens = useCallback((v: number) => {
     _setContextTokens(v);
     contextTokensRef.current = v;
@@ -134,11 +135,13 @@ export function useChat(
       setStreaming(EMPTY_STREAMING);
       setShowCompactSuggestion(false);
       setContextTokens(0);
+      setSessionCost(0);
       return;
     }
     setMessages([]);
     setStreaming(EMPTY_STREAMING);
     setContextTokens(0);
+    setSessionCost(0);
     const controller = new AbortController();
     fetchAbortRef.current = controller;
     apiFetch(`/api/conversations/${conversationId}/messages`)
@@ -365,6 +368,14 @@ export function useChat(
             !dismissedRef.current.has(conversationId)
           ) {
             setShowCompactSuggestion(true);
+          }
+          break;
+        }
+
+        case "usage": {
+          const { estimatedCost } = event.data as { estimatedCost: number };
+          if (estimatedCost > 0) {
+            setSessionCost((prev) => prev + estimatedCost);
           }
           break;
         }
@@ -734,6 +745,7 @@ export function useChat(
             const reloadedData = await reloaded.json();
             setMessages(reloadedData.messages);
             setContextTokens(0);
+            setSessionCost(0);
             setShowCompactSuggestion(false);
             onInfoRef.current?.("Conversation was automatically compacted to free up context.");
           }
@@ -818,5 +830,5 @@ export function useChat(
     if (conversationId) dismissedRef.current.add(conversationId);
   }, [conversationId]);
 
-  return { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens, skills };
+  return { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens, skills, sessionCost };
 }

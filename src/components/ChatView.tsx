@@ -5,6 +5,7 @@ import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
 
 import { CompactSuggestionBanner } from "./CompactSuggestionBanner";
+import { ContextStatusBar } from "./ContextStatusBar";
 import { ArtifactPanel } from "./ArtifactPanel";
 import { FileEditorPanel } from "./FileEditorPanel";
 import { Conversation } from "../types";
@@ -43,7 +44,7 @@ export function ChatView({
   onConsumePrompt,
 }: ChatViewProps) {
   const { addToast } = useToast();
-  const { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens, skills } = useChat(
+  const { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens, skills, sessionCost } = useChat(
     conversationId,
     (title) => {
       if (conversationId) onTitleUpdate(conversationId, title);
@@ -54,8 +55,15 @@ export function ChatView({
     conversation?.model,
   );
 
+  const promptSentRef = useRef(false);
+
   useEffect(() => {
-    if (initialPrompt && sendMessage && !streaming.isStreaming) {
+    if (!initialPrompt) {
+      promptSentRef.current = false;
+      return;
+    }
+    if (!promptSentRef.current && sendMessage && !streaming.isStreaming) {
+      promptSentRef.current = true;
       sendMessage(initialPrompt);
       onConsumePrompt?.();
     }
@@ -127,6 +135,8 @@ export function ChatView({
           onSendPrompt={sendMessage}
           onToast={(msg, type) => addToast(msg, type || "info")}
           onOpenArtifact={handleOpenArtifact}
+          onEditMessage={onFork ? handleEditMessage : undefined}
+          chatOnly={!!conversation?.chatOnly}
           renderInput={isEmpty ? () => (
             <ChatInput
               onSend={sendMessage}
@@ -151,6 +161,29 @@ export function ChatView({
               sendMessage("/compact");
             }}
             onDismiss={dismissCompactSuggestion}
+            onForkWithSummary={conversationId ? async () => {
+              dismissCompactSuggestion();
+              try {
+                const res = await apiFetch(`/api/conversations/${conversationId}/fork-with-summary`, { method: "POST" });
+                if (!res.ok) throw new Error("Fork failed");
+                const newConv = await res.json();
+                onFork?.(newConv.id);
+                addToast("Started fresh session with context summary", "info");
+              } catch {
+                addToast("Failed to start fresh session", "error");
+              }
+            } : undefined}
+            contextPercent={contextTokens / 200_000 * 100}
+          />
+        )}
+        {!isEmpty && conversation && (
+          <ContextStatusBar
+            model={conversation.model || ""}
+            contextTokens={contextTokens}
+            contextWindow={200_000}
+            sessionCost={sessionCost}
+            sessionStart={conversation.createdAt}
+            isStreaming={streaming.isStreaming}
           />
         )}
         {!isEmpty && (

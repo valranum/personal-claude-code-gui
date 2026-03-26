@@ -17,16 +17,28 @@ interface MessageListProps {
   onToast?: (message: string, type?: "info" | "error") => void;
   onOpenArtifact?: (language: string, code: string) => void;
   renderInput?: () => React.ReactNode;
+  chatOnly?: boolean;
 }
 
-const SUGGESTED_PROMPTS = [
+const CODE_PROMPTS = [
   { label: "Summarize this project", prompt: "Read the project structure and give me a concise summary of what this codebase does." },
   { label: "Find TODOs", prompt: "Search the codebase for all TODO and FIXME comments and list them." },
   { label: "Explain a file", prompt: "What are the main files in this project? Give me a brief overview of each." },
   { label: "Suggest a new feature", prompt: "Analyze this project and suggest useful features or improvements that could be added." },
+  { label: "Create a design brief", prompt: "Help me create a structured design brief for a new feature. Ask me about the goal, audience, constraints, and deliverables, then generate a formatted brief document." },
+  { label: "Audit accessibility", prompt: "Scan this project for accessibility issues — missing alt text, color contrast problems, keyboard navigation gaps, and ARIA attributes. Give me a prioritized list of fixes." },
 ];
 
-export function MessageList({ messages, streaming, conversationId, onRetry, onSendPrompt, onToast, onOpenArtifact, renderInput }: MessageListProps) {
+const CHAT_PROMPTS = [
+  { label: "Explain something", prompt: "Can you explain a concept to me in simple terms? I'll tell you what I'm curious about." },
+  { label: "Help me write", prompt: "I need help writing something. Can you help me draft, edit, or brainstorm ideas?" },
+  { label: "Pros and cons", prompt: "I'm trying to make a decision. Can you help me think through the pros and cons?" },
+  { label: "Learn something new", prompt: "Teach me something interesting I probably don't know. Surprise me!" },
+  { label: "Draft an email", prompt: "Help me write a professional email. I'll give you the context and who it's for, and you draft it for me." },
+  { label: "Summarize a document", prompt: "I have a long document I need summarized. I'll paste or describe the content, and you condense it into the key points." },
+];
+
+export function MessageList({ messages, streaming, conversationId, onRetry, onSendPrompt, onToast, onOpenArtifact, onEditMessage, renderInput, chatOnly }: MessageListProps) {
   const scrollRef = useAutoScroll([messages, streaming]);
   const [sharing, setSharing] = useState(false);
 
@@ -60,7 +72,7 @@ export function MessageList({ messages, streaming, conversationId, onRetry, onSe
           <p style={{ color: 'var(--text-muted)', marginTop: -10, fontSize: 14 }}>(for designers)</p>
           {renderInput && <div className="empty-state-input">{renderInput()}</div>}
           <div className="empty-state-prompts">
-            {SUGGESTED_PROMPTS.map((sp) => (
+            {(chatOnly ? CHAT_PROMPTS : CODE_PROMPTS).map((sp) => (
               <button
                 key={sp.label}
                 className="suggested-prompt-btn"
