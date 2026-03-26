@@ -94,15 +94,6 @@ function AppContent() {
     [createConversation],
   );
 
-  const handleGuidedStart = useCallback(async () => {
-    const conv = await createConversation();
-    if (conv) {
-      setPendingPrompt(
-        "I'm brand new to Claude for Designers and I have no idea where to start. Can you walk me through what this tool does, what I can build with it, and guide me step by step through my first project? Keep it simple and friendly — assume I have zero coding experience."
-      );
-    }
-  }, [createConversation]);
-
   const handlePaletteChangeModel = useCallback(
     (model: string) => {
       if (activeId) updateConversationModel(activeId, model);
@@ -198,7 +189,6 @@ function AppContent() {
     <WelcomeScreen
       onOpenFolder={handleOpenFolder}
       onNewProject={handleNewProject}
-      onGuidedStart={handleGuidedStart}
       conversations={conversations}
     />
   );
