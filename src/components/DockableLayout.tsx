@@ -158,10 +158,24 @@ export function DockableLayout({
   const activeZoneRef = useRef(activeZone);
   const containerSizeRef = useRef(containerSize);
 
+  const prevIsWelcomeRef = useRef(isWelcome);
+
   useEffect(() => { layoutStateRef.current = layout; }, [layout]);
   useEffect(() => { activeZoneRef.current = activeZone; }, [activeZone]);
   useEffect(() => { containerSizeRef.current = containerSize; }, [containerSize]);
   useEffect(() => { saveLayout(layout); }, [layout]);
+
+  useEffect(() => {
+    if (prevIsWelcomeRef.current && !isWelcome && !chatOnly) {
+      setLayout((prev) => ({
+        ...prev,
+        chats: { ...prev.chats, visible: true, pinned: true, pinnedPosition: "left", isCenter: false },
+        files: { ...prev.files, visible: true, pinned: true, pinnedPosition: "right", isCenter: false },
+        main: { ...prev.main, visible: true, isCenter: true },
+      }));
+    }
+    prevIsWelcomeRef.current = isWelcome;
+  }, [isWelcome, chatOnly]);
 
   const toggleUsageStats = useCallback(() => {
     setShowUsageStats((prev) => {
