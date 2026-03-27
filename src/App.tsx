@@ -90,10 +90,16 @@ function AppContent() {
       if (conv) {
         const newProjectDirective = [
           "\n\nNEW PROJECT CONTEXT: The user just created a brand new project in an empty directory.",
-          "Choose the best tech stack for what they describe (default to React with Vite and TypeScript if unclear).",
-          "Don't ask clarifying questions — just scaffold the project, install dependencies, and start the dev server.",
-          "Get straight to building what they asked for.",
-        ].join(" ");
+          "The user is a designer, not a developer. They don't know or care about frameworks, languages, or tooling.",
+          "\n\nYour approach for new projects:",
+          "\n1. FIRST, have a brief creative conversation. Ask 2-3 short questions about their vision — things like what sections they want, their style/color preferences, any reference sites they like, or what content they'll feature. Keep it casual and concise, not a long questionnaire.",
+          "\n2. ONCE you have a sense of what they want, THEN scaffold the project, install dependencies, start the dev server, and build it. Choose the tech stack yourself (default to React with Vite and TypeScript) — never ask the user about technical choices.",
+          "\n\nIMPORTANT TONE:",
+          "Keep your messages short, friendly, and non-technical.",
+          "Don't mention package registries, version conflicts, config files, or internal tooling details.",
+          "When installing dependencies or fixing build issues, just say something brief like \"Setting things up...\" or \"Almost ready...\"",
+          "Save the technical details for code comments if needed — your chat messages should feel simple and reassuring.",
+        ].join("");
         await apiFetch(`/api/conversations/${conv.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
