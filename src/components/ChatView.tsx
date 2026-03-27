@@ -59,14 +59,47 @@ export function ChatView({
   );
 
   const wasStreamingRef = useRef(false);
+  const [showNotifyBtn, setShowNotifyBtn] = useState(false);
+  const [notifyConfirmed, setNotifyConfirmed] = useState(false);
+  const notifyRequestedRef = useRef(false);
+  const notifyTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
   useEffect(() => {
     if (streaming.isStreaming) {
       wasStreamingRef.current = true;
-    } else if (wasStreamingRef.current) {
-      wasStreamingRef.current = false;
-      onStreamingEnd?.();
+      notifyTimerRef.current = setTimeout(() => setShowNotifyBtn(true), 15_000);
+    } else {
+      clearTimeout(notifyTimerRef.current);
+      if (wasStreamingRef.current) {
+        wasStreamingRef.current = false;
+        onStreamingEnd?.();
+        if (notifyRequestedRef.current) {
+          notifyRequestedRef.current = false;
+          new Notification("Claude is done", {
+            body: "Your project is ready to go.",
+          });
+        }
+      }
+      setShowNotifyBtn(false);
+      setNotifyConfirmed(false);
     }
+    return () => clearTimeout(notifyTimerRef.current);
   }, [streaming.isStreaming, onStreamingEnd]);
+
+  const handleNotifyMe = useCallback(async () => {
+    if (Notification.permission === "default") {
+      const result = await Notification.requestPermission();
+      if (result !== "granted") {
+        addToast("Enable notifications in your browser settings to use this feature", "info");
+        return;
+      }
+    } else if (Notification.permission === "denied") {
+      addToast("Notifications are blocked — enable them in your browser settings", "info");
+      return;
+    }
+    notifyRequestedRef.current = true;
+    setNotifyConfirmed(true);
+  }, [addToast]);
 
   const promptSentRef = useRef(false);
 
@@ -205,6 +238,25 @@ export function ChatView({
             sessionStart={conversation.createdAt}
             isStreaming={streaming.isStreaming}
           />
+        )}
+        {showNotifyBtn && streaming.isStreaming && (
+          <button
+            className={`notify-btn ${notifyConfirmed ? "notify-btn--confirmed" : ""}`}
+            onClick={handleNotifyMe}
+            disabled={notifyConfirmed}
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              {notifyConfirmed ? (
+                <path d="M4 8.5L7 11.5L12 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              ) : (
+                <>
+                  <path d="M8 1.5C5.5 1.5 4 3.5 4 5.5V8L2.5 10.5H13.5L12 8V5.5C12 3.5 10.5 1.5 8 1.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                  <path d="M6.5 11.5C6.5 12.33 7.17 13.5 8 13.5C8.83 13.5 9.5 12.33 9.5 11.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                </>
+              )}
+            </svg>
+            {notifyConfirmed ? "I'll notify you when done" : "Notify me when done"}
+          </button>
         )}
         {!isEmpty && (
           <ChatInput
