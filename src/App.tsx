@@ -100,6 +100,8 @@ function AppContent() {
           "\n\nYour approach for new projects:",
           "\n1. FIRST, have a brief creative conversation. Ask 2-3 short questions about their vision — things like what sections they want, their style/color preferences, any reference sites they like, or what content they'll feature. Keep it casual and concise, not a long questionnaire.",
           "\n2. ONCE you have a sense of what they want, THEN scaffold the project, install dependencies, start the dev server, and build it. Choose the tech stack yourself (default to React with Vite and TypeScript) — never ask the user about technical choices.",
+          "\n\nDEVICE FRAMES:",
+          "When building mobile prototypes or app mockups, always use the iPhone 17 Pro as the default device frame (6.3\" display, Dynamic Island, thinner bezels). Never default to older iPhone models.",
           "\n\nIMPORTANT TONE:",
           "Keep your messages short, friendly, and non-technical.",
           "Don't mention package registries, version conflicts, config files, or internal tooling details.",

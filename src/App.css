@@ -2963,8 +2963,17 @@ body,
   color: white;
 }
 
+[data-theme="light"] .stop-btn {
+  background: #d4564e;
+  opacity: 0.8;
+}
+
 .stop-btn:hover {
   opacity: 0.85;
+}
+
+[data-theme="light"] .stop-btn:hover {
+  opacity: 1;
 }
 
 /* ── Slash Command Menu ── */
