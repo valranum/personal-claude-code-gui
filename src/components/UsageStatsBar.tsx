@@ -29,40 +29,58 @@ function formatTokenCount(n: number): string {
   return String(n);
 }
 
-function Sparkline({ data, width = 84, height = 20 }: { data: number[]; width?: number; height?: number }) {
+function Sparkline({ data, width = 120, height = 32 }: { data: number[]; width?: number; height?: number }) {
   if (data.length === 0) return null;
   const max = Math.max(...data, 1);
-  const barWidth = Math.max(2, Math.floor((width - (data.length - 1) * 2) / data.length));
-  const gap = 2;
+  const barWidth = Math.max(4, Math.floor((width - (data.length - 1) * 3) / data.length));
+  const gap = 3;
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const today = new Date().getDay();
+  const dayLabels = data.map((_, i) => {
+    const dayIdx = (today - (data.length - 1 - i) + 7) % 7;
+    return days[dayIdx === 0 ? 6 : dayIdx - 1];
+  });
 
   return (
-    <svg width={width} height={height} className="usage-sparkline">
-      {data.map((val, i) => {
-        const barHeight = Math.max(1, (val / max) * (height - 2));
-        const x = i * (barWidth + gap);
-        const y = height - barHeight;
-        return (
-          <rect
-            key={i}
-            x={x}
-            y={y}
-            width={barWidth}
-            height={barHeight}
-            rx={1}
-            className="usage-sparkline-bar"
-          />
-        );
-      })}
-    </svg>
+    <div className="usage-sparkline-container">
+      <svg width={width} height={height} className="usage-sparkline">
+        {data.map((val, i) => {
+          const barHeight = Math.max(2, (val / max) * (height - 2));
+          const x = i * (barWidth + gap);
+          const y = height - barHeight;
+          return (
+            <rect
+              key={i}
+              x={x}
+              y={y}
+              width={barWidth}
+              height={barHeight}
+              rx={2}
+              className="usage-sparkline-bar"
+            />
+          );
+        })}
+      </svg>
+      <div className="usage-sparkline-labels" style={{ width }}>
+        {dayLabels.map((label, i) => (
+          <span key={i} style={{ width: barWidth + gap, textAlign: "center" }}>{i === 0 || i === data.length - 1 ? label : ""}</span>
+        ))}
+      </div>
+    </div>
   );
 }
 
 const BLOCK_MS = 5 * 60 * 60 * 1000;
 
-export function UsageStatsBar() {
+interface UsageStatsBarProps {
+  onClose: () => void;
+}
+
+export function UsageStatsBar({ onClose }: UsageStatsBarProps) {
   const [stats, setStats] = useState<ClaudeStats | null>(null);
   const [blockElapsed, setBlockElapsed] = useState<number | null>(null);
   const blockBaseRef = useRef<{ serverElapsed: number; fetchedAt: number } | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -87,7 +105,6 @@ export function UsageStatsBar() {
     return () => clearInterval(interval);
   }, [fetchStats]);
 
-  // Client-side tick for block timer
   useEffect(() => {
     if (blockBaseRef.current === null) return;
     const tick = setInterval(() => {
@@ -99,15 +116,33 @@ export function UsageStatsBar() {
     return () => clearInterval(tick);
   }, [stats]);
 
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    const timer = setTimeout(() => document.addEventListener("mousedown", handleClickOutside), 100);
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [onClose]);
+
   if (!stats) return null;
 
   const today = new Date().toISOString().slice(0, 10);
   const todayActivity = stats.dailyActivity.find((d) => d.date === today);
   const todayMessages = todayActivity?.messageCount ?? 0;
   const todayTools = todayActivity?.toolCallCount ?? 0;
+  const totalTokens = stats.todayTokens.input + stats.todayTokens.output + stats.todayTokens.cached;
 
-  // Build last 7 days of message counts for sparkline
-  const last7 = [];
+  const last7: number[] = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
@@ -117,64 +152,73 @@ export function UsageStatsBar() {
   }
 
   const blockPct = blockElapsed !== null ? Math.min(100, (blockElapsed / BLOCK_MS) * 100) : null;
-  const totalTokens = stats.todayTokens.input + stats.todayTokens.output + stats.todayTokens.cached;
+  const blockRemaining = blockElapsed !== null ? BLOCK_MS - blockElapsed : null;
 
   return (
-    <div className="usage-stats-bar">
-      {blockElapsed !== null && (
-        <div className="usage-stat-item usage-stat-block">
-          <svg width="18" height="18" viewBox="0 0 18 18" className="usage-block-ring">
-            <circle cx="9" cy="9" r="7" fill="none" stroke="var(--border)" strokeWidth="2" />
-            <circle
-              cx="9"
-              cy="9"
-              r="7"
-              fill="none"
-              stroke="var(--accent)"
-              strokeWidth="2"
-              strokeDasharray={`${(blockPct! / 100) * 44} 44`}
-              strokeLinecap="round"
-              transform="rotate(-90 9 9)"
-            />
-          </svg>
-          <span className="usage-stat-label">Block</span>
-          <span className="usage-stat-value">{formatDuration(blockElapsed)} / 5h</span>
+    <div className="usage-overlay">
+      <div className="usage-card" ref={cardRef}>
+        <div className="usage-card-header">
+          <h3 className="usage-card-title">Usage</h3>
+          <button className="usage-card-close" onClick={onClose}>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </button>
         </div>
-      )}
 
-      <div className="usage-stat-item">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-          <path d="M2 3.5C2 2.67 2.67 2 3.5 2H12.5C13.33 2 14 2.67 14 3.5V10.5C14 11.33 13.33 12 12.5 12H5L2 15V3.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-        </svg>
-        <span className="usage-stat-label">Today</span>
-        <span className="usage-stat-value">{todayMessages.toLocaleString()} msgs</span>
-        {todayTools > 0 && (
-          <span className="usage-stat-secondary">{todayTools.toLocaleString()} tools</span>
-        )}
-      </div>
+        <div className="usage-card-grid">
+          <div className="usage-metric-card">
+            <div className="usage-metric-label">Messages today</div>
+            <div className="usage-metric-value">{todayMessages.toLocaleString()}</div>
+            {todayTools > 0 && (
+              <div className="usage-metric-sub">{todayTools.toLocaleString()} tool calls</div>
+            )}
+          </div>
 
-      {totalTokens > 0 && (
-        <div className="usage-stat-item">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <path d="M4 2V14M8 4V14M12 6V14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          <span className="usage-stat-label">Tokens</span>
-          <span className="usage-stat-value">{formatTokenCount(totalTokens)}</span>
+          <div className="usage-metric-card">
+            <div className="usage-metric-label">Tokens today</div>
+            <div className="usage-metric-value">{formatTokenCount(totalTokens)}</div>
+            {totalTokens > 0 && (
+              <div className="usage-metric-sub">
+                {formatTokenCount(stats.todayTokens.input)} in · {formatTokenCount(stats.todayTokens.output)} out
+              </div>
+            )}
+          </div>
+
+          <div className="usage-metric-card">
+            <div className="usage-metric-label">Active sessions</div>
+            <div className="usage-metric-value">{stats.activeSessions.length}</div>
+          </div>
+
+          {blockElapsed !== null && (
+            <div className="usage-metric-card">
+              <div className="usage-metric-label">Rate limit window</div>
+              <div className="usage-metric-value usage-metric-row">
+                <svg width="24" height="24" viewBox="0 0 24 24" className="usage-block-ring">
+                  <circle cx="12" cy="12" r="10" fill="none" stroke="var(--border)" strokeWidth="2.5" />
+                  <circle
+                    cx="12" cy="12" r="10"
+                    fill="none"
+                    stroke={blockPct! > 80 ? "var(--warning)" : "var(--accent)"}
+                    strokeWidth="2.5"
+                    strokeDasharray={`${(blockPct! / 100) * 62.8} 62.8`}
+                    strokeLinecap="round"
+                    transform="rotate(-90 12 12)"
+                  />
+                </svg>
+                <span>{Math.round(blockPct!)}%</span>
+              </div>
+              <div className="usage-metric-sub">
+                {formatDuration(blockElapsed)} used · {formatDuration(blockRemaining!)} left
+              </div>
+            </div>
+          )}
         </div>
-      )}
 
-      <div className="usage-stat-item">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-          <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.2"/>
-          <path d="M5 8H11M8 5V11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-        </svg>
-        <span className="usage-stat-label">Sessions</span>
-        <span className="usage-stat-value">{stats.activeSessions.length} active</span>
-      </div>
-
-      <div className="usage-stat-item usage-stat-sparkline">
-        <span className="usage-stat-label">7d</span>
-        <Sparkline data={last7} />
+        <div className="usage-card-section">
+          <div className="usage-section-label">Last 7 days</div>
+          <Sparkline data={last7} width={240} height={40} />
+        </div>
       </div>
     </div>
   );

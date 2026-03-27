@@ -6329,60 +6329,139 @@ body,
   animation: scheduleSpinner 1s linear infinite;
 }
 
-/* ── Usage Stats Bar ── */
-.usage-stats-bar {
+/* ── Usage Stats Card ── */
+.usage-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 4px 16px;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  animation: usageOverlayIn 0.15s ease-out;
+}
+
+@keyframes usageOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes usageCardIn {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.usage-card {
   background: var(--bg-secondary);
-  border-top: 1px solid var(--border);
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  flex-shrink: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.15);
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  padding: 20px;
+  animation: usageCardIn 0.2s ease-out;
 }
 
-.usage-stats-bar::-webkit-scrollbar {
-  display: none;
-}
-
-.usage-stat-item {
+.usage-card-header {
   display: flex;
   align-items: center;
-  gap: 5px;
-  white-space: nowrap;
-  flex-shrink: 0;
+  justify-content: space-between;
+  margin-bottom: 16px;
 }
 
-.usage-stat-item svg {
-  color: var(--text-tertiary);
-  flex-shrink: 0;
-}
-
-.usage-stat-label {
-  color: var(--text-tertiary);
-  font-weight: 500;
-}
-
-.usage-stat-value {
+.usage-card-title {
+  font-size: 15px;
+  font-weight: 700;
   color: var(--text-primary);
-  font-weight: 500;
+  margin: 0;
+}
+
+.usage-card-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+
+.usage-card-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.usage-card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.usage-metric-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.usage-metric-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 4px;
+}
+
+.usage-metric-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.usage-metric-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.usage-metric-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
   font-variant-numeric: tabular-nums;
 }
 
-.usage-stat-secondary {
-  color: var(--text-tertiary);
-  font-variant-numeric: tabular-nums;
-}
-
-.usage-stat-block .usage-block-ring {
+.usage-block-ring {
   flex-shrink: 0;
 }
 
-.usage-stat-sparkline {
-  margin-left: auto;
+.usage-card-section {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.usage-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 8px;
+}
+
+.usage-sparkline-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .usage-sparkline {
@@ -6391,7 +6470,7 @@ body,
 
 .usage-sparkline-bar {
   fill: var(--accent);
-  opacity: 0.6;
+  opacity: 0.5;
   transition: opacity 0.15s;
 }
 
@@ -6399,15 +6478,11 @@ body,
   opacity: 1;
 }
 
-@media (max-width: 700px) {
-  .usage-stats-bar {
-    gap: 10px;
-    padding: 4px 10px;
-  }
-
-  .usage-stat-sparkline {
-    display: none;
-  }
+.usage-sparkline-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--text-muted);
 }
 
 /* ── Workflow Banner ── */

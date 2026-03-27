@@ -14,6 +14,12 @@ export function SystemPromptModal({ conversation, onClose }: SystemPromptModalPr
   const [saved, setSaved] = useState<string | null>(null);
 
   useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  useEffect(() => {
     apiFetch(`/api/workspace-config?cwd=${encodeURIComponent(conversation.cwd)}`)
       .then((r) => r.json())
       .then((data) => {

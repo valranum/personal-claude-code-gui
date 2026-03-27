@@ -149,9 +149,7 @@ export function DockableLayout({
   const [showSkills, setShowSkills] = useState(false);
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
-  const [showUsageStats, setShowUsageStats] = useState(() => {
-    try { return localStorage.getItem("show-usage-stats") === "true"; } catch { return false; }
-  });
+  const [showUsageStats, setShowUsageStats] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -188,14 +186,6 @@ export function DockableLayout({
     }
     prevIsWelcomeRef.current = isWelcome;
   }, [isWelcome, chatOnly]);
-
-  const toggleUsageStats = useCallback(() => {
-    setShowUsageStats((prev) => {
-      const next = !prev;
-      try { localStorage.setItem("show-usage-stats", String(next)); } catch { /* ignore */ }
-      return next;
-    });
-  }, []);
 
   // Auto-promote a panel to center if center is empty
   useEffect(() => {
@@ -924,12 +914,12 @@ export function DockableLayout({
                 </button>
                 <button
                   className="settings-option"
-                  onClick={() => { toggleUsageStats(); setShowSettings(false); }}
+                  onClick={() => { setShowUsageStats(true); setShowSettings(false); }}
                 >
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                     <path d="M4 2V14M8 4V14M12 6V14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                   </svg>
-                  <span>{showUsageStats ? "Hide Usage Stats" : "Show Usage Stats"}</span>
+                  <span>Usage</span>
                 </button>
                 <div className="settings-divider" />
                 <a
@@ -1004,7 +994,7 @@ export function DockableLayout({
         </>
       )}
 
-      {showUsageStats && <UsageStatsBar />}
+      {showUsageStats && <UsageStatsBar onClose={() => setShowUsageStats(false)} />}
 
       <FaqModal open={showFaq} onClose={() => setShowFaq(false)} />
       {showMcp && conversation && (

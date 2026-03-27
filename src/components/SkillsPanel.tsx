@@ -40,6 +40,12 @@ export function SkillsPanel({ cwd, onClose }: SkillsPanelProps) {
   useEffect(() => { loadSkills(); }, [loadSkills]);
 
   useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  useEffect(() => {
     if (!success && !error) return;
     const t = setTimeout(() => { setSuccess(null); setError(null); }, 4000);
     return () => clearTimeout(t);
