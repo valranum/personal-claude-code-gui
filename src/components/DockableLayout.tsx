@@ -91,6 +91,8 @@ function loadLayout(): LayoutState {
         }
         parsed.chats.visible = false;
         parsed.chats.isCenter = false;
+        parsed.preview.visible = false;
+        parsed.preview.isCenter = false;
         return parsed;
       }
     }
@@ -182,6 +184,7 @@ export function DockableLayout({
         chats: { ...prev.chats, visible: true, pinned: true, pinnedPosition: "left", isCenter: false },
         files: { ...prev.files, visible: true, pinned: true, pinnedPosition: "right", isCenter: false },
         main: { ...prev.main, visible: true, isCenter: true },
+        preview: { ...prev.preview, visible: false, isCenter: false },
       }));
     }
     prevIsWelcomeRef.current = isWelcome;
