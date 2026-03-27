@@ -7,7 +7,6 @@ import littleDude from "../assets/little-dude.png";
 interface WelcomeScreenProps {
   onOpenFolder: (cwd?: string) => void;
   onNewProject: (cwd: string, initialPrompt: string) => void;
-  onGuidedStart: () => void;
   conversations: Conversation[];
 }
 
@@ -41,7 +40,6 @@ function shortenPath(p: string): string {
 export function WelcomeScreen({
   onOpenFolder,
   onNewProject,
-  onGuidedStart,
   conversations,
 }: WelcomeScreenProps) {
   const [picking, setPicking] = useState(false);
@@ -202,13 +200,8 @@ export function WelcomeScreen({
     <div className="chat-view">
       <div className="welcome-screen">
         <img src={littleDude} alt="Claude" className="welcome-logo" />
-        <h1 className="welcome-title">
-          Claude Code{" "}
-          <span style={{ fontWeight: 400, opacity: 0.6, fontSize: "0.82em" }}>
-            (for designers)
-          </span>
-        </h1>
-        <p className="welcome-subtitle">What would you like to do?</p>
+        <h1 className="welcome-title">Claude for Designers</h1>
+        <p className="welcome-subtitle">Chat and code with Claude</p>
 
         <div className="welcome-paths">
           <div className="welcome-path-row">
@@ -270,18 +263,6 @@ export function WelcomeScreen({
               <path d="M2 3.5C2 2.67 2.67 2 3.5 2H12.5C13.33 2 14 2.67 14 3.5V10.5C14 11.33 13.33 12 12.5 12H5L2 15V3.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
             </svg>
             just chat, no code needed
-          </button>
-          <span className="welcome-secondary-sep">·</span>
-          <button
-            className="welcome-secondary-link"
-            onClick={onGuidedStart}
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2"/>
-              <path d="M6.5 6.5C6.5 5.67 7.17 5 8 5C8.83 5 9.5 5.67 9.5 6.5C9.5 7.17 9 7.67 8.4 7.9C8.15 8 8 8.2 8 8.5V9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-              <circle cx="8" cy="10.75" r="0.6" fill="currentColor"/>
-            </svg>
-            wait — what does this thing even do?
           </button>
         </div>
 

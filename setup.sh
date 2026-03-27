@@ -2,8 +2,8 @@
 set -e
 
 echo ""
-echo "  Claude Code GUI — Setup"
-echo "  ─────────────────────────"
+echo "  Claude for Designers — Setup"
+echo "  ──────────────────────────────"
 echo ""
 
 # Check Node.js

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ChatMessage, ImageAttachment, ToolCallInfo, StreamingState, SubagentInfo, SkillInfo } from "../types";
+import { ChatMessage, ImageAttachment, ToolCallInfo, StreamingState, SubagentInfo, SkillInfo, WorkflowState } from "../types";
 import { connectSSE, SSEEvent } from "../utils/sse";
 import { apiFetch, getAuthToken, getAuthTokenSync } from "../utils/api";
 
@@ -98,6 +98,7 @@ export function useChat(
   const [contextTokens, _setContextTokens] = useState(0);
   const [skills, setSkills] = useState<SkillInfo[]>([]);
   const [sessionCost, setSessionCost] = useState(0);
+  const [workflowState, setWorkflowState] = useState<WorkflowState | null>(null);
   const setContextTokens = useCallback((v: number) => {
     _setContextTokens(v);
     contextTokensRef.current = v;
@@ -136,15 +137,19 @@ export function useChat(
       setShowCompactSuggestion(false);
       setContextTokens(0);
       setSessionCost(0);
+      setWorkflowState(null);
       return;
     }
     setMessages([]);
     setStreaming(EMPTY_STREAMING);
     setContextTokens(0);
     setSessionCost(0);
+    setWorkflowState(null);
     const controller = new AbortController();
     fetchAbortRef.current = controller;
-    apiFetch(`/api/conversations/${conversationId}/messages`)
+
+    // Load messages and workflow state in parallel
+    const loadMessages = apiFetch(`/api/conversations/${conversationId}/messages`)
       .then((r) => {
         if (controller.signal.aborted) return;
         return r.json();
@@ -167,6 +172,19 @@ export function useChat(
         setMessages([]);
         onErrorRef.current?.("Failed to load messages");
       });
+
+    const loadWorkflow = apiFetch(`/api/conversations/${conversationId}/workflow`)
+      .then((r) => {
+        if (controller.signal.aborted) return;
+        return r.json();
+      })
+      .then((data: WorkflowState | null | undefined) => {
+        if (controller.signal.aborted) return;
+        setWorkflowState(data || null);
+      })
+      .catch(() => {});
+
+    Promise.all([loadMessages, loadWorkflow]);
     return () => controller.abort();
   }, [conversationId]);
 
@@ -385,6 +403,12 @@ export function useChat(
           onTitleUpdate?.(title);
           break;
         }
+
+        case "workflow_update": {
+          const update = event.data as Partial<WorkflowState>;
+          setWorkflowState((prev) => prev ? { ...prev, ...update } : null);
+          break;
+        }
       }
     };
 
@@ -528,6 +552,139 @@ export function useChat(
         }
         return;
       }
+
+      // /plan <description> — start structured workflow
+      if (content.trim().startsWith("/plan")) {
+        const description = content.trim().slice(5).trim();
+        if (!description) {
+          const systemMsg: ChatMessage = {
+            id: crypto.randomUUID(),
+            role: "system",
+            content: "**Usage:** `/plan <description>`\n\nDescribe what you want to build. Example:\n`/plan Add user authentication with OAuth and session management`",
+            timestamp: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, systemMsg]);
+          return;
+        }
+        if (!cwdRef.current) {
+          onErrorRef.current?.("No workspace selected — /plan requires a workspace");
+          return;
+        }
+
+        try {
+          const res = await apiFetch(`/api/conversations/${conversationId}/workflow`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phase: "brainstorming", description }),
+          });
+          const workflow = await res.json();
+          setWorkflowState(workflow);
+
+          const brainstormPrompt = `I want to build: ${description}\n\nPlease start the structured development workflow — ask me clarifying questions first, then propose approaches, and we'll create a spec before writing any code.`;
+
+          const userMsg: ChatMessage = {
+            id: crypto.randomUUID(),
+            role: "user",
+            content: brainstormPrompt,
+            timestamp: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, userMsg]);
+          setStreaming({ isStreaming: true, text: "", thinking: "", toolCalls: [], subagents: [] });
+
+          await apiFetch(`/api/conversations/${conversationId}/messages`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content: brainstormPrompt }),
+          });
+        } catch {
+          onErrorRef.current?.("Failed to start workflow");
+        }
+        return;
+      }
+
+      // /execute — execute the current workflow plan
+      if (content.trim() === "/execute") {
+        if (!cwdRef.current) {
+          onErrorRef.current?.("No workspace selected");
+          return;
+        }
+
+        try {
+          const wfRes = await apiFetch(`/api/conversations/${conversationId}/workflow`);
+          const workflow = await wfRes.json();
+
+          if (!workflow) {
+            const systemMsg: ChatMessage = {
+              id: crypto.randomUUID(),
+              role: "system",
+              content: "**No active workflow.** Start one with `/plan <description>`.",
+              timestamp: new Date().toISOString(),
+            };
+            setMessages((prev) => [...prev, systemMsg]);
+            return;
+          }
+
+          let executePrompt: string;
+
+          if (workflow.planPath) {
+            try {
+              const planRes = await apiFetch(`/api/conversations/${conversationId}/workflow/plan-file`);
+              const planData = await planRes.json();
+
+              const updateRes = await apiFetch(`/api/conversations/${conversationId}/workflow`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ phase: "executing" }),
+              });
+              const updated = await updateRes.json();
+              setWorkflowState(updated);
+
+              executePrompt = `Execute this implementation plan using sub-agents. Dispatch one sub-agent per task, in order.\n\n**Implementation Plan:**\n\`\`\`\n${planData.content}\n\`\`\`\n\nStart with the first task and work through each one sequentially. Report progress after each task completes.`;
+            } catch {
+              onErrorRef.current?.("Failed to read plan file");
+              return;
+            }
+          } else if (workflow.specPath) {
+            const updateRes = await apiFetch(`/api/conversations/${conversationId}/workflow`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ phase: "planning" }),
+            });
+            const updated = await updateRes.json();
+            setWorkflowState(updated);
+
+            executePrompt = `The spec document has been written. Now create an implementation plan from it. Read the spec at \`${workflow.specPath}\` and write a detailed implementation plan with numbered tasks that can each be dispatched to a sub-agent.`;
+          } else {
+            const systemMsg: ChatMessage = {
+              id: crypto.randomUUID(),
+              role: "system",
+              content: "**Workflow in progress.** The spec hasn't been written yet. Continue the brainstorming conversation, or approve an approach so Claude can write the spec.",
+              timestamp: new Date().toISOString(),
+            };
+            setMessages((prev) => [...prev, systemMsg]);
+            return;
+          }
+
+          const userMsg: ChatMessage = {
+            id: crypto.randomUUID(),
+            role: "user",
+            content: executePrompt,
+            timestamp: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, userMsg]);
+          setStreaming({ isStreaming: true, text: "", thinking: "", toolCalls: [], subagents: [] });
+
+          await apiFetch(`/api/conversations/${conversationId}/messages`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content: executePrompt }),
+          });
+        } catch {
+          onErrorRef.current?.("Failed to execute plan");
+        }
+        return;
+      }
+
 
       if (content.trim() === "/context") {
         const tokens = contextTokensRef.current;
@@ -830,5 +987,5 @@ export function useChat(
     if (conversationId) dismissedRef.current.add(conversationId);
   }, [conversationId]);
 
-  return { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens, skills, sessionCost };
+  return { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens, skills, sessionCost, workflowState };
 }

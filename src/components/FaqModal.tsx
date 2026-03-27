@@ -2,8 +2,8 @@ import { useEffect, useRef } from "react";
 
 const FAQ_ITEMS = [
   {
-    q: "What is Claude Code for Designers?",
-    a: "It's a visual interface for Claude Code — Anthropic's AI coding agent. You can ask Claude to read, write, and edit code in your project folder, run commands, search the web, and more.",
+    q: "What is Claude for Designers?",
+    a: "It's a visual interface for chatting and coding with Claude — Anthropic's AI. Built on the Claude Agent SDK, it lets you ask Claude to read, write, and edit code in your project folder, run commands, search the web, and more.",
   },
   {
     q: "What can I ask Claude to do?",
@@ -42,8 +42,12 @@ const FAQ_ITEMS = [
     a: "⌘N — New chat\n⌘B — Toggle sidebar\n⌘K — Command palette\n⌘Enter — Send message",
   },
   {
+    q: "How do I plan and build a feature from scratch?",
+    a: "Type /plan followed by a description of what you want to build — for example, /plan Add dark mode with a settings toggle. Claude will walk you through a structured workflow: first asking clarifying questions, then proposing approaches, then writing a design spec to docs/plans/. When the spec is ready, type /execute and Claude will create an implementation plan and dispatch sub-agents to build each piece. A progress banner at the top tracks which phase you're in.",
+  },
+  {
     q: "What do the slash commands do?",
-    a: "/agents — List available subagents for this workspace\n/clear — Clear conversation history\n/compact — Compress context to free up token space\n/context — Show context window usage with a visual breakdown\n/cost — Show session cost and token summary\n/diff — Show uncommitted git changes in your workspace\n/export — Download conversation as markdown (or /export json)\n/review — Ask Claude to review your uncommitted code changes\n/skills — List installed skills\n/status — Show model, workspace, and session info\n/usage — Show token usage and cost (supports /usage week, month, or a number of days)",
+    a: "/agents — List available subagents for this workspace\n/clear — Clear conversation history\n/compact — Compress context to free up token space\n/context — Show context window usage with a visual breakdown\n/cost — Show session cost and token summary\n/diff — Show uncommitted git changes in your workspace\n/execute — Execute the current implementation plan with sub-agents\n/export — Download conversation as markdown (or /export json)\n/plan — Start a structured development workflow (brainstorm → spec → build)\n/review — Ask Claude to review your uncommitted code changes\n/skills — List installed skills\n/status — Show model, workspace, and session info\n/usage — Show token usage and cost (supports /usage week, month, or a number of days)",
   },
   {
     q: "What does /review do?",
