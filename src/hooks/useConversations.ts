@@ -48,6 +48,10 @@ export function useConversations(onError?: (message: string) => void) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cwd }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to create conversation");
+      }
       const conv: Conversation = await res.json();
       setConversations((prev) => [conv, ...prev]);
       setActiveId(conv.id);

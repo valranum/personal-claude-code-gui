@@ -4328,12 +4328,52 @@ body,
   font-size: 15px;
 }
 
-.welcome-onboarding-folder {
+.welcome-onboarding-folder-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
+  padding: 12px 16px;
+  background: var(--bg-primary);
+  border: 1.5px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: left;
 }
 
-.welcome-onboarding-folder .folder-picker {
-  width: 100%;
+.welcome-onboarding-folder-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--bg-primary));
+}
+
+.welcome-onboarding-folder-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.welcome-onboarding-folder-icon {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.welcome-onboarding-folder-path {
+  flex: 1;
+  font-size: 15px;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.welcome-onboarding-folder-change {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--accent);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 /* ── Conversation metadata (cwd path in sidebar) ── */

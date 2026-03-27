@@ -810,7 +810,10 @@ app.post("/api/conversations", (req, res) => {
   const { title, cwd, model } = req.body;
 
   const isChatOnly = !cwd;
-  const resolvedCwd = cwd ? path.resolve(cwd) : HOME_DIR;
+  const expandedCwd = cwd && cwd.startsWith("~")
+    ? path.join(HOME_DIR, cwd.slice(1))
+    : cwd;
+  const resolvedCwd = expandedCwd ? path.resolve(expandedCwd) : HOME_DIR;
   if (!fs.existsSync(resolvedCwd) || !fs.statSync(resolvedCwd).isDirectory()) {
     res.status(400).json({ error: "Invalid workspace path" });
     return;
