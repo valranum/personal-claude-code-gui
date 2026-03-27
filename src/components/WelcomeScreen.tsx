@@ -10,16 +10,6 @@ interface WelcomeScreenProps {
   conversations: Conversation[];
 }
 
-type OnboardingStep = "framework" | "location";
-
-const FRAMEWORKS = [
-  { id: "react", label: "React" },
-  { id: "nextjs", label: "Next.js" },
-  { id: "vue", label: "Vue" },
-  { id: "html", label: "HTML / CSS" },
-  { id: "astro", label: "Astro" },
-];
-
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const minutes = Math.floor(diff / 60000);
@@ -44,8 +34,6 @@ export function WelcomeScreen({
 }: WelcomeScreenProps) {
   const [picking, setPicking] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("framework");
-  const [framework, setFramework] = useState<string | null>(null);
   const [projectPath, setProjectPath] = useState("~/Development/");
 
   const handlePickFolder = async () => {
@@ -73,29 +61,9 @@ export function WelcomeScreen({
     .slice(0, 5);
 
   const handleCreateProject = () => {
-    const fw = FRAMEWORKS.find((f) => f.id === framework);
-
-    let prompt = "Create a new project";
-    if (fw && fw.id !== "auto") {
-      prompt += ` using ${fw.label}`;
-    }
-    prompt +=
-      ". Set up the project structure, install dependencies, and create a basic starting point. Then start the dev server.";
-
+    const prompt = "Create a new project. Set up the project structure, install dependencies, and create a basic starting point. Then start the dev server.";
     onNewProject(projectPath, prompt);
   };
-
-  const handleOnboardingBack = () => {
-    if (onboardingStep === "location") {
-      setOnboardingStep("framework");
-    } else {
-      setShowOnboarding(false);
-      setFramework(null);
-      setOnboardingStep("framework");
-    }
-  };
-
-  const stepNumber = onboardingStep === "framework" ? 1 : 2;
 
   if (showOnboarding) {
     return (
@@ -105,7 +73,7 @@ export function WelcomeScreen({
             <div className="welcome-onboarding-header">
               <button
                 className="welcome-onboarding-back"
-                onClick={handleOnboardingBack}
+                onClick={() => setShowOnboarding(false)}
               >
                 <svg
                   width="16"
@@ -123,73 +91,29 @@ export function WelcomeScreen({
                 </svg>
                 Back
               </button>
-              <span className="welcome-onboarding-step">
-                Step {stepNumber} of 2
-              </span>
             </div>
 
-            {onboardingStep === "framework" && (
-              <>
-                <h2 className="welcome-onboarding-title">
-                  Do you have a framework in mind?
-                </h2>
-                <p className="welcome-onboarding-subtitle">
-                  Don't worry if you're not sure — Claude will pick the best option for your project.
-                </p>
-                <button
-                  className={`welcome-framework-default ${framework === "auto" ? "active" : ""}`}
-                  onClick={() => { setFramework("auto"); setOnboardingStep("location"); }}
-                >
-                  <span className="welcome-framework-default-label">No, just help me build something</span>
-                  <span className="welcome-framework-default-hint">Recommended</span>
-                </button>
-                <div className="welcome-framework-divider">
-                  <span>or choose a specific framework</span>
-                </div>
-                <div className="welcome-onboarding-grid">
-                  {FRAMEWORKS.map((fw) => (
-                    <button
-                      key={fw.id}
-                      className={`welcome-pill ${framework === fw.id ? "active" : ""}`}
-                      onClick={() => setFramework(fw.id)}
-                    >
-                      {fw.label}
-                    </button>
-                  ))}
-                </div>
-                {framework && framework !== "auto" && (
-                  <button
-                    className="welcome-onboarding-next"
-                    onClick={() => setOnboardingStep("location")}
-                  >
-                    Next
-                  </button>
-                )}
-              </>
-            )}
-
-            {onboardingStep === "location" && (
-              <>
-                <h2 className="welcome-onboarding-title">
-                  Where should we create it?
-                </h2>
-                <div className="welcome-onboarding-folder">
-                  <FolderPicker
-                    value={projectPath}
-                    onChange={setProjectPath}
-                    onCommit={() => handleCreateProject()}
-                    large
-                    placeholder="~/Development/my-project"
-                  />
-                </div>
-                <button
-                  className="welcome-onboarding-next welcome-onboarding-create"
-                  onClick={handleCreateProject}
-                >
-                  Create Project
-                </button>
-              </>
-            )}
+            <h2 className="welcome-onboarding-title">
+              Where should we create it?
+            </h2>
+            <p className="welcome-onboarding-subtitle">
+              Pick a folder and Claude will set everything up for you.
+            </p>
+            <div className="welcome-onboarding-folder">
+              <FolderPicker
+                value={projectPath}
+                onChange={setProjectPath}
+                onCommit={() => handleCreateProject()}
+                large
+                placeholder="~/Development/my-project"
+              />
+            </div>
+            <button
+              className="welcome-onboarding-next welcome-onboarding-create"
+              onClick={handleCreateProject}
+            >
+              Create Project
+            </button>
           </div>
         </div>
       </div>
