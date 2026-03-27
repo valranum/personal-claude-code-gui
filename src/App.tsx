@@ -88,6 +88,17 @@ function AppContent() {
     async (cwd: string, initialPrompt: string) => {
       const conv = await createConversation(cwd);
       if (conv) {
+        const newProjectDirective = [
+          "\n\nNEW PROJECT CONTEXT: The user just created a brand new project in an empty directory.",
+          "Choose the best tech stack for what they describe (default to React with Vite and TypeScript if unclear).",
+          "Don't ask clarifying questions — just scaffold the project, install dependencies, and start the dev server.",
+          "Get straight to building what they asked for.",
+        ].join(" ");
+        await apiFetch(`/api/conversations/${conv.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ systemPrompt: (conv.systemPrompt || "") + newProjectDirective }),
+        });
         setPendingPrompt(initialPrompt);
       }
     },

@@ -35,6 +35,7 @@ export function WelcomeScreen({
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [parentFolder, setParentFolder] = useState("~/Development");
   const [projectName, setProjectName] = useState("");
+  const [projectDescription, setProjectDescription] = useState("");
   const [pickingNewProjectFolder, setPickingNewProjectFolder] = useState(false);
 
   const handlePickFolder = async () => {
@@ -66,8 +67,9 @@ export function WelcomeScreen({
 
   const handleCreateProject = () => {
     if (!sanitizedName) return;
-    const prompt = "Create a new project. Set up the project structure, install dependencies, and create a basic starting point. Then start the dev server.";
-    onNewProject(fullProjectPath, prompt);
+    const description = projectDescription.trim();
+    const visiblePrompt = description || "Set up the project and create a clean starting page.";
+    onNewProject(fullProjectPath, visiblePrompt);
   };
 
   if (showOnboarding) {
@@ -99,22 +101,36 @@ export function WelcomeScreen({
             </div>
 
             <h2 className="welcome-onboarding-title">
-              Name your project
+              Start a new project
             </h2>
             <p className="welcome-onboarding-subtitle">
-              Give it a name and Claude will set everything up for you.
+              Tell Claude what you want to build and it'll handle the rest.
             </p>
 
-            <input
-              className="welcome-onboarding-name-input"
-              type="text"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") handleCreateProject(); }}
-              placeholder="my-cool-project"
-              autoFocus
-              spellCheck={false}
-            />
+            <div className="welcome-onboarding-field">
+              <label className="welcome-onboarding-field-label">Project name</label>
+              <input
+                className="welcome-onboarding-name-input"
+                type="text"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                placeholder="my-cool-project"
+                autoFocus
+                spellCheck={false}
+              />
+            </div>
+
+            <div className="welcome-onboarding-field">
+              <label className="welcome-onboarding-field-label">What are you building?</label>
+              <textarea
+                className="welcome-onboarding-description"
+                value={projectDescription}
+                onChange={(e) => setProjectDescription(e.target.value)}
+                placeholder="e.g. A portfolio website with a gallery and contact form"
+                rows={3}
+                spellCheck={false}
+              />
+            </div>
 
             <div className="welcome-onboarding-location">
               <span className="welcome-onboarding-location-label">Location</span>
