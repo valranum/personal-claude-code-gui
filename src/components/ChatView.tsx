@@ -136,6 +136,10 @@ export function ChatView({
     setArtifact({ language, code });
   }, []);
 
+  const handleRunCommand = useCallback((command: string) => {
+    sendMessage(`Please run this command:\n\`\`\`\n${command}\n\`\`\``);
+  }, [sendMessage]);
+
   const handleCloseArtifact = useCallback(() => {
     setArtifact(null);
   }, []);
@@ -188,6 +192,7 @@ export function ChatView({
           onSendPrompt={sendMessage}
           onToast={(msg, type) => addToast(msg, type || "info")}
           onOpenArtifact={handleOpenArtifact}
+          onRunCommand={handleRunCommand}
           onEditMessage={undefined}
           chatOnly={!!conversation?.chatOnly}
           renderInput={isEmpty ? () => (

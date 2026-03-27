@@ -16,6 +16,7 @@ interface MessageListProps {
   onSendPrompt: (content: string) => void;
   onToast?: (message: string, type?: "info" | "error") => void;
   onOpenArtifact?: (language: string, code: string) => void;
+  onRunCommand?: (command: string) => void;
   renderInput?: () => React.ReactNode;
   chatOnly?: boolean;
 }
@@ -38,7 +39,7 @@ const CHAT_PROMPTS = [
   { label: "Summarize a document", prompt: "I have a long document I need summarized. I'll paste or describe the content, and you condense it into the key points." },
 ];
 
-export function MessageList({ messages, streaming, conversationId, onRetry, onSendPrompt, onToast, onOpenArtifact, onEditMessage, renderInput, chatOnly }: MessageListProps) {
+export function MessageList({ messages, streaming, conversationId, onRetry, onSendPrompt, onToast, onOpenArtifact, onRunCommand, onEditMessage, renderInput, chatOnly }: MessageListProps) {
   const scrollRef = useAutoScroll([messages, streaming]);
   const [sharing, setSharing] = useState(false);
 
@@ -85,7 +86,7 @@ export function MessageList({ messages, streaming, conversationId, onRetry, onSe
         </div>
       )}
       {messages.map((msg) => (
-        <MessageBubble key={msg.id} message={msg} onOpenArtifact={onOpenArtifact} />
+        <MessageBubble key={msg.id} message={msg} onOpenArtifact={onOpenArtifact} onRunCommand={onRunCommand} />
       ))}
       {streaming.isStreaming && (
         <div className="message-bubble assistant streaming msg-enter">

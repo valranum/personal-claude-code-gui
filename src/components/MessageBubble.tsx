@@ -32,6 +32,7 @@ function CopyButton({ text, className = "" }: { text: string; className?: string
 interface MessageBubbleProps {
   message: ChatMessage;
   onOpenArtifact?: (language: string, code: string) => void;
+  onRunCommand?: (command: string) => void;
 }
 
 const LANG_LABELS: Record<string, string> = {
@@ -62,19 +63,25 @@ function fileNameFromPath(p: string): string {
   return p.split("/").pop() || p;
 }
 
+const SHELL_LANGS = new Set(["bash", "sh", "shell", "zsh"]);
+
 function CodeCard({
   language,
   code,
   title,
   fileName,
   onOpen,
+  onRunCommand,
 }: {
   language: string;
   code: string;
   title?: string;
   fileName?: string;
   onOpen: () => void;
+  onRunCommand?: (command: string) => void;
 }) {
+  const isShell = SHELL_LANGS.has(language.toLowerCase());
+
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();
     const downloadName = fileName || (() => {
@@ -93,21 +100,40 @@ function CodeCard({
     URL.revokeObjectURL(url);
   };
 
+  const handleRun = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onRunCommand?.(code);
+  };
+
   return (
     <div className="code-card" onClick={onOpen} role="button" tabIndex={0}>
       <div className="code-card-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-          <path d="M14 2V8H20" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-        </svg>
+        {isShell ? (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <rect x="2" y="3" width="20" height="18" rx="3" stroke="currentColor" strokeWidth="1.5"/>
+            <path d="M6 9L10 12L6 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M12 15H17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        ) : (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+            <path d="M14 2V8H20" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+          </svg>
+        )}
       </div>
       <div className="code-card-info">
-        <span className="code-card-title">{title || `${langTitle(language)} Code`}</span>
-        <span className="code-card-meta">{langLabel(language)}</span>
+        <span className="code-card-title">{title || (isShell ? "Command" : `${langTitle(language)} Code`)}</span>
+        <span className="code-card-meta">{isShell ? code.split("\n")[0].slice(0, 40) : langLabel(language)}</span>
       </div>
-      <button className="code-card-download" onClick={handleDownload} type="button">
-        Download
-      </button>
+      {isShell && onRunCommand ? (
+        <button className="code-card-download code-card-run" onClick={handleRun} type="button">
+          Run
+        </button>
+      ) : (
+        <button className="code-card-download" onClick={handleDownload} type="button">
+          Download
+        </button>
+      )}
     </div>
   );
 }
@@ -126,7 +152,7 @@ function detectLangFromPath(filePath: string): string {
   return EXT_TO_LANG[ext] || ext || "text";
 }
 
-export function MessageBubble({ message, onOpenArtifact }: MessageBubbleProps) {
+export function MessageBubble({ message, onOpenArtifact, onRunCommand }: MessageBubbleProps) {
   const writtenFiles = useMemo(() => {
     if (message.role !== "assistant" || !message.toolCalls) return [];
     const byPath = new Map<string, { lang: string; code: string; path: string; name: string }>();
@@ -217,6 +243,7 @@ export function MessageBubble({ message, onOpenArtifact }: MessageBubbleProps) {
                           language={lang}
                           code={codeStr}
                           onOpen={() => onOpenArtifact(lang, codeStr)}
+                          onRunCommand={onRunCommand}
                         />
                       );
                     }
@@ -236,6 +263,7 @@ export function MessageBubble({ message, onOpenArtifact }: MessageBubbleProps) {
                       title={f.name}
                       fileName={f.name}
                       onOpen={() => onOpenArtifact!(f.lang, f.code)}
+                      onRunCommand={onRunCommand}
                     />
                   ))}
                 </div>

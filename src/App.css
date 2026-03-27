@@ -1621,6 +1621,18 @@ body,
   border-color: var(--text-muted);
 }
 
+.code-card-run {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.code-card-run:hover {
+  background: var(--accent-hover, var(--accent));
+  border-color: var(--accent-hover, var(--accent));
+  filter: brightness(1.1);
+}
+
 /* ── Artifact Resize Handle ── */
 .artifact-resize-handle {
   flex-shrink: 0;
