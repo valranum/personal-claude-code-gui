@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { DockableLayout } from "./components/DockableLayout";
 import { ChatsPanel } from "./components/ChatsPanel";
 import { FilesPanel } from "./components/FilesPanel";
@@ -77,6 +77,7 @@ function AppContent() {
   const [openFilePath, setOpenFilePath] = useState<string | null>(null);
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
   const [filesRefreshKey, setFilesRefreshKey] = useState(0);
+  const openPreviewRef = useRef<(() => void) | null>(null);
 
   const handleStreamingEnd = useCallback(() => {
     setFilesRefreshKey((k) => k + 1);
@@ -208,6 +209,7 @@ function AppContent() {
       initialPrompt={pendingPrompt}
       onConsumePrompt={() => setPendingPrompt(null)}
       onStreamingEnd={handleStreamingEnd}
+      onOpenPreview={() => openPreviewRef.current?.()}
     />
   ) : (
     <WelcomeScreen
@@ -235,6 +237,7 @@ function AppContent() {
         isWelcome={!activeConversation}
         chatOnly={!!activeConversation?.chatOnly}
         onToast={(msg) => addToast(msg, "info")}
+        openPreviewRef={openPreviewRef}
       />
       <CommandPalette
         open={commandPaletteOpen}

@@ -124,6 +124,7 @@ interface DockableLayoutProps {
   isWelcome?: boolean;
   chatOnly?: boolean;
   onToast?: (msg: string) => void;
+  openPreviewRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 export function DockableLayout({
@@ -138,6 +139,7 @@ export function DockableLayout({
   isWelcome,
   chatOnly,
   onToast,
+  openPreviewRef,
 }: DockableLayoutProps) {
   const [layout, setLayout] = useState<LayoutState>(loadLayout);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -189,6 +191,40 @@ export function DockableLayout({
     }
     prevIsWelcomeRef.current = isWelcome;
   }, [isWelcome, chatOnly]);
+
+  // Auto-popout preview when it becomes visible (unless user explicitly docked it)
+  const previewDockedByUserRef = useRef(false);
+  const prevPreviewVisibleRef = useRef(layout.preview.visible);
+
+  useEffect(() => {
+    const nowVisible = layout.preview.visible;
+    const wasVisible = prevPreviewVisibleRef.current;
+    prevPreviewVisibleRef.current = nowVisible;
+
+    if (!wasVisible && nowVisible && !previewDockedByUserRef.current && !poppedOut.has("preview")) {
+      setPoppedOut((prev) => {
+        const next = new Set(prev);
+        next.add("preview");
+        return next;
+      });
+    }
+    if (!nowVisible) {
+      previewDockedByUserRef.current = false;
+    }
+  }, [layout.preview.visible, poppedOut]);
+
+  // Expose a function for child components to open the preview as a popout
+  useEffect(() => {
+    if (openPreviewRef) {
+      openPreviewRef.current = () => {
+        previewDockedByUserRef.current = false;
+        setLayout((prev) => ({
+          ...prev,
+          preview: { ...prev.preview, visible: true },
+        }));
+      };
+    }
+  }, [openPreviewRef]);
 
   // Auto-promote a panel to center if center is empty
   useEffect(() => {
@@ -435,6 +471,9 @@ export function DockableLayout({
   }, []);
 
   const handlePopIn = useCallback((panelId: string) => {
+    if (panelId === "preview") {
+      previewDockedByUserRef.current = true;
+    }
     setPoppedOut((prev) => {
       const next = new Set(prev);
       next.delete(panelId as PanelId);

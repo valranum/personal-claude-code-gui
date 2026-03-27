@@ -10,6 +10,7 @@ interface FileChange {
 interface DiffSummaryProps {
   toolCalls: ToolCallInfo[];
   onOpenArtifact?: (language: string, code: string) => void;
+  onOpenPreview?: () => void;
 }
 
 function fileNameFromPath(p: string): string {
@@ -28,7 +29,7 @@ function detectLang(filePath: string): string {
   return EXT_TO_LANG[ext] || ext || "text";
 }
 
-export function DiffSummary({ toolCalls, onOpenArtifact }: DiffSummaryProps) {
+export function DiffSummary({ toolCalls, onOpenArtifact, onOpenPreview }: DiffSummaryProps) {
   const [expanded, setExpanded] = useState(false);
 
   const fileChanges = useMemo(() => {
@@ -113,6 +114,21 @@ export function DiffSummary({ toolCalls, onOpenArtifact }: DiffSummaryProps) {
           ))}
         </div>
       )}
+      <div className="diff-summary-hint">
+        <span>Your files are ready in the Files panel — click any file to preview it.</span>
+        {onOpenPreview && (
+          <button className="diff-summary-preview-btn" onClick={onOpenPreview} type="button">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
+              <path d="M1.5 5H14.5" stroke="currentColor" strokeWidth="1.2"/>
+              <circle cx="3.5" cy="3.8" r="0.6" fill="currentColor"/>
+              <circle cx="5.3" cy="3.8" r="0.6" fill="currentColor"/>
+              <circle cx="7.1" cy="3.8" r="0.6" fill="currentColor"/>
+            </svg>
+            Open Live Preview
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChatMessage } from "../types";
@@ -33,6 +33,7 @@ interface MessageBubbleProps {
   message: ChatMessage;
   onOpenArtifact?: (language: string, code: string) => void;
   onRunCommand?: (command: string) => void;
+  onOpenPreview?: () => void;
 }
 
 const LANG_LABELS: Record<string, string> = {
@@ -57,10 +58,6 @@ function langTitle(lang: string): string {
     yml: "YAML", xml: "XML", r: "R",
   };
   return titles[lang.toLowerCase()] || lang.charAt(0).toUpperCase() + lang.slice(1);
-}
-
-function fileNameFromPath(p: string): string {
-  return p.split("/").pop() || p;
 }
 
 const SHELL_LANGS = new Set(["bash", "sh", "shell", "zsh"]);
@@ -138,41 +135,7 @@ function CodeCard({
   );
 }
 
-const EXT_TO_LANG: Record<string, string> = {
-  py: "python", js: "javascript", ts: "typescript", jsx: "javascript",
-  tsx: "typescript", rb: "ruby", go: "go", rs: "rust", java: "java",
-  cpp: "cpp", c: "c", cs: "csharp", php: "php", swift: "swift",
-  kt: "kotlin", html: "html", css: "css", sql: "sql", sh: "bash",
-  bash: "bash", json: "json", yaml: "yaml", yml: "yaml", xml: "xml",
-  md: "markdown", r: "r", toml: "toml",
-};
-
-function detectLangFromPath(filePath: string): string {
-  const ext = filePath.split(".").pop()?.toLowerCase() || "";
-  return EXT_TO_LANG[ext] || ext || "text";
-}
-
-export function MessageBubble({ message, onOpenArtifact, onRunCommand }: MessageBubbleProps) {
-  const writtenFiles = useMemo(() => {
-    if (message.role !== "assistant" || !message.toolCalls) return [];
-    const byPath = new Map<string, { lang: string; code: string; path: string; name: string }>();
-    for (const tc of message.toolCalls) {
-      const tcName = tc.name.toLowerCase();
-      if (tcName !== "write" && tcName !== "filewrite") continue;
-      const inp = tc.input || {};
-      if (!(inp.content || inp.contents) || !(inp.file_path || inp.path)) continue;
-      const filePath = String(inp.file_path || inp.path);
-      const code = String(inp.content || inp.contents);
-      byPath.set(filePath, {
-        lang: detectLangFromPath(filePath),
-        code,
-        path: filePath,
-        name: fileNameFromPath(filePath),
-      });
-    }
-    return Array.from(byPath.values());
-  }, [message.role, message.toolCalls]);
-
+export function MessageBubble({ message, onOpenArtifact, onRunCommand, onOpenPreview }: MessageBubbleProps) {
   if (message.role === "system") {
     return (
       <div className="message-bubble system msg-enter">
@@ -253,23 +216,8 @@ export function MessageBubble({ message, onOpenArtifact, onRunCommand }: Message
               >
                 {message.content}
               </ReactMarkdown>
-              {writtenFiles.length > 0 && onOpenArtifact && (
-                <div className="written-files-cards">
-                  {writtenFiles.map((f) => (
-                    <CodeCard
-                      key={f.path}
-                      language={f.lang}
-                      code={f.code}
-                      title={f.name}
-                      fileName={f.name}
-                      onOpen={() => onOpenArtifact!(f.lang, f.code)}
-                      onRunCommand={onRunCommand}
-                    />
-                  ))}
-                </div>
-              )}
               {message.toolCalls && message.toolCalls.length > 0 && (
-                <DiffSummary toolCalls={message.toolCalls} onOpenArtifact={onOpenArtifact} />
+                <DiffSummary toolCalls={message.toolCalls} onOpenArtifact={onOpenArtifact} onOpenPreview={onOpenPreview} />
               )}
             </>
           ) : (

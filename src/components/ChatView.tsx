@@ -30,6 +30,7 @@ interface ChatViewProps {
   initialPrompt?: string | null;
   onConsumePrompt?: () => void;
   onStreamingEnd?: () => void;
+  onOpenPreview?: () => void;
 }
 
 export function ChatView({
@@ -45,6 +46,7 @@ export function ChatView({
   initialPrompt,
   onConsumePrompt,
   onStreamingEnd,
+  onOpenPreview,
 }: ChatViewProps) {
   const { addToast } = useToast();
   const { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens, skills, workflowState } = useChat(
@@ -75,6 +77,21 @@ export function ChatView({
         onStreamingEnd?.();
         if (notifyRequestedRef.current) {
           notifyRequestedRef.current = false;
+          try {
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = "sine";
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            osc.frequency.setValueAtTime(1108.73, ctx.currentTime + 0.15);
+            osc.frequency.setValueAtTime(1318.51, ctx.currentTime + 0.3);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.6);
+          } catch {}
           new Notification("Claude is done", {
             body: "Your project is ready to go.",
           });
@@ -195,6 +212,7 @@ export function ChatView({
           onRunCommand={handleRunCommand}
           onEditMessage={undefined}
           chatOnly={!!conversation?.chatOnly}
+          onOpenPreview={onOpenPreview}
           renderInput={isEmpty ? () => (
             <ChatInput
               onSend={sendMessage}
