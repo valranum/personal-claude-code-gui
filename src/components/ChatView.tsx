@@ -143,7 +143,7 @@ export function ChatView({
           onSendPrompt={sendMessage}
           onToast={(msg, type) => addToast(msg, type || "info")}
           onOpenArtifact={handleOpenArtifact}
-          onEditMessage={onFork ? handleEditMessage : undefined}
+          onEditMessage={undefined}
           chatOnly={!!conversation?.chatOnly}
           renderInput={isEmpty ? () => (
             <ChatInput

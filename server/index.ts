@@ -814,8 +814,17 @@ app.post("/api/conversations", (req, res) => {
     ? path.join(HOME_DIR, cwd.slice(1))
     : cwd;
   const resolvedCwd = expandedCwd ? path.resolve(expandedCwd) : HOME_DIR;
-  if (!fs.existsSync(resolvedCwd) || !fs.statSync(resolvedCwd).isDirectory()) {
-    res.status(400).json({ error: "Invalid workspace path" });
+
+  if (!fs.existsSync(resolvedCwd)) {
+    const parent = path.dirname(resolvedCwd);
+    if (fs.existsSync(parent) && fs.statSync(parent).isDirectory() && isPathWithinHome(resolvedCwd)) {
+      fs.mkdirSync(resolvedCwd, { recursive: true });
+    } else {
+      res.status(400).json({ error: "Invalid workspace path" });
+      return;
+    }
+  } else if (!fs.statSync(resolvedCwd).isDirectory()) {
+    res.status(400).json({ error: "Path is not a directory" });
     return;
   }
 

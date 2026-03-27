@@ -33,7 +33,8 @@ export function WelcomeScreen({
 }: WelcomeScreenProps) {
   const [picking, setPicking] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [projectPath, setProjectPath] = useState("~/Development/");
+  const [parentFolder, setParentFolder] = useState("~/Development");
+  const [projectName, setProjectName] = useState("");
   const [pickingNewProjectFolder, setPickingNewProjectFolder] = useState(false);
 
   const handlePickFolder = async () => {
@@ -60,10 +61,13 @@ export function WelcomeScreen({
     }, [])
     .slice(0, 5);
 
+  const sanitizedName = projectName.trim().replace(/[/\\]/g, "");
+  const fullProjectPath = parentFolder.replace(/\/+$/, "") + "/" + sanitizedName;
+
   const handleCreateProject = () => {
-    const cleanPath = projectPath.replace(/\/+$/, "");
+    if (!sanitizedName) return;
     const prompt = "Create a new project. Set up the project structure, install dependencies, and create a basic starting point. Then start the dev server.";
-    onNewProject(cleanPath, prompt);
+    onNewProject(fullProjectPath, prompt);
   };
 
   if (showOnboarding) {
@@ -95,41 +99,64 @@ export function WelcomeScreen({
             </div>
 
             <h2 className="welcome-onboarding-title">
-              Where should we create it?
+              Name your project
             </h2>
             <p className="welcome-onboarding-subtitle">
-              Pick a folder and Claude will set everything up for you.
+              Give it a name and Claude will set everything up for you.
             </p>
-            <button
-              className="welcome-onboarding-folder-btn"
-              onClick={async () => {
-                if (pickingNewProjectFolder) return;
-                setPickingNewProjectFolder(true);
-                try {
-                  const res = await apiFetch("/api/pick-folder", { method: "POST" });
-                  const data = await res.json();
-                  if (!data.cancelled && data.path) {
-                    setProjectPath(data.path);
+
+            <input
+              className="welcome-onboarding-name-input"
+              type="text"
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleCreateProject(); }}
+              placeholder="my-cool-project"
+              autoFocus
+              spellCheck={false}
+            />
+
+            <div className="welcome-onboarding-location">
+              <span className="welcome-onboarding-location-label">Location</span>
+              <button
+                className="welcome-onboarding-folder-btn"
+                onClick={async () => {
+                  if (pickingNewProjectFolder) return;
+                  setPickingNewProjectFolder(true);
+                  try {
+                    const res = await apiFetch("/api/pick-folder", { method: "POST" });
+                    const data = await res.json();
+                    if (!data.cancelled && data.path) {
+                      setParentFolder(data.path);
+                    }
+                  } finally {
+                    setPickingNewProjectFolder(false);
                   }
-                } finally {
-                  setPickingNewProjectFolder(false);
-                }
-              }}
-              disabled={pickingNewProjectFolder}
-            >
-              <svg className="welcome-onboarding-folder-icon" width="20" height="20" viewBox="0 0 16 16" fill="none">
-                <path d="M2 4.5C2 3.67 2.67 3 3.5 3H6.5L8 4.5H12.5C13.33 4.5 14 5.17 14 6V11.5C14 12.33 13.33 13 12.5 13H3.5C2.67 13 2 12.33 2 11.5V4.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
-              </svg>
-              <span className="welcome-onboarding-folder-path">
-                {pickingNewProjectFolder ? "Choosing folder..." : shortenPath(projectPath)}
-              </span>
-              <span className="welcome-onboarding-folder-change">
-                {pickingNewProjectFolder ? "" : "Change"}
-              </span>
-            </button>
+                }}
+                disabled={pickingNewProjectFolder}
+              >
+                <svg className="welcome-onboarding-folder-icon" width="18" height="18" viewBox="0 0 16 16" fill="none">
+                  <path d="M2 4.5C2 3.67 2.67 3 3.5 3H6.5L8 4.5H12.5C13.33 4.5 14 5.17 14 6V11.5C14 12.33 13.33 13 12.5 13H3.5C2.67 13 2 12.33 2 11.5V4.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+                </svg>
+                <span className="welcome-onboarding-folder-path">
+                  {pickingNewProjectFolder ? "Choosing..." : shortenPath(parentFolder)}
+                </span>
+                <span className="welcome-onboarding-folder-change">
+                  {pickingNewProjectFolder ? "" : "Change"}
+                </span>
+              </button>
+            </div>
+
+            {sanitizedName && (
+              <div className="welcome-onboarding-full-path">
+                {shortenPath(fullProjectPath)}
+              </div>
+            )}
+
             <button
               className="welcome-onboarding-next welcome-onboarding-create"
               onClick={handleCreateProject}
+              disabled={!sanitizedName}
             >
               Create Project
             </button>
