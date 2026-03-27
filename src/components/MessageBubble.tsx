@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChatMessage } from "../types";
@@ -112,8 +112,6 @@ function CodeCard({
   );
 }
 
-const CODE_BLOCK_RE = /```(\w+)\n([\s\S]*?)```/g;
-
 const EXT_TO_LANG: Record<string, string> = {
   py: "python", js: "javascript", ts: "typescript", jsx: "javascript",
   tsx: "typescript", rb: "ruby", go: "go", rs: "rust", java: "java",
@@ -129,8 +127,6 @@ function detectLangFromPath(filePath: string): string {
 }
 
 export function MessageBubble({ message, onOpenArtifact }: MessageBubbleProps) {
-  const autoOpened = useRef(false);
-
   const writtenFiles = useMemo(() => {
     if (message.role !== "assistant" || !message.toolCalls) return [];
     const byPath = new Map<string, { lang: string; code: string; path: string; name: string }>();
@@ -150,47 +146,6 @@ export function MessageBubble({ message, onOpenArtifact }: MessageBubbleProps) {
     }
     return Array.from(byPath.values());
   }, [message.role, message.toolCalls]);
-
-  useEffect(() => {
-    if (message.role !== "assistant" || !onOpenArtifact || autoOpened.current) return;
-
-    if (message.toolCalls && message.toolCalls.length > 0) {
-      const writes = message.toolCalls
-        .filter((tc) => {
-          const name = tc.name.toLowerCase();
-          if (name !== "write" && name !== "filewrite") return false;
-          const inp = tc.input || {};
-          return (inp.content || inp.contents) && (inp.file_path || inp.path);
-        })
-        .map((tc) => {
-          const inp = tc.input;
-          const filePath = String(inp.file_path || inp.path);
-          const code = String(inp.content || inp.contents);
-          return { lang: detectLangFromPath(filePath), code, path: filePath };
-        });
-
-      if (writes.length > 0) {
-        const largest = writes.reduce((a, b) => (b.code.length > a.code.length ? b : a));
-        autoOpened.current = true;
-        onOpenArtifact(largest.lang, largest.code);
-        return;
-      }
-    }
-
-    // Fall back to code blocks in the message text
-    const blocks: { lang: string; code: string }[] = [];
-    let m;
-    while ((m = CODE_BLOCK_RE.exec(message.content)) !== null) {
-      blocks.push({ lang: m[1], code: m[2].replace(/\n$/, "") });
-    }
-    CODE_BLOCK_RE.lastIndex = 0;
-
-    if (blocks.length === 0) return;
-
-    const largest = blocks.reduce((a, b) => (b.code.length > a.code.length ? b : a));
-    autoOpened.current = true;
-    onOpenArtifact(largest.lang, largest.code);
-  }, [message.content, message.role, message.toolCalls, onOpenArtifact]);
 
   if (message.role === "system") {
     return (

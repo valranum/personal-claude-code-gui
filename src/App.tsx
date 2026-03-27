@@ -76,6 +76,11 @@ function AppContent() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [openFilePath, setOpenFilePath] = useState<string | null>(null);
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
+  const [filesRefreshKey, setFilesRefreshKey] = useState(0);
+
+  const handleStreamingEnd = useCallback(() => {
+    setFilesRefreshKey((k) => k + 1);
+  }, []);
 
   const handleOpenFolder = useCallback(
     (cwd?: string) => {
@@ -183,6 +188,7 @@ function AppContent() {
       cwd={activeConversation.cwd}
       onChangeCwd={handleChangeCwd}
       onFileClick={setOpenFilePath}
+      refreshKey={filesRefreshKey}
     />
   ) : (
     <div className="sidebar-empty">Open a project folder to browse files.</div>
@@ -201,6 +207,7 @@ function AppContent() {
       onCloseFile={() => setOpenFilePath(null)}
       initialPrompt={pendingPrompt}
       onConsumePrompt={() => setPendingPrompt(null)}
+      onStreamingEnd={handleStreamingEnd}
     />
   ) : (
     <WelcomeScreen

@@ -13,6 +13,7 @@ interface FileTreeProps {
   onClose: () => void;
   onFileClick?: (filePath: string) => void;
   onChangeCwd?: (newCwd: string) => void;
+  refreshKey?: number;
 }
 
 function FileIcon() {
@@ -126,7 +127,7 @@ function TreeNode({ entry, onFileClick }: { entry: FileEntry; onFileClick?: (pat
   );
 }
 
-export function FileTree({ cwd, onClose, onFileClick, onChangeCwd }: FileTreeProps) {
+export function FileTree({ cwd, onClose, onFileClick, onChangeCwd, refreshKey }: FileTreeProps) {
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [picking, setPicking] = useState(false);
@@ -147,7 +148,7 @@ export function FileTree({ cwd, onClose, onFileClick, onChangeCwd }: FileTreePro
 
   useEffect(() => {
     fetchRoot();
-  }, [fetchRoot]);
+  }, [fetchRoot, refreshKey]);
 
   const handleChangeCwd = async () => {
     if (picking || !onChangeCwd) return;

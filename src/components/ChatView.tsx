@@ -29,6 +29,7 @@ interface ChatViewProps {
   onCloseFile?: () => void;
   initialPrompt?: string | null;
   onConsumePrompt?: () => void;
+  onStreamingEnd?: () => void;
 }
 
 export function ChatView({
@@ -43,6 +44,7 @@ export function ChatView({
   onCloseFile,
   initialPrompt,
   onConsumePrompt,
+  onStreamingEnd,
 }: ChatViewProps) {
   const { addToast } = useToast();
   const { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens, skills, sessionCost, workflowState } = useChat(
@@ -55,6 +57,16 @@ export function ChatView({
     conversation?.cwd,
     conversation?.model,
   );
+
+  const wasStreamingRef = useRef(false);
+  useEffect(() => {
+    if (streaming.isStreaming) {
+      wasStreamingRef.current = true;
+    } else if (wasStreamingRef.current) {
+      wasStreamingRef.current = false;
+      onStreamingEnd?.();
+    }
+  }, [streaming.isStreaming, onStreamingEnd]);
 
   const promptSentRef = useRef(false);
 
