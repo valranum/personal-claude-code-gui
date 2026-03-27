@@ -2900,6 +2900,11 @@ body,
   box-shadow: 0 0 0 3px var(--accent-subtle);
 }
 
+[data-theme="light"] .chat-input-wrapper:focus-within {
+  border-color: var(--accent);
+  box-shadow: none;
+}
+
 .chat-input {
   flex: 1;
   background: transparent;
