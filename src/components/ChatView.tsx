@@ -5,7 +5,7 @@ import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
 
 import { CompactSuggestionBanner } from "./CompactSuggestionBanner";
-import { ContextStatusBar } from "./ContextStatusBar";
+
 import { WorkflowBanner } from "./WorkflowBanner";
 import { ArtifactPanel } from "./ArtifactPanel";
 import { FileEditorPanel } from "./FileEditorPanel";
@@ -47,7 +47,7 @@ export function ChatView({
   onStreamingEnd,
 }: ChatViewProps) {
   const { addToast } = useToast();
-  const { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens, skills, sessionCost, workflowState } = useChat(
+  const { messages, streaming, sendMessage, abort, retry, showCompactSuggestion, dismissCompactSuggestion, contextTokens, skills, workflowState } = useChat(
     conversationId,
     (title) => {
       if (conversationId) onTitleUpdate(conversationId, title);
@@ -227,16 +227,6 @@ export function ChatView({
               }
             } : undefined}
             contextPercent={contextTokens / 200_000 * 100}
-          />
-        )}
-        {!isEmpty && conversation && (
-          <ContextStatusBar
-            model={conversation.model || ""}
-            contextTokens={contextTokens}
-            contextWindow={200_000}
-            sessionCost={sessionCost}
-            sessionStart={conversation.createdAt}
-            isStreaming={streaming.isStreaming}
           />
         )}
         {showNotifyBtn && streaming.isStreaming && (
