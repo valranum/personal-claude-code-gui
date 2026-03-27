@@ -102,9 +102,22 @@ export function ChatsPanel({
     setEditingId(null);
   };
 
-  const handleExport = useCallback((convId: string, format: "md" | "json") => {
-    window.open(`/api/conversations/${convId}/export?format=${format}`, "_blank");
+  const handleExport = useCallback(async (convId: string, format: "md" | "json") => {
     setExportMenuId(null);
+    try {
+      const res = await apiFetch(`/api/conversations/${convId}/export?format=${format}`);
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") || "";
+      const match = disposition.match(/filename="?([^"]+)"?/);
+      const filename = match?.[1] || `conversation.${format === "md" ? "md" : "json"}`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {}
   }, []);
 
   return (
