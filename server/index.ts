@@ -1313,9 +1313,9 @@ app.post("/api/conversations/:id/messages", (req, res) => {
   store.addMessage(req.params.id, userMsg);
 
   const lastTurnTokens = convFile.conversation.lastTurnInputTokens || 0;
-  if (lastTurnTokens >= 100_000) {
-    const hint = "\n\nIMPORTANT: Context usage is high. For any complex or multi-step task, prefer delegating to sub-agents (using the Agent tool) so work happens in a fresh context window. Keep your direct responses concise and focused.";
-    if (convFile.conversation.systemPrompt && !convFile.conversation.systemPrompt.includes("Context usage is high")) {
+  if (lastTurnTokens >= 80_000) {
+    const hint = "\n\nIMPORTANT: Your context window is filling up. To maintain quality:\n- Delegate ALL multi-step or complex tasks to sub-agents (Agent tool) so each task runs in a fresh context window\n- Keep your direct responses short and focused — summaries, decisions, next steps\n- Do NOT try to hold large code blocks or full file contents in this conversation\n- Sub-agents can read files, write code, and run commands independently, then report back with a concise result\nThis prevents context degradation that compaction cannot fix.";
+    if (convFile.conversation.systemPrompt && !convFile.conversation.systemPrompt.includes("context window is filling up")) {
       convFile.conversation.systemPrompt += hint;
     }
   }

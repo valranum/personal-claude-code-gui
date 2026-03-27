@@ -47,7 +47,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "What do the slash commands do?",
-    a: "/agents — List available subagents for this workspace\n/clear — Clear conversation history\n/compact — Compress context to free up token space\n/context — Show context window usage with a visual breakdown\n/cost — Show session cost and token summary\n/diff — Show uncommitted git changes in your workspace\n/execute — Execute the current implementation plan with sub-agents\n/export — Download conversation as markdown (or /export json)\n/plan — Start a structured development workflow (brainstorm → spec → build)\n/review — Ask Claude to review your uncommitted code changes\n/skills — List installed skills\n/status — Show model, workspace, and session info\n/usage — Show token usage and cost (supports /usage week, month, or a number of days)",
+    a: "/agents — List available subagents for this workspace\n/clear — Clear conversation history\n/compact — Manually compress context (last resort — prefer starting fresh)\n/context — Show context window usage with a visual breakdown\n/cost — Show session cost and token summary\n/diff — Show uncommitted git changes in your workspace\n/execute — Execute the current implementation plan with sub-agents\n/export — Download conversation as markdown (or /export json)\n/plan — Start a structured development workflow (brainstorm → spec → build)\n/review — Ask Claude to review your uncommitted code changes\n/skills — List installed skills\n/status — Show model, workspace, and session info\n/usage — Show token usage and cost (supports /usage week, month, or a number of days)",
   },
   {
     q: "What does /review do?",
@@ -55,7 +55,11 @@ const FAQ_ITEMS = [
   },
   {
     q: "How do I monitor my context usage?",
-    a: "The context ring in the bottom-right of the input area shows how full your context window is. Type /context for a detailed breakdown with a progress bar. When usage gets high, the app will suggest running /compact to free up space, and at 95% it auto-compacts before sending.",
+    a: "The status bar below the chat shows your context percentage. Type /context for a detailed breakdown with a progress bar. When usage gets high, Claude automatically shifts to delegating work to sub-agents that each run in a fresh context window. At ~75%, a banner will suggest starting a fresh session. The /compact command is available as a manual fallback if needed.",
+  },
+  {
+    q: "Why doesn't Claude auto-compact?",
+    a: "Compacting sounds helpful but it's actually the worst of both worlds: you lose the detailed context Claude was using, while the summary still carries stale assumptions from the bloated session. Instead, Claude for Designers uses sub-agents as the primary strategy for managing context. When the context window starts filling up, Claude delegates complex tasks to sub-agents that each work in their own fresh context window and report back concise results. This keeps the main session lean and coherent. If context gets very high, the app suggests starting a fresh session rather than compacting.",
   },
   {
     q: "Why is Claude taking a long time?",

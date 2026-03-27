@@ -101,9 +101,22 @@ Export any conversation as Markdown or JSON. Available from the sidebar (hover o
 
 The sidebar search searches across both conversation titles and message content. Results show where the match was found, with a context snippet for message-content matches.
 
-### Auto-Compact Suggestion
+### Context Management
 
-When a conversation uses more than 75% of the context window (~150k tokens), a banner suggests compacting the conversation to free up space. Click "Compact now" or dismiss it.
+LLMs lose coherence as the context window fills up — often well before hitting the hard limit. Around 50% capacity, responses start degrading: the model forgets earlier instructions, duplicates work, and hallucinates more frequently.
+
+**Why not just compact?** Compacting (summarizing the conversation to free up space) sounds reasonable, but it's the worst of both worlds: you lose the detailed working context Claude was using, while the remaining summary still carries stale assumptions and "context poisoning" from the bloated session. The result is a model that remembers things wrong rather than not at all.
+
+**The sub-agent approach.** Instead of compacting, Claude for Designers uses sub-agents as the primary strategy for managing context. When context usage gets high, the system nudges Claude to delegate work to sub-agents — independent AI workers that each run in their own fresh context window. They read files, write code, run commands, and report back with a concise result. The main session stays lean, acting as an orchestrator rather than doing all the heavy lifting itself.
+
+**What you'll see:**
+
+- **At ~40% context** — the system prompt automatically tells Claude to prefer sub-agents for complex tasks.
+- **At ~50% context** — a subtle banner appears: "Context is getting full — Claude will prefer sub-agents to keep responses sharp." No action needed from you.
+- **At ~75% context** — a stronger banner suggests starting a fresh session (with context summary carried over) to avoid degradation.
+- **At ~95% context** — a toast notification warns that context is nearly full.
+
+The `/compact` command is still available if you want to manually compress a conversation, but it's a last resort, not the recommended approach.
 
 ### Keyboard Shortcuts
 

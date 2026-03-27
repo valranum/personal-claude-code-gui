@@ -81,8 +81,8 @@ function parseUsageQuery(input: string): { scope: "conversation" | "range"; days
 
   return null;
 }
-// ~95% of 200k context window — auto-compact before sending
-const AUTO_COMPACT_THRESHOLD = 190_000;
+// ~95% of 200k — warn user to start fresh instead of auto-compacting
+const CRITICAL_CONTEXT_THRESHOLD = 190_000;
 
 export function useChat(
   conversationId: string | null,
@@ -894,21 +894,8 @@ export function useChat(
         }
       }
 
-      if (contextTokensRef.current >= AUTO_COMPACT_THRESHOLD) {
-        try {
-          const res = await apiFetch(`/api/conversations/${conversationId}/compact`, { method: "POST" });
-          if (res.ok) {
-            const reloaded = await apiFetch(`/api/conversations/${conversationId}/messages`);
-            const reloadedData = await reloaded.json();
-            setMessages(reloadedData.messages);
-            setContextTokens(0);
-            setSessionCost(0);
-            setShowCompactSuggestion(false);
-            onInfoRef.current?.("Conversation was automatically compacted to free up context.");
-          }
-        } catch {
-          // compact failed — continue with send anyway
-        }
+      if (contextTokensRef.current >= CRITICAL_CONTEXT_THRESHOLD) {
+        onInfoRef.current?.("Context is nearly full. Consider starting a fresh session to maintain quality — sub-agents can't compensate at this level.");
       }
 
       const userMsg: ChatMessage = {
