@@ -4,6 +4,7 @@ import { PopoutWindow } from "./PopoutWindow";
 import { Tooltip } from "./Tooltip";
 import { Conversation } from "../types";
 import { FaqModal } from "./FaqModal";
+import { GettingStartedModal } from "./GettingStartedModal";
 import { MCPConfigPanel } from "./MCPConfigPanel";
 import { SkillsPanel } from "./SkillsPanel";
 import { SystemPromptModal } from "./SystemPromptModal";
@@ -125,6 +126,7 @@ interface DockableLayoutProps {
   chatOnly?: boolean;
   onToast?: (msg: string) => void;
   openPreviewRef?: React.MutableRefObject<(() => void) | null>;
+  showGettingStartedRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 export function DockableLayout({
@@ -140,6 +142,7 @@ export function DockableLayout({
   chatOnly,
   onToast,
   openPreviewRef,
+  showGettingStartedRef,
 }: DockableLayoutProps) {
   const [layout, setLayout] = useState<LayoutState>(loadLayout);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -149,6 +152,7 @@ export function DockableLayout({
   const [poppedOut, setPoppedOut] = useState<Set<PanelId>>(new Set());
   const [showSettings, setShowSettings] = useState(false);
   const [showFaq, setShowFaq] = useState(false);
+  const [showGettingStarted, setShowGettingStarted] = useState(false);
   const [showMcp, setShowMcp] = useState(false);
   const [showSkills, setShowSkills] = useState(false);
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
@@ -225,6 +229,12 @@ export function DockableLayout({
       };
     }
   }, [openPreviewRef]);
+
+  useEffect(() => {
+    if (showGettingStartedRef) {
+      showGettingStartedRef.current = () => setShowGettingStarted(true);
+    }
+  }, [showGettingStartedRef]);
 
   // Auto-promote a panel to center if center is empty
   useEffect(() => {
@@ -829,7 +839,28 @@ export function DockableLayout({
                 <div className="fp-body fp-center-body">{p.content}</div>
               </div>
             ))
-          ) : null}
+          ) : (
+            <div className="fp-center-empty">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="3" />
+                <path d="M3 9h18" />
+                <path d="M9 9v12" />
+              </svg>
+              <span>No panels open</span>
+              <div className="fp-center-empty-actions">
+                {hiddenPanels.map((p) => (
+                  <button
+                    key={p.id}
+                    className="fp-center-empty-btn"
+                    onClick={() => handleToggleVisible(p.id)}
+                  >
+                    {getPanelIcon(p.id)}
+                    <span>{p.title}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {!isWelcome && renderResizeHandle("bottom")}
@@ -900,6 +931,17 @@ export function DockableLayout({
                     </svg>
                   )}
                   <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+                </button>
+                <button
+                  className="settings-option"
+                  onClick={() => { setShowGettingStarted(true); setShowSettings(false); }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                    <path d="M2 3.5C2 2.67 2.67 2 3.5 2H10L14 6V12.5C14 13.33 13.33 14 12.5 14H3.5C2.67 14 3 13.33 3 12.5" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+                    <path d="M10 2V6H14" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+                    <path d="M5 9H11M5 11.5H9" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                  </svg>
+                  <span>Getting Started</span>
                 </button>
                 <button
                   className="settings-option"
@@ -1039,11 +1081,12 @@ export function DockableLayout({
       {showUsageStats && <UsageStatsBar onClose={() => setShowUsageStats(false)} />}
 
       <FaqModal open={showFaq} onClose={() => setShowFaq(false)} />
+      <GettingStartedModal open={showGettingStarted} onClose={() => setShowGettingStarted(false)} />
       {showMcp && conversation && (
         <MCPConfigPanel cwd={conversation.cwd} onClose={() => setShowMcp(false)} />
       )}
-      {showSkills && conversation && (
-        <SkillsPanel cwd={conversation.cwd} onClose={() => setShowSkills(false)} />
+      {showSkills && (
+        <SkillsPanel cwd={conversation?.cwd} onClose={() => setShowSkills(false)} />
       )}
       {showSystemPrompt && conversation && (
         <SystemPromptModal

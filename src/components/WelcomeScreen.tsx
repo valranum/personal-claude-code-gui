@@ -7,6 +7,7 @@ interface WelcomeScreenProps {
   onOpenFolder: (cwd?: string) => void;
   onNewProject: (cwd: string, initialPrompt: string) => void;
   conversations: Conversation[];
+  onShowGettingStarted?: () => void;
 }
 
 function timeAgo(dateStr: string): string {
@@ -30,6 +31,7 @@ export function WelcomeScreen({
   onOpenFolder,
   onNewProject,
   conversations,
+  onShowGettingStarted,
 }: WelcomeScreenProps) {
   const [picking, setPicking] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -250,6 +252,18 @@ export function WelcomeScreen({
             </svg>
             just chat, no code needed
           </button>
+          {onShowGettingStarted && (
+            <button
+              className="welcome-secondary-link"
+              onClick={onShowGettingStarted}
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M6 12.5V11C4.34 10.07 3.5 8.5 3.5 6.5C3.5 4 5.5 2 8 2C10.5 2 12.5 4 12.5 6.5C12.5 8.5 11.66 10.07 10 11V12.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M6 14H10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              </svg>
+              getting started guide
+            </button>
+          )}
         </div>
 
         {recentProjects.length > 0 && (

@@ -19,11 +19,15 @@ const FAQ_ITEMS = [
   },
   {
     q: "What are skills?",
-    a: "Skills extend Claude with specialized knowledge and capabilities — like interacting with Slack, managing Linear issues, searching code across repositories, or working with Google Drive. They're loaded automatically from your Claude settings and can be invoked by typing /<skill-name> in the chat. Go to Settings → Skills to see what's installed, or type /skills in the chat.",
+    a: "Skills are like plugins that give Claude extra abilities beyond reading and writing code. For example, a Slack skill lets Claude send messages on your behalf, a Linear skill lets it create and manage tickets, and a Google Drive skill lets it search your documents. You can see what's installed under Settings → Skills, or type /skills in the chat.",
   },
   {
-    q: "How do I install or remove skills?",
-    a: "Open Settings → Skills to manage your skills. If the sq CLI is available, you can install skills by name directly from the panel (e.g., type \"slack\" and click Install). You can also install from the terminal with: sq agents skills add <name>. To remove a skill, click the X next to it in the Skills panel, or run: sq agents skills remove <name>.",
+    q: "How do I add or remove skills?",
+    a: "Open Settings → Skills to see your installed skills. From there you can install new ones by typing a name (e.g. \"slack\") and clicking Install, or remove existing ones by clicking the X next to them. If the install option isn't available, your team admin may need to set up the skills CLI first.",
+  },
+  {
+    q: "What are MCP servers?",
+    a: "MCP (Model Context Protocol) servers are integrations that connect Claude to external tools and data sources — like databases, APIs, design tools, or custom internal services. Each server gives Claude additional capabilities it can use during your conversation. For example, an MCP server for Figma could let Claude inspect your design files, or one for a database could let it query data directly. You can manage them under Settings → MCP Servers.",
   },
   {
     q: "What file types can I attach?",

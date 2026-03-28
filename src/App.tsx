@@ -78,6 +78,7 @@ function AppContent() {
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
   const [filesRefreshKey, setFilesRefreshKey] = useState(0);
   const openPreviewRef = useRef<(() => void) | null>(null);
+  const showGettingStartedRef = useRef<(() => void) | null>(null);
 
   const handleStreamingEnd = useCallback(() => {
     setFilesRefreshKey((k) => k + 1);
@@ -218,6 +219,7 @@ function AppContent() {
       onOpenFolder={handleOpenFolder}
       onNewProject={handleNewProject}
       conversations={conversations}
+      onShowGettingStarted={() => showGettingStartedRef.current?.()}
     />
   );
 
@@ -240,6 +242,7 @@ function AppContent() {
         chatOnly={!!activeConversation?.chatOnly}
         onToast={(msg) => addToast(msg, "info")}
         openPreviewRef={openPreviewRef}
+        showGettingStartedRef={showGettingStartedRef}
       />
       <CommandPalette
         open={commandPaletteOpen}

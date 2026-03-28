@@ -8,11 +8,11 @@ interface SkillEntry {
 }
 
 interface SkillsPanelProps {
-  cwd: string;
+  cwd?: string;
   onClose: () => void;
 }
 
-export function SkillsPanel({ cwd, onClose }: SkillsPanelProps) {
+export function SkillsPanel({ cwd = ".", onClose }: SkillsPanelProps) {
   const [skills, setSkills] = useState<SkillEntry[]>([]);
   const [sqAvailable, setSqAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
