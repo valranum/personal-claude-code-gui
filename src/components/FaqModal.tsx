@@ -30,6 +30,10 @@ const FAQ_ITEMS = [
     a: "MCP (Model Context Protocol) servers are integrations that connect Claude to external tools and data sources — like databases, APIs, design tools, or custom internal services. Each server gives Claude additional capabilities it can use during your conversation. For example, an MCP server for Figma could let Claude inspect your design files, or one for a database could let it query data directly. You can manage them under Settings → MCP Servers.",
   },
   {
+    q: "What is the system prompt?",
+    a: "The system prompt is a set of background instructions that Claude follows during your conversation — like giving it a role or ground rules. For example, you could tell it \"Always use Tailwind CSS\" or \"Keep responses concise.\" You can set one per conversation or save a default for an entire project folder. Most people never need to change it, but it's useful if your team has specific coding conventions. Find it under Settings → System Prompt.",
+  },
+  {
     q: "What file types can I attach?",
     a: "You can attach images (JPG, PNG, GIF, WEBP) using the paperclip icon. Claude can analyze screenshots, mockups, and design references to help implement what you show it.",
   },

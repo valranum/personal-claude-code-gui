@@ -15,6 +15,32 @@ import * as workspaceConfig from "./workspace-config.js";
 import * as scheduleStore from "./schedule-store.js";
 import { startScheduler, computeNextRun, onSchedulerEvent, offSchedulerEvent } from "./scheduler.js";
 
+const ENV_FILE = path.resolve(import.meta.dirname || __dirname, "..", ".env");
+
+function loadEnvFile() {
+  try {
+    const contents = fs.readFileSync(ENV_FILE, "utf-8");
+    for (const line of contents.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eq = trimmed.indexOf("=");
+      if (eq < 0) continue;
+      const key = trimmed.slice(0, eq).trim();
+      let val = trimmed.slice(eq + 1).trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      if (!process.env[key]) {
+        process.env[key] = val;
+      }
+    }
+  } catch {
+    // .env file doesn't exist yet -- that's fine
+  }
+}
+
+loadEnvFile();
+
 const app = express();
 
 const AUTH_TOKEN = randomBytes(32).toString("hex");
@@ -67,6 +93,58 @@ app.use("/api", (req, res, next) => {
   }
 
   res.status(401).json({ error: "Unauthorized" });
+});
+
+// --- API Key management ---
+
+app.get("/api/api-key", (_req, res) => {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) {
+    return res.json({ configured: false });
+  }
+  const masked = key.length > 11
+    ? key.slice(0, 7) + "..." + key.slice(-4)
+    : key.slice(0, 3) + "...";
+  res.json({ configured: true, maskedKey: masked });
+});
+
+app.post("/api/api-key", (req, res) => {
+  const { key } = req.body;
+  if (!key || typeof key !== "string") {
+    return res.status(400).json({ error: "API key is required" });
+  }
+  const trimmed = key.trim();
+  if (!trimmed.startsWith("sk-ant-")) {
+    return res.status(400).json({ error: "Invalid key format — it should start with sk-ant-" });
+  }
+
+  process.env.ANTHROPIC_API_KEY = trimmed;
+
+  try {
+    let envContents = "";
+    try { envContents = fs.readFileSync(ENV_FILE, "utf-8"); } catch {}
+
+    const lines = envContents.split("\n");
+    let replaced = false;
+    const updated = lines.map((line) => {
+      if (line.trim().startsWith("ANTHROPIC_API_KEY=")) {
+        replaced = true;
+        return `ANTHROPIC_API_KEY="${trimmed}"`;
+      }
+      return line;
+    });
+    if (!replaced) {
+      updated.push(`ANTHROPIC_API_KEY="${trimmed}"`);
+    }
+    fs.writeFileSync(ENV_FILE, updated.join("\n").replace(/\n{3,}/g, "\n\n").trim() + "\n");
+  } catch (err) {
+    console.error("Failed to write .env file:", err);
+  }
+
+  const masked = trimmed.length > 11
+    ? trimmed.slice(0, 7) + "..." + trimmed.slice(-4)
+    : trimmed.slice(0, 3) + "...";
+  res.json({ ok: true, maskedKey: masked });
 });
 
 const DEFAULT_MODEL = "claude-opus-4-6";
