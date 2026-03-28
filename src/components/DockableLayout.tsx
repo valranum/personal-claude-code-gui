@@ -875,7 +875,7 @@ export function DockableLayout({
 
         <div className="fp-toolbar">
           <div className="fp-toolbar-group fp-toolbar-center">
-            {hiddenPanels.map((p) => (
+            {!isWelcome && hiddenPanels.map((p) => (
               <Tooltip key={p.id} text={`Show ${p.title}`} side="top">
                 <button
                   className="fp-toolbar-btn"
@@ -885,7 +885,7 @@ export function DockableLayout({
                 </button>
               </Tooltip>
             ))}
-            {poppedOutPanels.map((p) => (
+            {!isWelcome && poppedOutPanels.map((p) => (
               <Tooltip key={p.id} text={`Bring ${p.title} back`} side="top">
                 <button
                   className="fp-toolbar-btn fp-toolbar-btn-popout"
@@ -949,20 +949,11 @@ export function DockableLayout({
               )}
             </div>
             <Tooltip text={theme === "dark" ? "Light mode" : "Dark mode"} side="top">
-              <button
-                className="fp-toolbar-btn"
-                onClick={onToggleTheme}
-              >
-                {theme === "dark" ? (
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <circle cx="8" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.3"/>
-                    <path d="M8 2V3.5M8 12.5V14M2 8H3.5M12.5 8H14M3.76 3.76L4.82 4.82M11.18 11.18L12.24 12.24M12.24 3.76L11.18 4.82M4.82 11.18L3.76 12.24" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-                  </svg>
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M13.5 9.5a5.5 5.5 0 1 1-7-7 4.5 4.5 0 0 0 7 7Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
-                  </svg>
-                )}
+              <button className="fp-toolbar-btn" onClick={onToggleTheme}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <circle cx="8" cy="8" r="4" fill="none" stroke="currentColor" strokeWidth="1.3"/>
+                  <path d="M8 4A4 4 0 0 0 8 12Z" fill="currentColor"/>
+                </svg>
               </button>
             </Tooltip>
             <div ref={settingsRef} style={{ position: "relative" }}>
@@ -1128,9 +1119,10 @@ export function DockableLayout({
       {showSkills && (
         <SkillsPanel cwd={conversation?.cwd} onClose={() => setShowSkills(false)} />
       )}
-      {showSystemPrompt && conversation && (
+      {showSystemPrompt && (
         <SystemPromptModal
           conversation={conversation}
+          cwd={conversation?.cwd || "."}
           onClose={() => setShowSystemPrompt(false)}
         />
       )}

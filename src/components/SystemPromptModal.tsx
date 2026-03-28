@@ -3,12 +3,13 @@ import { Conversation } from "../types";
 import { apiFetch } from "../utils/api";
 
 interface SystemPromptModalProps {
-  conversation: Conversation;
+  conversation?: Conversation | null;
+  cwd: string;
   onClose: () => void;
 }
 
-export function SystemPromptModal({ conversation, onClose }: SystemPromptModalProps) {
-  const [prompt, setPrompt] = useState(conversation.systemPrompt || "");
+export function SystemPromptModal({ conversation, cwd, onClose }: SystemPromptModalProps) {
+  const [prompt, setPrompt] = useState(conversation?.systemPrompt || "");
   const [workspaceDefault, setWorkspaceDefault] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
@@ -20,18 +21,19 @@ export function SystemPromptModal({ conversation, onClose }: SystemPromptModalPr
   }, [onClose]);
 
   useEffect(() => {
-    apiFetch(`/api/workspace-config?cwd=${encodeURIComponent(conversation.cwd)}`)
+    apiFetch(`/api/workspace-config?cwd=${encodeURIComponent(cwd)}`)
       .then((r) => r.json())
       .then((data) => {
         setWorkspaceDefault(data.defaultSystemPrompt || "");
-        if (!conversation.systemPrompt && data.defaultSystemPrompt) {
+        if (!conversation?.systemPrompt && data.defaultSystemPrompt) {
           setPrompt(data.defaultSystemPrompt);
         }
       })
       .catch(() => {});
-  }, [conversation.cwd, conversation.systemPrompt]);
+  }, [cwd, conversation?.systemPrompt]);
 
   const handleSaveConversation = useCallback(async () => {
+    if (!conversation) return;
     setSaving(true);
     try {
       await apiFetch(`/api/conversations/${conversation.id}`, {
@@ -44,7 +46,7 @@ export function SystemPromptModal({ conversation, onClose }: SystemPromptModalPr
     } finally {
       setSaving(false);
     }
-  }, [conversation.id, prompt]);
+  }, [conversation, prompt]);
 
   const handleSaveWorkspace = useCallback(async () => {
     setSaving(true);
@@ -52,7 +54,7 @@ export function SystemPromptModal({ conversation, onClose }: SystemPromptModalPr
       await apiFetch("/api/workspace-config", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cwd: conversation.cwd, defaultSystemPrompt: prompt }),
+        body: JSON.stringify({ cwd, defaultSystemPrompt: prompt }),
       });
       setWorkspaceDefault(prompt);
       setSaved("Saved as workspace default");
@@ -60,7 +62,7 @@ export function SystemPromptModal({ conversation, onClose }: SystemPromptModalPr
     } finally {
       setSaving(false);
     }
-  }, [conversation.cwd, prompt]);
+  }, [cwd, prompt]);
 
   return (
     <div className="sysprompt-overlay" onClick={onClose}>
@@ -78,7 +80,7 @@ export function SystemPromptModal({ conversation, onClose }: SystemPromptModalPr
             className="sysprompt-textarea"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Enter a system prompt for Claude..."
+            placeholder="Custom instructions that Claude will follow in every message. Use this to set tone, constraints, or context — e.g. 'Always respond in French' or 'You are a senior React developer.'"
             rows={8}
             spellCheck={false}
           />
@@ -92,13 +94,15 @@ export function SystemPromptModal({ conversation, onClose }: SystemPromptModalPr
           )}
           {saved && <div className="sysprompt-saved">{saved}</div>}
           <div className="sysprompt-actions">
-            <button
-              className="sysprompt-btn sysprompt-btn-secondary"
-              onClick={handleSaveConversation}
-              disabled={saving}
-            >
-              Save for this conversation
-            </button>
+            {conversation && (
+              <button
+                className="sysprompt-btn sysprompt-btn-secondary"
+                onClick={handleSaveConversation}
+                disabled={saving}
+              >
+                Save for this conversation
+              </button>
+            )}
             <button
               className="sysprompt-btn sysprompt-btn-primary"
               onClick={handleSaveWorkspace}
